@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Chamada — Instituto Veridiana</title>
+
+<!-- iOS: o Safari NÃO usa favicon para atalho. É este link que faz o
+     ícone do instituto aparecer na tela de início do iPhone. -->
+<link rel="apple-touch-icon" sizes="180x180" href="icones/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Chamada">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<!-- Android -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="512x512" href="icones/icon-512.png">
+<meta name="theme-color" content="#4A1D6E">
+
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #4A1D6E; overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  iframe {
+    position: fixed; inset: 0;
+    width: 100%; height: 100%;
+    border: 0; display: block;
+  }
+  /* Enquanto o Apps Script acorda, a tela já é roxa em vez de branca. */
+  #espera {
+    position: fixed; inset: 0;
+    display: grid; place-items: center;
+    background: #4A1D6E; color: #D6C3E8;
+    font: 500 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    text-align: center; padding: 24px;
+  }
+  #espera img { width: 96px; height: 96px; border-radius: 22px; margin-bottom: 20px; }
+  #espera.saiu { display: none; }
+  #erro { display: none; padding: 32px 24px; color: #fff; text-align: center;
+          font: 400 16px/1.6 system-ui, sans-serif; }
+  #erro a { color: #fff; }
+</style>
+</head>
+<body>
+
+<div id="espera">
+  <div>
+    <img src="icones/icon-192.png" alt="Instituto Veridiana">
+    <div>Abrindo a chamada…</div>
+  </div>
+</div>
+
+<div id="erro">
+  <p><b>Falta configurar o endereço do app.</b></p>
+  <p>Abra o <code>index.html</code> e coloque em <code>URL_APP</code> o link
+     do Apps Script que termina em <code>/exec</code>.</p>
+</div>
+
+<script>
+/* ─────────────────────────────────────────────────────────────
+   COLE AQUI o link do seu app, o mesmo que termina em /exec.
+   ───────────────────────────────────────────────────────────── */
+var URL_APP = '';
+
+(function () {
+  if (!URL_APP) {
+    document.getElementById('espera').className = 'saiu';
+    document.getElementById('erro').style.display = 'block';
+    return;
+  }
+  /* Repassa ?turma= para dentro, para o QR da parede continuar abrindo
+     direto na turma mesmo passando por aqui. */
+  var q = location.search || '';
+  var alvo = URL_APP + (q ? (URL_APP.indexOf('?') === -1 ? q : '&' + q.slice(1)) : '');
+
+  var f = document.createElement('iframe');
+  f.src = alvo;
+  f.setAttribute('allow', 'clipboard-write; web-share');
+  f.setAttribute('title', 'Chamada — Instituto Veridiana');
+  f.onload = function () { document.getElementById('espera').className = 'saiu'; };
+  document.body.appendChild(f);
+
+  /* Se em 12 s nada carregou, some com o aviso mesmo assim: melhor ver
+     o iframe vazio e poder recarregar do que uma tela travada. */
+  setTimeout(function () { document.getElementById('espera').className = 'saiu'; }, 12000);
+})();
+</script>
+</body>
+</html>

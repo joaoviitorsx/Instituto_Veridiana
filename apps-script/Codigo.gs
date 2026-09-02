@@ -75,7 +75,12 @@ function doGet() {
   const pagina = HtmlService.createHtmlOutput(html)
     .setTitle('Chamada Veridiana')
     .addMetaTag('viewport',
-      'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover');
+      'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover')
+    /* Libera embutir a página em outro site. É isso que permite o atalho
+       do GitHub Pages abrir o app com o ícone do instituto — no iPhone,
+       o Safari só aceita ícone de atalho via apple-touch-icon, que não
+       existe na página do Google. */
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   if (URL_ICONE) pagina.setFaviconUrl(URL_ICONE);
   return pagina;
 }

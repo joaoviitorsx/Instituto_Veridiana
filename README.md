@@ -252,34 +252,53 @@ versões do Google Sheets, que desfaz qualquer estrago.
 
 ## 3. Ícone na tela inicial do celular
 
-O app roda dentro de um iframe. O "Adicionar à tela inicial" do Chrome lê
-o ícone da **página de fora**, que é do Google — um `<link rel="icon">`
-dentro do `Index.html` não muda nada. O único jeito é o `setFaviconUrl`,
-e ele precisa de uma URL pública de imagem.
+O app roda dentro de um iframe, e o "Adicionar à tela inicial" lê o ícone
+da **página de fora**, que é do Google. No Android o `setFaviconUrl` do
+Apps Script às vezes resolve. **No iPhone nunca resolve**: o Safari só
+aceita ícone de atalho via `apple-touch-icon`, que não existe na página
+do Google.
 
-1. Suba `icones/icon.png` no **Google Drive**.
-2. Botão direito no arquivo → **Compartilhar** → **Qualquer pessoa com o
-   link** → **Leitor**.
-3. Copie o link. Ele parece com
-   `https://drive.google.com/file/d/`**`1AbCdEf...`**`/view?usp=sharing`
-   O pedaço em negrito é o ID.
-4. No `Codigo.gs`, no alto, troque:
+Por isso este repositório publica uma casca no **GitHub Pages**:
+
+```
+index.html      abre o app em tela cheia, com o ícone e o nome certos
+manifest.json   Android
+icones/         icon-180 (iOS), icon-192 e icon-512 (Android)
+```
+
+### Ligar
+
+1. No `index.html`, coloque o link do seu app em `URL_APP`:
 
    ```javascript
-   const URL_ICONE = 'https://lh3.googleusercontent.com/d/COLE_O_ID_AQUI';
+   var URL_APP = 'https://script.google.com/macros/s/SEU_ID/exec';
    ```
 
-5. Salve e **implante uma nova versão** (passo 1).
+2. Confirme que o `doGet` tem a linha que libera o embed — sem ela o
+   iframe fica em branco:
 
-No celular: abra o link, menu ⋮ do Chrome → **Adicionar à tela inicial**.
+   ```javascript
+   .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+   ```
 
-O nome que aparece embaixo do ícone vem do `setTitle`, hoje
-"Chamada Veridiana". O Chrome deixa editar esse nome na hora de adicionar.
+3. No GitHub: **Settings → Pages → Source: Deploy from a branch →
+   `main` / `/ (root)`**.
 
-> Se o ícone continuar como uma letra num quadradinho, o Chrome guardou o
-> antigo em cache. Limpe os dados do site ou teste numa aba anônima.
+O endereço fica `https://joaoviitorsx.github.io/Instituto_Veridiana/`.
 
----
+### Instalar no celular
+
+**iPhone:** abra no **Safari** (não funciona no Chrome do iOS) →
+Compartilhar → **Adicionar à Tela de Início**.
+
+**Android:** abra no Chrome → menu ⋮ → **Instalar aplicativo**.
+
+O atalho abre em tela cheia, sem barra de endereço.
+
+> O QR da parede pode continuar apontando direto para o `/exec`. Se
+> preferir que passe pela casca, use
+> `.../Instituto_Veridiana/?turma=Jazz%20Juvenil` — o `?turma=` é
+> repassado para dentro.
 
 ## 4. QR de cada turma
 
