@@ -1,0 +1,782 @@
+<script>
+/* Área da equipe: PIN, cadastros, QR, histórico e planilha. */
+/* ══════════════ TELA: PIN ══════════════ */
+var pinBuf = '';
+TELAS.pin = function(){
+  pinBuf = '';
+  var teclas = '';
+  for (var i = 1; i <= 9; i++)
+    teclas += '<button type="button" data-acao="pinDig" data-d="' + i + '">' + i + '</button>';
+  teclas += '<span class="vazia"></span>' +
+            '<button type="button" data-acao="pinDig" data-d="0">0</button>' +
+            '<button type="button" class="apagar" data-acao="pinApaga" aria-label="Apagar">' +
+            ico('apagarTecla', 24) + '</button>';
+  return {
+    titulo:'Gestão', solto:true,
+    html:'<div class="pin"><div class="circulo" style="width:64px;height:64px;border-radius:50%;' +
+      'margin:0 auto 16px;display:grid;place-items:center;background:var(--roxo-fraco);color:var(--roxo)">' +
+      ico('cadeado', 26) + '</div>' +
+      '<h2>Área da equipe</h2>' +
+      '<p>Digite o código de 4 números para cuidar de turmas, alunos e professores.</p>' +
+      '<div class="pontos" id="pontos" role="status" aria-label="Código, 0 de 4 números">' +
+      '<i></i><i></i><i></i><i></i></div>' +
+      '<div class="teclado">' + teclas + '</div></div>'
+  };
+};
+function pontos(){
+  var ns = el('pontos');
+  if (!ns) return;
+  for (var i = 0; i < 4; i++) ns.children[i].classList.toggle('cheio', i < pinBuf.length);
+  ns.setAttribute('aria-label', 'Código, ' + pinBuf.length + ' de 4 números');
+}
+ACOES.pinDig = function(b){
+  if (pinBuf.length >= 4) return;
+  pinBuf += b.getAttribute('data-d'); vibrar(); pontos();
+  if (pinBuf.length === 4) setTimeout(validaPin, 120);
+};
+ACOES.pinApaga = function(){ pinBuf = pinBuf.slice(0, -1); vibrar(); pontos(); };
+function validaPin(){
+  var tentativa = pinBuf;
+  api('entrarNaGestao', [tentativa], function(g){
+    S.pin = tentativa; S.gest = g; trocar('gestao');
+  }, function(e){
+    var n = el('pontos');
+    if (n){ n.classList.add('errou'); setTimeout(function(){ n.classList.remove('errou'); }, 360); }
+    pinBuf = ''; pontos();
+    toast(textoErro(e), 'erro');
+  });
+}
+document.addEventListener('keydown', function(e){
+  if (atual().t !== 'pin' || folhaAberta()) return;
+  if (/^[0-9]$/.test(e.key)){ ACOES.pinDig({getAttribute:function(){ return e.key; }}); }
+  else if (e.key === 'Backspace'){ ACOES.pinApaga(); }
+});
+
+/* ══════════════ TELA: menu de gestão ══════════════ */
+TELAS.gestao = function(){
+  var g = S.gest || {};
+  var itens = [
+    {ic:'prancheta', t:'Turmas', s:plural(g.turmas || 0, 'turma ativa', 'turmas ativas'), a:'gTurmas'},
+    {ic:'grupo', t:'Alunos', s:(g.alunosAtivos || 0) + ' ativos, ' + (g.alunosInativos || 0) + ' inativos', a:'gAlunos'},
+    {ic:'pessoa', t:'Professores', s:plural(g.professores || 0, 'na equipe', 'na equipe'), a:'gProfs'},
+    {ic:'qr', t:'QR das turmas', s:'gerar código para imprimir', a:'gQr'},
+    {ic:'sino', t:'Precisam de atenção', s:'carregando…', a:'gRisco', id:'itRisco'},
+    {ic:'calendario', t:'Histórico', s:'quem veio, por dia e por mês', a:'gHistorico'},
+    {ic:'documento', t:'Relatório para edital', s:'beneficiários, aulas e frequência', a:'gRelatorio'},
+    {ic:'tabela', t:'Planilha', s:'abrir e compartilhar a planilha', a:'gPlanilha'}
+  ];
+  var h = '<ul class="cartoes">';
+  itens.forEach(function(i){
+    h += '<li><button type="button" class="item" data-acao="' + i.a + '">' + ico(i.ic, 22) +
+         '<span class="txt">' + esc(i.t) + '<small>' + esc(i.s) + '</small></span>' +
+         '<span class="seta">' + ico('dir') + '</span></button></li>';
+  });
+  return {
+    titulo:'Gestão',
+    html:'<div id="caixaBolo"></div>' + h + '</ul>',
+    depois:function(){
+      /* Fora do carregamento do menu: ler Chamadas para o alerta custa
+         caro e não pode segurar a tela. */
+      api('contarRisco', [S.pin], function(n){
+        var i = el('itRisco');
+        if (!i) return;
+        i.querySelector('small').textContent = n === 0
+          ? 'ninguém faltando seguido, ótimo'
+          : plural(n, 'aluno some há 3 aulas', 'alunos somem há 3 aulas');
+        if (n > 0) i.querySelector('small').style.color = 'var(--falta)';
+      }, function(){});
+      api('aniversariantesSemana', [S.pin], function(lista){
+        if (!lista || !lista.length) return;
+        var c = el('caixaBolo');
+        if (!c) return;
+        var h2 = '<div class="bolo">' + ico('bolo', 22) + '<div><b>' +
+          (lista.length === 1 ? 'Aniversário esta semana' : lista.length + ' aniversários esta semana') +
+          '</b>';
+        lista.forEach(function(a){
+          h2 += '<span>' + esc(a.aluno) + ' faz ' + a.faz + ' em ' + dataCurta(a.dia) + '</span>';
+        });
+        c.innerHTML = h2 + '</div></div>';
+      }, function(){});
+    }
+  };
+};
+ACOES.gTurmas = function(){ ir('gTurmas'); };
+ACOES.gAlunos = function(){ S.busca = ''; S.filtro = 'ativos'; ir('gAlunos'); };
+ACOES.gProfs  = function(){ ir('gProfs'); };
+ACOES.gQr     = function(){ ir('gQr'); };
+ACOES.gHistorico = function(){ ir('gHistorico'); };
+ACOES.gPlanilha  = function(){ ir('gPlanilha'); };
+ACOES.gRisco     = function(){ ir('gRisco'); };
+ACOES.gRelatorio = function(){ ir('gRelatorio'); };
+
+/* recarrega os contadores depois de qualquer escrita */
+function recontar(){
+  api('entrarNaGestao', [S.pin], function(g){ S.gest = g; }, function(){});
+}
+
+/* ─── escrita na gestão: toast vermelho no erro, tela intacta ─── */
+function escrever(fn, args, msgOk, depois){
+  api(fn, [S.pin].concat(args), function(r){
+    vibrar(); toast(msgOk);
+    recontar();
+    if (depois) depois(r);
+  }, function(e){
+    toast(textoErro(e), 'erro');
+  });
+}
+
+/* pedir um nome sem usar prompt() */
+function pedirTexto(titulo, rotulo, valor, rotuloBotao, fn){
+  abrirFolha(titulo,
+    '<div style="padding:0 8px"><div class="campo"><label for="campoTxt">' + esc(rotulo) + '</label>' +
+    '<input id="campoTxt" type="text" autocomplete="off" autocapitalize="words" ' +
+    'spellcheck="false" value="' + esc(valor || '') + '"></div></div>' +
+    '<div class="acoes"><button type="button" class="cancelar" data-t="0">Cancelar</button>' +
+    '<button type="button" class="confirmar" style="background:var(--roxo)" data-t="1">' +
+    esc(rotuloBotao) + '</button></div>');
+  function enviar(){
+    var v = (el('campoTxt').value || '').trim();
+    if (v.length < 2){ toast('Escreva pelo menos 2 letras.', 'erro'); return; }
+    fecharFolha(); setTimeout(function(){ fn(v); }, 60);
+  }
+  el('folhaCorpo').onclick = function(e){
+    var b = e.target.closest('[data-t]');
+    if (!b) return;
+    if (b.dataset.t === '1') enviar(); else fecharFolha();
+  };
+  el('folhaCorpo').onkeydown = function(e){ if (e.key === 'Enter'){ e.preventDefault(); enviar(); } };
+  setTimeout(function(){ var i = el('campoTxt'); if (i){ i.focus(); i.select(); } }, 320);
+}
+
+/* ══════════════ GESTÃO: turmas ══════════════ */
+TELAS.gTurmas = function(){
+  return {
+    titulo:'Turmas', html:esqueleto(4),
+    barra:'<button type="button" class="salvar" data-acao="novaTurma">' + ico('mais') + 'Criar turma</button>',
+    depois:listarTurmasGestao
+  };
+};
+function listarTurmasGestao(){
+  api('listarTurmasCompleto', [S.pin], function(ts){
+    var alvo = el('palco').querySelector('.corpo');
+    if (!ts.length){
+      alvo.innerHTML = estado('prancheta','Nenhuma turma ainda',
+        'Toque em "Criar turma" aqui embaixo para começar.');
+      return;
+    }
+    var h = '<ul class="cartoes">';
+    ts.forEach(function(t){
+      h += '<li><button type="button" class="item" data-acao="abrirFicha" data-t="' + esc(t.nome) + '">' +
+           '<span class="txt">' + esc(t.nome) + '<small>' + plural(t.ativos, 'aluno', 'alunos') +
+           (t.inativos ? ' · ' + t.inativos + ' inativo' + (t.inativos > 1 ? 's' : '') : '') +
+           '</small></span><span class="seta">' + ico('dir') + '</span></button></li>';
+    });
+    alvo.innerHTML = h + '</ul>';
+  }, function(e){
+    el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+  });
+}
+ACOES.novaTurma = function(){
+  pedirTexto('Criar turma', 'Nome da turma', '', 'Criar', function(nome){
+    escrever('criarTurma', [nome], 'Turma ' + nome + ' criada', listarTurmasGestao);
+  });
+};
+ACOES.abrirFicha = function(b){ ir('gTurma', {turma:b.getAttribute('data-t')}); };
+
+/* ══════════════ GESTÃO: ficha da turma ══════════════ */
+TELAS.gTurma = function(p){
+  return {
+    titulo:p.turma, html:esqueleto(4),
+    barra:'<button type="button" class="salvar" data-acao="novoAluno" data-t="' + esc(p.turma) + '">' +
+          ico('mais') + 'Adicionar aluno</button>',
+    depois:function(){ carregarFicha(p.turma); }
+  };
+};
+function carregarFicha(turma){
+  api('listarAlunos', [S.pin, turma, true], function(as){
+    S.todosAlunos = as;
+    var ativos = as.filter(function(a){ return a.ativo; });
+    var inativos = as.filter(function(a){ return !a.ativo; });
+    var h = '<div class="duplo" style="margin-bottom:20px">' +
+      '<button type="button" class="secundario" data-acao="renomearTurma" data-t="' + esc(turma) + '">' +
+      ico('renomear', 18) + ' Renomear</button>' +
+      '<button type="button" class="secundario" data-acao="arquivarTurma" data-t="' + esc(turma) +
+      '" data-n="' + ativos.length + '">' + ico('arquivar', 18) + ' Arquivar</button></div>';
+
+    if (!ativos.length){
+      h += estado('grupo','Turma sem alunos','Toque em "Adicionar aluno" aqui embaixo.');
+    } else {
+      h += '<div class="secao">' + plural(ativos.length, 'aluno', 'alunos') + '</div>';
+      h += linhasAlunos(ativos, false);
+    }
+    if (inativos.length){
+      h += '<button type="button" class="recolhe" data-acao="verInativos" aria-expanded="false">' +
+           '<span class="seta">' + ico('dir', 18) + '</span>' +
+           plural(inativos.length, 'aluno inativo', 'alunos inativos') + '</button>' +
+           '<div id="caixaInativos" hidden>' + linhasAlunos(inativos, true) + '</div>';
+    }
+    el('palco').querySelector('.corpo').innerHTML = h;
+  }, function(e){
+    el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+  });
+}
+function linhasAlunos(lista, inativo){
+  var h = '<ul class="lista">';
+  lista.forEach(function(a){
+    h += '<li class="li" data-acao="acoesAluno" data-n="' + esc(a.nome) + '" data-t="' + esc(a.turma) +
+         '" data-inativo="' + (inativo ? '1' : '') + '" role="button" tabindex="0">' +
+         '<span class="ini"' + (inativo ? ' style="background:var(--fundo);color:var(--apagado)"' : '') + '>' +
+         esc(iniciais(a.nome)) + '</span>' +
+         '<span class="nome"' + (inativo ? ' style="color:var(--apagado)"' : '') + '>' + esc(a.nome) +
+         (a.turma && a.mostrarTurma ? '<small style="display:block;font-size:13px;font-weight:400;color:var(--apagado)">' +
+           esc(a.turma) + '</small>' : '') + '</span>' +
+         '<span class="marca">' + ico('dir', 18) + '</span></li>';
+  });
+  return h + '</ul>';
+}
+ACOES.verInativos = function(b){
+  var c = el('caixaInativos');
+  var ab = b.getAttribute('aria-expanded') === 'true';
+  b.setAttribute('aria-expanded', ab ? 'false' : 'true');
+  c.hidden = ab;
+};
+ACOES.renomearTurma = function(b){
+  var t = b.getAttribute('data-t');
+  pedirTexto('Renomear turma', 'Novo nome', t, 'Renomear', function(novo){
+    escrever('renomearTurma', [t, novo], 'Turma renomeada para ' + novo, function(){
+      trocar('gTurma', {turma:novo});
+    });
+  });
+};
+ACOES.arquivarTurma = function(b){
+  var t = b.getAttribute('data-t');
+  if (+b.getAttribute('data-n') > 0){
+    toast('Mova ou desative os alunos antes de arquivar.', 'erro');
+    return;
+  }
+  confirmar('Arquivar turma', 'A turma ' + t + ' sai da lista de chamada. As chamadas antigas dela continuam guardadas.',
+    'Arquivar', function(){
+      escrever('arquivarTurma', [t], 'Turma ' + t + ' arquivada', function(){
+        voltar(); setTimeout(listarTurmasGestao, 60);
+      });
+    });
+};
+ACOES.novoAluno = function(b){
+  var t = b.getAttribute('data-t');
+  pedirFicha('Adicionar aluno', [
+    {id:'nome', rotulo:'Nome do aluno', obrigatorio:true},
+    {id:'nascimento', rotulo:'Data de nascimento', tipo:'date'},
+    {id:'responsavel', rotulo:'Responsável'},
+    {id:'telefone', rotulo:'Telefone com DDD', tipo:'tel', dica:'85 9 9999 0000'}
+  ], 'Adicionar', function(d){
+    escrever('adicionarAluno', [t, d.nome, d], d.nome + ' entrou em ' + t, recarregarLista);
+  });
+};
+
+function editarAluno(nome, turma, atual){
+  pedirFicha('Dados de ' + nome, [
+    {id:'nascimento', rotulo:'Data de nascimento', tipo:'date', valor:(atual && atual.nascimento) || ''},
+    {id:'responsavel', rotulo:'Responsável', valor:(atual && atual.responsavel) || ''},
+    {id:'telefone', rotulo:'Telefone com DDD', tipo:'tel', dica:'85 9 9999 0000',
+     valor:(atual && atual.telefone) || ''}
+  ], 'Salvar', function(d){
+    escrever('atualizarAluno', [nome, turma, d], 'Dados de ' + nome + ' salvos', recarregarLista);
+  });
+}
+ACOES.acoesAluno = function(b){
+  var nome = b.getAttribute('data-n'), turma = b.getAttribute('data-t');
+  var inativo = !!b.getAttribute('data-inativo');
+  if (inativo){
+    folhaOpcoes(nome, [
+      {txt:'Voltar para a chamada', sub:'em ' + turma, icone:'reativar', fn:function(){
+        escrever('reativarAluno', [nome, turma], nome + ' voltou para a chamada', recarregarLista);
+      }}
+    ]);
+    return;
+  }
+  var ficha = (S.todosAlunos || []).filter(function(x){
+    return x.nome === nome && x.turma === turma;
+  })[0];
+  folhaOpcoes(nome, [
+    {txt:'Editar dados', sub:'nascimento, responsável, telefone', icone:'renomear',
+     fn:function(){ editarAluno(nome, turma, ficha); }},
+    {txt:'Mudar de turma', sub:'hoje em ' + turma, icone:'mover', fn:function(){ moverAluno(nome, turma); }},
+    {txt:'Desativar', sub:'sai da chamada, histórico fica', icone:'desativar', perigo:true, fn:function(){
+      escrever('desativarAluno', [nome, turma], nome + ' saiu da chamada', recarregarLista);
+    }}
+  ]);
+};
+function moverAluno(nome, turmaAtual){
+  api('listarTurmasCompleto', [S.pin], function(ts){
+    var opc = ts.filter(function(t){ return t.nome !== turmaAtual; }).map(function(t){
+      return { txt:t.nome, sub:plural(t.ativos, 'aluno', 'alunos'), ini:t.nome, fn:function(){
+        escrever('moverAluno', [nome, t.nome, turmaAtual], nome + ' agora está em ' + t.nome, recarregarLista);
+      }};
+    });
+    opc.push({ txt:'Criar turma nova', icone:'mais', fn:function(){
+      pedirTexto('Criar turma', 'Nome da turma', '', 'Criar e mover', function(nova){
+        escrever('criarTurma', [nova], 'Turma ' + nova + ' criada', function(){
+          escrever('moverAluno', [nome, nova, turmaAtual], nome + ' agora está em ' + nova, recarregarLista);
+        });
+      });
+    }});
+    folhaOpcoes('Mover ' + nome + ' para', opc);
+  }, function(e){ toast(textoErro(e), 'erro'); });
+}
+/* depois de escrever, sempre relê do servidor */
+function recarregarLista(){
+  var a = atual();
+  if (a.t === 'gTurma') carregarFicha(a.p.turma);
+  else if (a.t === 'gAlunos') carregarAlunos();
+  else if (a.t === 'gTurmas') listarTurmasGestao();
+  else if (a.t === 'gProfs') carregarProfs();
+}
+
+/* ══════════════ GESTÃO: todos os alunos ══════════════ */
+TELAS.gAlunos = function(){
+  return {
+    titulo:'Alunos',
+    html:'<div class="busca">' + ico('lupa') +
+      '<input id="campoBusca" type="search" placeholder="Procurar pelo nome" autocomplete="off" ' +
+      'aria-label="Procurar aluno"></div>' +
+      '<div class="filtro">' +
+      '<button type="button" data-acao="filtro" data-f="ativos" aria-selected="true">Na chamada</button>' +
+      '<button type="button" data-acao="filtro" data-f="inativos" aria-selected="false">Inativos</button>' +
+      '</div><div id="listaAlunos">' + esqueleto(5) + '</div>',
+    depois:function(){
+      el('campoBusca').addEventListener('input', function(){
+        S.busca = this.value; pintarAlunos();
+      });
+      carregarAlunos();
+    }
+  };
+};
+function carregarAlunos(){
+  api('listarAlunos', [S.pin, '', true], function(as){
+    S.todosAlunos = as; pintarAlunos();
+  }, function(e){
+    el('listaAlunos').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+  });
+}
+function pintarAlunos(){
+  var b = semAcento(S.busca);
+  var lista = (S.todosAlunos || []).filter(function(a){
+    if (S.filtro === 'ativos' ? !a.ativo : a.ativo) return false;
+    return !b || semAcento(a.nome).indexOf(b) !== -1 || semAcento(a.turma).indexOf(b) !== -1;
+  });
+  lista.forEach(function(a){ a.mostrarTurma = true; });
+  var alvo = el('listaAlunos');
+  if (!alvo) return;
+  if (!lista.length){
+    alvo.innerHTML = b
+      ? estado('lupa','Ninguém com esse nome', 'Confira a escrita ou troque para a outra aba.')
+      : estado('grupo', S.filtro === 'ativos' ? 'Nenhum aluno na chamada' : 'Nenhum aluno inativo',
+               S.filtro === 'ativos' ? 'Cadastre alunos dentro de cada turma.'
+                                     : 'Todo mundo cadastrado está na chamada.');
+    return;
+  }
+  alvo.innerHTML = linhasAlunos(lista, S.filtro === 'inativos');
+}
+ACOES.filtro = function(b){
+  S.filtro = b.getAttribute('data-f');
+  var bs = b.parentNode.children;
+  for (var i = 0; i < bs.length; i++)
+    bs[i].setAttribute('aria-selected', bs[i] === b ? 'true' : 'false');
+  vibrar(); pintarAlunos();
+};
+
+/* ══════════════ GESTÃO: professores ══════════════ */
+TELAS.gProfs = function(){
+  return {
+    titulo:'Professores', html:esqueleto(4),
+    barra:'<button type="button" class="salvar" data-acao="novoProf">' + ico('mais') + 'Adicionar professor</button>',
+    depois:carregarProfs
+  };
+};
+function carregarProfs(){
+  api('listarProfessores', [S.pin], function(ps){
+    var alvo = el('palco').querySelector('.corpo');
+    if (!ps.length){
+      alvo.innerHTML = estado('pessoa','Ninguém na equipe ainda',
+        'Toque em "Adicionar professor" aqui embaixo.');
+      return;
+    }
+    var h = '<ul class="lista">';
+    ps.forEach(function(n){
+      h += '<li class="li" data-acao="acoesProf" data-n="' + esc(n) + '" role="button" tabindex="0">' +
+           '<span class="ini">' + esc(iniciais(n)) + '</span>' +
+           '<span class="nome">' + esc(n) + '</span>' +
+           '<span class="marca">' + ico('dir', 18) + '</span></li>';
+    });
+    alvo.innerHTML = h + '</ul>';
+  }, function(e){
+    el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+  });
+}
+ACOES.novoProf = function(){
+  pedirTexto('Adicionar professor', 'Nome', '', 'Adicionar', function(nome){
+    escrever('adicionarProfessor', [nome], nome + ' entrou na equipe', carregarProfs);
+  });
+};
+ACOES.acoesProf = function(b){
+  var n = b.getAttribute('data-n');
+  folhaOpcoes(n, [{txt:'Tirar da equipe', sub:'as chamadas antigas continuam com o nome',
+    icone:'desativar', perigo:true, fn:function(){
+      confirmar('Tirar da equipe', n + ' some da escolha na chamada. As chamadas já salvas continuam com o nome.',
+        'Tirar da equipe', function(){
+          escrever('removerProfessor', [n], n + ' saiu da equipe', carregarProfs);
+        });
+    }}]);
+};
+
+/* ══════════════ GESTÃO: QR das turmas ══════════════ */
+TELAS.gQr = function(){
+  return {
+    titulo:'QR das turmas', html:esqueleto(4),
+    depois:function(){
+      api('obterUrlApp', [S.pin], function(url){
+        S.urlApp = url || '';
+        if (!S.urlApp){
+          el('palco').querySelector('.corpo').innerHTML = estado('alerta','Falta o endereço do app',
+            'Publique o app e abra esta tela de novo. Se continuar assim, use "Configurar endereço do app" no menu Veridiana da planilha, uma vez só.');
+          return;
+        }
+        api('listarTurmasCompleto', [S.pin], function(ts){
+          var alvo = el('palco').querySelector('.corpo');
+          if (!ts.length){
+            alvo.innerHTML = estado('prancheta','Nenhuma turma ainda','Crie uma turma para gerar o QR dela.');
+            return;
+          }
+          var h = '<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
+                  'Escolha a turma para gerar o código de colar na parede.</p><ul class="cartoes">';
+          ts.forEach(function(t){
+            h += '<li><button type="button" class="item" data-acao="verQr" data-t="' + esc(t.nome) + '">' +
+                 '<span class="txt">' + esc(t.nome) + '</span>' +
+                 '<span class="seta">' + ico('qr', 20) + '</span></button></li>';
+          });
+          alvo.innerHTML = h + '</ul>';
+        }, function(e){
+          el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+        });
+      }, function(e){
+        el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+ACOES.verQr = function(b){ ir('gQrTurma', {turma:b.getAttribute('data-t')}); };
+
+TELAS.gQrTurma = function(p){
+  var url = S.urlApp + (S.urlApp.indexOf('?') === -1 ? '?' : '&') + 'turma=' + encodeURIComponent(p.turma);
+  var podeCompartilhar = !!navigator.share;
+  var h = '<div class="folha-qr" id="paraImprimir">' +
+    '<p class="turma">' + esc(p.turma) + '</p>' + qrSvg(url) +
+    '<p class="marca">INSTITUTO VERIDIANA · aponte a câmera para fazer a chamada</p></div>';
+  h += '<div class="duplo">';
+  if (podeCompartilhar)
+    h += '<button type="button" class="principal" data-acao="partilhar" data-u="' + esc(url) +
+         '" data-t="' + esc(p.turma) + '">' + ico('partilha', 18) + ' Compartilhar</button>';
+  h += '<button type="button" class="' + (podeCompartilhar ? 'secundario' : 'principal') +
+       '" data-acao="copiarLink" data-u="' + esc(url) + '">' + ico('copiar', 18) + ' Copiar link</button>';
+  h += '</div>';
+  return { titulo:p.turma, html:h };
+};
+ACOES.partilhar = function(b){
+  var url = b.getAttribute('data-u'), t = b.getAttribute('data-t');
+  try {
+    navigator.share({ title:'Chamada · ' + t, text:'Chamada da turma ' + t, url:url })
+      .catch(function(){ /* cancelou ou o iframe bloqueou: silencio */ });
+  } catch(e){ copiar(url); }
+};
+ACOES.copiarLink = function(b){ copiar(b.getAttribute('data-u')); };
+function copiar(txt){
+  function ok(){ vibrar(); toast('Link copiado'); }
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(ok, function(){ copiaAntiga(txt, ok); });
+  } else copiaAntiga(txt, ok);
+}
+function copiaAntiga(txt, ok){
+  var a = document.createElement('textarea');
+  a.value = txt; a.setAttribute('readonly','');
+  a.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+  document.body.appendChild(a); a.focus(); a.select();
+  var deu = false;
+  try { deu = document.execCommand('copy'); } catch(e){}
+  document.body.removeChild(a);
+  if (deu) ok(); else toast('Não deu para copiar sozinho. Segure o dedo no link.', 'erro');
+}
+
+/* ══════════════ GESTÃO: precisam de atenção ══════════════ */
+/* Três faltas seguidas é o gatilho que a busca ativa usa na rede
+   pública. O dado já existia; faltava alguém ler. */
+TELAS.gRisco = function(){
+  return {
+    titulo:'Precisam de atenção', html:esqueleto(3),
+    depois:function(){
+      api('alunosEmRisco', [S.pin, 3], function(r){
+        var alvo = el('palco').querySelector('.corpo');
+        if (!r.alunos.length){
+          alvo.innerHTML = estado('cheque', 'Ninguém sumido',
+            'Nenhum aluno faltou 3 aulas seguidas. Continue olhando aqui de vez em quando.');
+          return;
+        }
+        var h = '<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
+          esc(plural(r.alunos.length, 'aluno faltou', 'alunos faltaram')) +
+          ' 3 aulas ou mais seguidas. Uma ligação agora costuma trazer de volta.</p>';
+        r.alunos.forEach(function(a){
+          var texto = 'Oi! Aqui é do Instituto Veridiana. Sentimos falta d' +
+            (a.aluno ? 'e ' + a.aluno : 'o aluno') + ' nas últimas ' + a.faltas +
+            ' aulas de ' + a.turma + '. Está tudo bem? A gente gostaria muito de ver de volta.';
+          var zap = linkZap(a.telefone, texto);
+          h += '<div class="risco">' +
+            '<div class="cab-risco"><span class="ini">' + esc(iniciais(a.aluno)) + '</span>' +
+            '<span class="nome">' + esc(a.aluno) +
+            '<small>' + esc(a.turma) + (a.idade !== null && a.idade !== undefined ? ' · ' + a.idade + ' anos' : '') + '</small></span>' +
+            '<span class="pct" style="color:var(--falta)">' + a.faltas + '</span></div>' +
+            '<p class="detalhe">' + plural(a.faltas, 'falta seguida', 'faltas seguidas') +
+            (a.justificadas ? ' (' + a.justificadas + ' justificada' + (a.justificadas > 1 ? 's' : '') + ')' : '') +
+            (a.ultimaPresenca ? ' · veio pela última vez em ' + dataCurta(a.ultimaPresenca) : ' · sem presença nas aulas recentes') +
+            '</p>';
+          if (zap){
+            h += '<a class="botao-zap" href="' + esc(zap) + '" target="_blank" rel="noopener">' +
+                 ico('conversa', 18) + ' ' + esc(rotuloZap(a.responsavel)) + '</a>';
+          } else {
+            h += '<button type="button" class="botao-vazio" data-acao="contatoFalta" ' +
+                 'data-n="' + esc(a.aluno) + '" data-t="' + esc(a.turma) + '">' +
+                 ico('pessoa', 18) + ' Sem telefone — cadastrar agora</button>';
+          }
+          h += '</div>';
+        });
+        alvo.innerHTML = h;
+      }, function(e){
+        el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+/* "Falar com Ana" quando há nome; senão não inventa parentesco. */
+function rotuloZap(responsavel){
+  var p = String(responsavel || '').trim().split(/\s+/)[0] || '';
+  return p && p.length > 2 ? 'Falar com ' + p : 'Falar no WhatsApp';
+}
+ACOES.contatoFalta = function(b){
+  editarAluno(b.getAttribute('data-n'), b.getAttribute('data-t'), null);
+};
+
+/* ══════════════ GESTÃO: relatório para edital ══════════════ */
+TELAS.gRelatorio = function(){
+  var hj = new Date();
+  var fim = hj.getFullYear() + '-' + String(hj.getMonth()+1).padStart(2,'0') + '-' + String(hj.getDate()).padStart(2,'0');
+  var ini = fim.slice(0,8) + '01';
+  return {
+    titulo:'Relatório para edital',
+    html:'<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
+      'Os números que a prestação de contas pede: beneficiários atendidos, aulas realizadas e frequência.</p>' +
+      '<div class="duplo" style="margin-bottom:12px">' +
+      '<div class="campo" style="flex:1;margin:0"><label for="dtIni">De</label>' +
+      '<input id="dtIni" type="date" value="' + ini + '"></div>' +
+      '<div class="campo" style="flex:1;margin:0"><label for="dtFim">Até</label>' +
+      '<input id="dtFim" type="date" value="' + fim + '"></div></div>' +
+      '<button type="button" class="botao-cheio" data-acao="gerarRel">' +
+      ico('documento', 18) + ' Gerar relatório</button>' +
+      '<div id="saidaRel"></div>',
+    depois:function(){ ACOES.gerarRel(); }
+  };
+};
+ACOES.gerarRel = function(){
+  var de = el('dtIni').value, ate = el('dtFim').value;
+  el('saidaRel').innerHTML = '<div style="margin-top:20px">' + esqueleto(2) + '</div>';
+  api('relatorioPeriodo', [S.pin, de, ate], function(r){
+    S.rel = r;
+    var h = '<div class="secao">Resumo</div><div class="numeros">';
+    h += '<div><b>' + r.beneficiarios + '</b><span>beneficiários</span></div>';
+    h += '<div><b>' + r.aulas + '</b><span>aulas</span></div>';
+    h += '<div><b>' + r.frequencia + '%</b><span>frequência</span></div>';
+    h += '</div>';
+
+    h += '<div class="secao">Faixa etária</div><ul class="lista sem-avatar">';
+    Object.keys(r.faixas).forEach(function(k){
+      if (!r.faixas[k]) return;
+      h += '<li class="li"><span class="nome">' + esc(k) + '</span>' +
+           '<span class="pct">' + r.faixas[k] + '</span></li>';
+    });
+    h += '</ul>';
+
+    if (r.turmas.length){
+      h += '<div class="secao">Por turma</div><ul class="lista sem-avatar">';
+      r.turmas.forEach(function(t){
+        h += '<li class="li"><span class="nome">' + esc(t.turma) +
+             '<small>' + plural(t.aulas,'aula','aulas') + ' · ' +
+             plural(t.alunos,'aluno','alunos') + '</small></span>' +
+             '<span class="pct">' + t.pct + '%</span></li>';
+      });
+      h += '</ul>';
+    }
+    h += '<button type="button" class="botao-cheio" style="margin-top:20px" data-acao="copiarRel">' +
+         ico('copiar', 18) + ' Copiar para colar no edital</button>';
+    el('saidaRel').innerHTML = '<div style="margin-top:4px">' + h + '</div>';
+  }, function(e){
+    el('saidaRel').innerHTML = '<div style="margin-top:20px">' +
+      estado('alerta','Não deu para gerar', textoErro(e)) + '</div>';
+  });
+};
+ACOES.copiarRel = function(){
+  var r = S.rel;
+  if (!r) return;
+  var L = [];
+  L.push('INSTITUTO VERIDIANA — Relatório de frequência');
+  L.push('Período: ' + dataCurta(r.inicio) + '/' + r.inicio.slice(0,4) +
+         ' a ' + dataCurta(r.fim) + '/' + r.fim.slice(0,4));
+  L.push('');
+  L.push('Beneficiários atendidos: ' + r.beneficiarios);
+  L.push('Aulas realizadas: ' + r.aulas);
+  L.push('Frequência média: ' + r.frequencia + '%');
+  L.push('');
+  L.push('Faixa etária:');
+  Object.keys(r.faixas).forEach(function(k){
+    if (r.faixas[k]) L.push('- ' + k + ': ' + r.faixas[k]);
+  });
+  L.push('');
+  L.push('Por turma:');
+  r.turmas.forEach(function(t){
+    L.push('- ' + t.turma + ': ' + t.aulas + ' aulas, ' + t.alunos +
+           ' alunos, ' + t.pct + '% de frequência');
+  });
+  copiar(L.join('\n'));
+};
+
+/* ══════════════ GESTÃO: histórico ══════════════ */
+/* Só leitura, calculado das mesmas linhas de Chamadas. Sem gráfico:
+   a análise a fundo vive na planilha, com Tabela Dinâmica. */
+TELAS.gHistorico = function(){
+  return {
+    titulo:'Histórico', html:esqueleto(4),
+    depois:function(){
+      api('mesesComChamada', [S.pin], function(meses){
+        S.meses = meses || []; S.mesIdx = 0;
+        if (!S.meses.length){
+          el('palco').querySelector('.corpo').innerHTML = estado('calendario',
+            'Nenhuma chamada ainda', 'Assim que a primeira turma for salva, o histórico aparece aqui.');
+          return;
+        }
+        carregarMes();
+      }, function(e){
+        el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+
+function carregarMes(){
+  var mes = S.meses[S.mesIdx];
+  var alvo = el('palco').querySelector('.corpo');
+  alvo.innerHTML = passoMes(mes) + esqueleto(3);
+  api('resumoHistorico', [S.pin, mes], function(r){
+    var h = passoMes(mes);
+    var t = r.totais;
+
+    h += '<div class="resumo"><b>' + t.pct + '%</b>' +
+         '<span>de presença em ' + plural(t.aulas, 'aula', 'aulas') + '</span></div>';
+
+    if (r.turmas.length){
+      h += '<div class="secao">Por turma</div><ul class="lista sem-avatar">';
+      r.turmas.forEach(function(x){
+        h += '<li class="li"><span class="nome">' + esc(x.turma) +
+             '<small>' + plural(x.aulas, 'aula', 'aulas') + ' · ' +
+             x.presentes + ' de ' + x.total + ' presenças</small></span>' +
+             '<span class="pct">' + x.pct + '%</span></li>';
+      });
+      h += '</ul>';
+    }
+
+    if (r.aulas.length){
+      h += '<div class="secao">Aulas do mês</div>';
+      var diaAtual = '';
+      r.aulas.forEach(function(a, i){
+        if (a.data !== diaAtual){
+          if (diaAtual) h += '</ul>';
+          diaAtual = a.data;
+          h += '<div class="dia">' + esc(dataExtenso(a.data)) + '</div><ul class="lista sem-avatar">';
+        }
+        h += '<li class="li"><span class="nome">' + esc(a.turma) +
+             '<small>' + esc(a.professor || 'sem professor') + '</small></span>' +
+             '<span class="pct' + (a.presentes === a.total ? ' cheio' : '') + '">' +
+             a.presentes + '/' + a.total + '</span></li>';
+      });
+      h += '</ul>';
+    }
+    alvo.innerHTML = h;
+  }, function(e){
+    alvo.innerHTML = passoMes(mes) + estado('alerta','Não deu para carregar', textoErro(e));
+  });
+}
+
+function passoMes(mes){
+  var temAntes = S.mesIdx < S.meses.length - 1;
+  var temDepois = S.mesIdx > 0;
+  return '<div class="passo">' +
+    '<button type="button" data-acao="mesAntes" aria-label="Mês anterior"' +
+      (temAntes ? '' : ' disabled') + '>' + ico('esq', 22) + '</button>' +
+    '<b>' + esc(mesExtenso(mes)) + '</b>' +
+    '<button type="button" data-acao="mesDepois" aria-label="Próximo mês"' +
+      (temDepois ? '' : ' disabled') + '>' + ico('dir', 22) + '</button></div>';
+}
+ACOES.mesAntes  = function(){ if (S.mesIdx < S.meses.length - 1){ S.mesIdx++; vibrar(); carregarMes(); } };
+ACOES.mesDepois = function(){ if (S.mesIdx > 0){ S.mesIdx--; vibrar(); carregarMes(); } };
+
+/* ══════════════ GESTÃO: planilha ══════════════ */
+TELAS.gPlanilha = function(){
+  return {
+    titulo:'Planilha', html:esqueleto(2),
+    depois:function(){
+      api('obterLinkPlanilha', [S.pin], function(d){
+        var podeCompartilhar = !!navigator.share;
+        var h = '<div class="cartao-info">' + ico('tabela', 26) +
+          '<b>' + esc(d.nome) + '</b>' +
+          '<span>Todo dado do app mora aqui. A aba Painel mostra a frequência por turma e por dia.</span></div>';
+
+        h += '<a class="botao-cheio" href="' + esc(d.url) + '" target="_blank" rel="noopener">' +
+             ico('abrir', 18) + ' Abrir planilha</a>';
+        h += '<div class="duplo" style="margin-top:8px">';
+        h += '<button type="button" class="secundario" data-acao="copiarLink" data-u="' + esc(d.url) + '">' +
+             ico('copiar', 18) + ' Copiar link</button>';
+        if (podeCompartilhar)
+          h += '<button type="button" class="secundario" data-acao="partilharPlanilha" data-u="' +
+               esc(d.url) + '" data-n="' + esc(d.nome) + '">' + ico('partilha', 18) + ' Compartilhar</button>';
+        h += '</div>';
+
+        h += '<div class="aviso" style="margin-top:20px">' + ico('alerta', 18) +
+             '<span>O link sozinho não libera nada. Quem abrir precisa já ter permissão. ' +
+             'Para dar acesso a alguém, use o botão Compartilhar dentro da própria planilha.</span></div>';
+
+        h += '<div class="secao">Padronizar</div>';
+        h += '<div class="cartao-info" style="text-align:left">' +
+             '<span>Deixa cabeçalho, larguras, cores, listas de SIM/NAO e o Painel no padrão. ' +
+             'Pode rodar quantas vezes quiser, não duplica nada.</span></div>';
+        h += '<button type="button" class="botao-cheio" id="btArrumar" data-acao="arrumar">' +
+             ico('varinha', 18) + ' Arrumar planilha</button>';
+
+        el('palco').querySelector('.corpo').innerHTML = h;
+      }, function(e){
+        el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+ACOES.partilharPlanilha = function(b){
+  try {
+    navigator.share({ title:b.getAttribute('data-n'), url:b.getAttribute('data-u') }).catch(function(){});
+  } catch(e){ copiar(b.getAttribute('data-u')); }
+};
+ACOES.arrumar = function(){
+  var bt = el('btArrumar');
+  bt.disabled = true; bt.textContent = 'Arrumando…';
+  api('arrumarPlanilha', [S.pin], function(){
+    bt.disabled = false; bt.innerHTML = ico('varinha', 18) + ' Arrumar planilha';
+    vibrar(); toast('Planilha arrumada. O Painel está na primeira aba.');
+  }, function(e){
+    bt.disabled = false; bt.innerHTML = ico('varinha', 18) + ' Arrumar planilha';
+    toast(textoErro(e), 'erro');
+  });
+};
+</script>

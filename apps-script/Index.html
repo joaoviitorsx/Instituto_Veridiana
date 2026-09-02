@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<title>Chamada — Instituto Veridiana</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script>
+/* A fonte entra por JS de propósito: um <link rel="stylesheet"> comum
+   bloqueia a primeira pintura, e em 4G ruim isso é 1 segundo de tela
+   branca. Assim o texto aparece na hora com a fonte do sistema e a
+   Plus Jakarta Sans troca sozinha quando chega. */
+(function () {
+  var l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap';
+  document.head.appendChild(l);
+})();
+</script>
+</head>
+<body>
+
+<div class="cab sobre-roxo" id="cab">
+  <div class="linha">
+    <button class="icone" id="btVoltar" type="button" aria-label="Voltar" hidden></button>
+    <div class="meio"><div class="marca">INSTITUTO VERIDIANA</div>
+      <div class="compacto" id="cabTitulo"></div></div>
+    <div class="placar" id="cabPlacar" hidden></div>
+    <button class="icone" id="btGestao" type="button" aria-label="Gestão" hidden></button>
+  </div>
+</div>
+
+<main id="palco"></main>
+
+<div class="barra" id="barra" hidden><div class="dentro" id="barraDentro"></div></div>
+
+<div class="veu" id="veu" data-aberto="false"></div>
+<div class="folha" id="folha" data-aberto="false" role="dialog" aria-modal="true" aria-labelledby="folhaTitulo">
+  <div class="puxador" id="puxador"></div>
+  <h2 id="folhaTitulo"></h2>
+  <div class="rolo" id="folhaCorpo"></div>
+</div>
+
+<div class="toast" id="toast" data-aberto="false" role="status" aria-live="polite">
+  <span id="toastIcone"></span><span id="toastTexto"></span>
+</div>
+
+</body>
+</html>

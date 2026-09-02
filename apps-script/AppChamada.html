@@ -1,0 +1,220 @@
+<script>
+/* O fluxo do QR: escolher turma, marcar faltas, salvar. */
+/* ══════════════ TELA: escolher turma ══════════════ */
+TELAS.turmas = function(){
+  return {
+    titulo:'Chamada', gestao:!S.viaQr,
+    capa:'<div class="capa"><div class="topo"><div style="flex:1;min-width:0">' +
+         '<h1>Chamada</h1><p class="data">Qual turma está entrando agora?</p>' +
+         '</div></div></div>',
+    html: esqueleto(4),
+    depois: function(){
+      api('listarTurmas', [], function(turmas){
+        if (!turmas.length){
+          el('palco').querySelector('.corpo').innerHTML =
+            estado('grupo','Nenhuma turma ainda',
+                   'Toque na engrenagem lá em cima para criar a primeira turma e cadastrar os alunos.');
+          return;
+        }
+        var h = '<ul class="cartoes">';
+        turmas.forEach(function(t){
+          h += '<li><button type="button" class="item" data-acao="abrirTurma" data-t="' + esc(t) + '">' +
+               '<span class="txt">' + esc(t) + '</span>' +
+               '<span class="seta">' + ico('dir') + '</span></button></li>';
+        });
+        el('palco').querySelector('.corpo').innerHTML = h + '</ul>';
+      }, function(e){
+        el('palco').querySelector('.corpo').innerHTML =
+          estado('alerta','Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+ACOES.abrirTurma = function(b){ ir('chamada', {turma:b.getAttribute('data-t')}); };
+
+/* ══════════════ TELA: chamada ══════════════ */
+TELAS.chamada = function(p){
+  var t = {
+    titulo: p.turma, placar:true,
+    capa:'<div class="capa"><div class="topo">' +
+         '<div style="flex:1;min-width:0"><h1>' + esc(p.turma) + '</h1>' +
+         '<p class="data" id="capaData">carregando…</p></div>' +
+         '<div class="conta"><b id="capaN">—</b><span id="capaR">&nbsp;</span></div>' +
+         '</div></div>',
+    html: esqueleto(6),
+    voltar: !S.viaQr,
+    depois: function(){
+      api('carregarTurma', [p.turma], montarChamada, function(e){
+        el('palco').querySelector('.corpo').innerHTML =
+          estado('alerta','Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+  return t;
+};
+
+function montarChamada(d){
+  S.turma = d.turma; S.data = d.data;
+  S.professores = d.professores || [];
+  S.professor = d.professorSugerido || '';
+  S.jaRegistrada = !!d.jaRegistrada;
+  S.token = sorteioToken();
+  S.alunos = (d.alunos || []).map(function(n){ return {aluno:n, status:'Presente'}; });
+
+  el('capaData').textContent = dataExtenso(d.data);
+
+  if (!S.alunos.length){
+    el('palco').querySelector('.corpo').innerHTML =
+      estado('grupo','Turma sem alunos',
+             'Ninguém ativo em ' + d.turma + '. Toque na engrenagem na tela inicial para cadastrar.');
+    el('capaN').textContent = '0'; el('capaR').textContent = 'sem alunos';
+    return;
+  }
+
+  var h = '';
+  /* Zero toque a mais: só uma linha que o professor vê antes de começar. */
+  if (d.aniversarios && d.aniversarios.length){
+    h += '<div class="bolo">' + ico('bolo', 22) + '<div><b>Aniversário hoje</b>';
+    d.aniversarios.forEach(function(x){
+      h += '<span>' + esc(x.aluno) + ' está fazendo ' + x.faz + ' anos</span>';
+    });
+    h += '</div></div>';
+  }
+  if (S.jaRegistrada){
+    h += '<div class="aviso">' + ico('alerta', 18) +
+         '<span>Esta turma já teve chamada salva hoje. Se salvar de novo, vai contar duas vezes.</span></div>';
+  }
+  h += '<button type="button" class="prof" id="cartaoProf" data-acao="escolherProf" data-vazio="' +
+       (S.professor ? 'false' : 'true') + '">' + ico('pessoa', 22) +
+       '<span class="txt"><small>Quem está dando a aula</small>' +
+       '<b id="profNome">' + esc(S.professor || 'Escolher') + '</b></span>' +
+       '<span class="seta">' + ico('dir') + '</span></button>';
+  h += '<div class="instrucao"><span>Toque em quem faltou</span>' +
+       '<button type="button" id="btTodos" data-acao="todosPresentes" hidden>Todos presentes</button></div>';
+  h += '<ul class="lista">';
+  S.alunos.forEach(function(a, i){
+    h += '<li class="li" data-st="Presente" id="li' + i + '" data-acao="ciclar" data-i="' + i + '"' +
+         ' role="button" tabindex="0" aria-label="' + esc(a.aluno) + ', presente">' +
+         '<span class="ini">' + esc(iniciais(a.aluno)) + '</span>' +
+         '<span class="nome">' + esc(a.aluno) + '</span>' +
+         '<span class="marca" id="mk' + i + '"></span></li>';
+  });
+  el('palco').querySelector('.corpo').innerHTML = h + '</ul>';
+
+  S.alunos.forEach(function(a, i){ pintar(i); });
+  atualizarPlacar();
+
+  el('barraDentro').innerHTML =
+    '<button type="button" class="salvar" id="btSalvar" data-acao="salvar">Salvar chamada</button>';
+  el('barra').hidden = false;
+  medirBarra();
+
+  /* Sem sugestao de professor a folha abre sozinha: e a primeira pergunta
+     da aula, e assim o fluxo inteiro fecha em cinco toques. */
+  if (!S.professor && S.professores.length) setTimeout(escolherProf, 340);
+}
+
+function pintar(i){
+  var st = S.alunos[i].status, li = el('li' + i);
+  li.dataset.st = st;
+  li.setAttribute('aria-label', S.alunos[i].aluno + ', ' +
+    (st === 'Presente' ? 'presente' : st === 'Falta' ? 'faltou' : 'falta justificada'));
+  el('mk' + i).innerHTML = st === 'Presente'
+    ? '<span class="ok">' + ico('cheque', 16) + '</span>'
+    : '<span class="selo">' + (st === 'Falta' ? 'Faltou' : 'Justificada') + '</span>';
+}
+
+ACOES.ciclar = function(b){
+  var i = +b.getAttribute('data-i');
+  S.alunos[i].status = CICLO[S.alunos[i].status];
+  pintar(i); atualizarPlacar(); vibrar();
+};
+
+ACOES.todosPresentes = function(){
+  var antes = S.alunos.map(function(a){ return a.status; });
+  var mudou = false;
+  S.alunos.forEach(function(a, i){ if (a.status !== 'Presente'){ a.status = 'Presente'; pintar(i); mudou = true; } });
+  if (!mudou) return;
+  atualizarPlacar(); vibrar();
+  toast('Todos marcados como presentes', 'ok', {rotulo:'Desfazer', fn:function(){
+    S.alunos.forEach(function(a, i){ a.status = antes[i]; pintar(i); });
+    atualizarPlacar(); vibrar();
+  }});
+};
+
+function atualizarPlacar(){
+  var p = S.alunos.filter(function(a){ return a.status === 'Presente'; }).length;
+  var n = S.alunos.length, f = n - p;
+  el('capaN').textContent = p + '/' + n;
+  el('capaR').textContent = f === 0 ? 'turma completa' : plural(f, 'faltou', 'faltaram');
+  el('cabPlacar').textContent = p + '/' + n;
+  var bt = el('btTodos');
+  if (bt) bt.hidden = (f === 0);   /* nada a desfazer enquanto todos estao presentes */
+  el('cabPlacar').setAttribute('aria-label', p + ' de ' + n + ' presentes');
+}
+
+function escolherProf(){
+  if (!S.professores.length){
+    toast('Nenhum professor cadastrado. Use a engrenagem na tela inicial.', 'erro');
+    return;
+  }
+  folhaOpcoes('Quem está dando a aula', S.professores.map(function(nome){
+    return { txt:nome, ini:nome, marcado:(nome === S.professor), fn:function(){
+      S.professor = nome;
+      el('profNome').textContent = nome;
+      el('cartaoProf').dataset.vazio = 'false';
+      vibrar();
+    }};
+  }));
+}
+ACOES.escolherProf = escolherProf;
+
+/* ─── salvar ─── */
+ACOES.salvar = function(){
+  if (!S.professor){ toast('Escolha quem está dando a aula', 'erro'); escolherProf(); return; }
+  if (navigator.onLine === false){
+    toast('Sem internet agora. Suas marcações continuam aqui.', 'erro',
+          {rotulo:'Tentar', fn:enviarChamada});
+    return;
+  }
+  enviarChamada();
+};
+
+function enviarChamada(){
+  if (S.salvando) return;
+  S.salvando = true;
+  var b = el('btSalvar');
+  if (b){ b.disabled = true; b.textContent = 'Salvando…'; }
+  api('salvarChamada',
+    [{turma:S.turma, professor:S.professor, token:S.token, presencas:S.alunos}],
+    function(r){ S.salvando = false; vibrar(); ir('fim', {r:r}, true); },
+    function(){
+      /* Nada de re-render aqui: as marcacoes do professor continuam na tela. */
+      S.salvando = false;
+      var bb = el('btSalvar');
+      if (bb){ bb.disabled = false; bb.textContent = 'Salvar chamada'; }
+      toast('Não salvou. Confira a internet e tente de novo.', 'erro',
+            {rotulo:'Tentar de novo', fn:enviarChamada});
+    });
+}
+
+/* ══════════════ TELA: chamada salva ══════════════ */
+TELAS.fim = function(p){
+  var r = p.r || {};
+  var resumo = r.faltas
+    ? plural(r.presentes, 'presente', 'presentes') + ' · ' + plural(r.faltas, 'faltou', 'faltaram')
+    : 'Turma completa, ' + plural(r.total, 'aluno presente', 'alunos presentes');
+  return {
+    titulo:'', solto:true,
+    html:'<div class="fim"><div class="selo-ok">' +
+      '<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>' +
+      '</div><h2>Chamada salva</h2><p>' + esc(r.turma || S.turma) + '<br>' + esc(resumo) + '</p>' +
+      '<button type="button" class="botao" data-acao="outraChamada">Fazer outra chamada</button></div>'
+  };
+};
+ACOES.outraChamada = function(){
+  if (S.viaQr) ir('chamada', {turma:S.turma}, true);
+  else ir('turmas', {}, true);
+};
+</script>

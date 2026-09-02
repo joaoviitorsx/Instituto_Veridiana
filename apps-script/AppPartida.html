@@ -1,0 +1,23 @@
+<script>
+/* Partida: lê a turma da URL e abre a primeira tela. Roda por último. */
+/* ══════════════ partida ══════════════ */
+function iniciar(){
+  function semParametro(){ S.viaQr = false; ir('turmas', {}, true); }
+  try {
+    if (google.script.url && google.script.url.getLocation){
+      var respondeu = false;
+      var prazo = setTimeout(function(){ if (!respondeu){ respondeu = true; semParametro(); } }, 4000);
+      google.script.url.getLocation(function(loc){
+        if (respondeu) return;
+        respondeu = true; clearTimeout(prazo);
+        var t = (loc && loc.parameter && loc.parameter.turma) ? String(loc.parameter.turma) : '';
+        if (t){ S.viaQr = true; ir('chamada', {turma:t}, true); }
+        else semParametro();
+      });
+    } else semParametro();
+  } catch(e){ semParametro(); }
+}
+
+window.addEventListener('resize', medirBarra);
+iniciar();
+</script>

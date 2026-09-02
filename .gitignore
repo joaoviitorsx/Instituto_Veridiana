@@ -1,0 +1,8 @@
+# gerado por gerar-preview.sh, mas commitado de propósito para o
+# projeto abrir no navegador sem rodar nada. Se preferir não versionar,
+# descomente a linha abaixo.
+# preview.html
+
+.DS_Store
+*.swp
+__pycache__/

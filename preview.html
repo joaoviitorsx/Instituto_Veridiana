@@ -1,0 +1,2724 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<title>Chamada — Instituto Veridiana</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script>
+/* A fonte entra por JS de propósito: um <link rel="stylesheet"> comum
+   bloqueia a primeira pintura, e em 4G ruim isso é 1 segundo de tela
+   branca. Assim o texto aparece na hora com a fonte do sistema e a
+   Plus Jakarta Sans troca sozinha quando chega. */
+(function () {
+  var l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap';
+  document.head.appendChild(l);
+})();
+</script>
+<style>
+:root{
+  --roxo:#4A1D6E; --roxo-fundo:#3A1556;
+  /* pares fraco/claro do roxo, seguindo o mesmo padrao dos estados */
+  --roxo-fraco:#EDE4F3; --roxo-claro:#D6C3E8;
+
+  --tinta:#1B1020; --fundo:#F4F1F7; --papel:#FFFFFF;
+  --borda:#E5DCEC; --apagado:#6B5E78;
+
+  --presente:#16704A; --presente-fraco:#E8F3ED;
+  --falta:#AF2338;    --falta-fraco:#FBEAEE;
+  --justif:#8A6314;   --justif-fraco:#FAF2E1;
+
+  --r-p:10px; --r-m:14px; --r-g:22px;
+  --sombra:0 1px 2px rgba(27,16,32,.05), 0 8px 24px rgba(27,16,32,.06);
+  --curva:cubic-bezier(.32,.72,0,1);
+  --barra-h:0px;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none !important}
+
+html{background:var(--fundo)}
+/* clip corta o transbordo lateral SEM virar container de rolagem.
+   Com overflow-x:hidden aqui, o position:sticky do cabecalho para
+   de grudar e a barra roxa some ao rolar. */
+html{overflow-x:clip}
+html,body{max-width:100%}
+
+body{
+  margin:0; background:var(--fundo); min-height:100vh; color:var(--tinta);
+  font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:16px; line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior-y:contain;
+  /* nada de selecao de texto nem menu de long-press: o toque aqui e um
+     controle, nao um paragrafo. Campos de digitacao reativam abaixo. */
+  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  padding-bottom:var(--barra-h);
+}
+
+input,textarea{-webkit-user-select:text;user-select:text}
+
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+
+:focus-visible{outline:3px solid var(--roxo);outline-offset:2px;border-radius:var(--r-p)}
+.sobre-roxo :focus-visible{outline-color:#fff}
+
+/* ─────────── cabecalho fixo ─────────── */
+.cab{
+  position:sticky; top:0; z-index:30;
+  background:var(--roxo); color:#fff;
+  padding-top:env(safe-area-inset-top);
+  transition:box-shadow 200ms var(--curva);
+}
+.cab .linha{display:flex;align-items:center;gap:12px;height:56px;padding:0 8px 0 4px;
+  max-width:644px;margin:0 auto}
+.cab .icone{
+  width:44px;height:44px;flex:0 0 44px;
+  display:grid;place-items:center;border-radius:var(--r-p);
+  transition:background 160ms var(--curva);
+}
+.cab .icone:active{background:rgba(255,255,255,.16)}
+.cab .meio{flex:1;min-width:0;position:relative}
+.cab .marca{
+  position:absolute;top:50%;transform:translateY(-50%);
+  font-size:12px;font-weight:700;letter-spacing:.09em;color:var(--roxo-claro);
+  white-space:nowrap;opacity:1;transition:opacity 200ms var(--curva);pointer-events:none;
+}
+body.rolou .cab .marca, body.semcapa .cab .marca{opacity:0}
+.cab .compacto{
+  font-size:17px;font-weight:600;letter-spacing:-.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  opacity:0; transition:opacity 200ms var(--curva);
+}
+.cab .placar{
+  flex-shrink:0;padding-right:12px;text-align:right;
+  font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;
+  opacity:0; transition:opacity 200ms var(--curva);
+}
+body.rolou .cab{box-shadow:0 1px 0 rgba(0,0,0,.14), 0 6px 16px rgba(27,16,32,.16)}
+body.rolou .cab .compacto,
+body.rolou .cab .placar{opacity:1}
+/* em telas sem capa (gestão) o título já nasce visível */
+body.semcapa .cab .compacto{opacity:1}
+
+/* ─────────── capa roxa que rola ─────────── */
+.capa{background:var(--roxo);color:#fff;padding:4px 20px 24px}
+.capa .topo{display:flex;align-items:flex-end;gap:16px;max-width:620px;margin:0 auto}
+.capa h1{
+  margin:0;font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.15;
+  flex:1;min-width:0;overflow-wrap:anywhere;
+}
+.capa .data{margin:4px 0 0;font-size:14px;color:var(--roxo-claro)}
+.capa .conta{text-align:right;flex-shrink:0;line-height:1}
+.capa .conta b{font-size:32px;font-weight:700;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+.capa .conta span{display:block;font-size:13px;color:var(--roxo-claro);margin-top:4px;font-weight:500}
+
+main{padding:0 0 24px}
+.corpo{padding:20px 16px 0;max-width:620px;margin:0 auto}
+
+/* ─────────── cartao do professor ─────────── */
+.prof{
+  width:100%;display:flex;align-items:center;gap:12px;
+  padding:12px 16px;margin-bottom:20px;text-align:left;
+  background:var(--papel);border:1px solid var(--borda);
+  border-radius:var(--r-m);box-shadow:var(--sombra);
+  transition:background 160ms var(--curva);
+}
+.prof:active{background:var(--fundo)}
+.prof .ini{flex-shrink:0}
+.prof .txt{flex:1;min-width:0}
+.prof .txt small{display:block;font-size:13px;color:var(--apagado);line-height:1.3}
+.prof .txt b{font-size:16px;font-weight:600;display:block;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prof[data-vazio="true"] .txt b{color:var(--apagado);font-weight:400}
+.prof .seta{flex-shrink:0;color:var(--apagado)}
+
+/* ─────────── instrucao ─────────── */
+.instrucao{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:12px;margin-bottom:12px;padding-left:4px;
+}
+.instrucao span{font-size:14px;color:var(--apagado)}
+.instrucao button{
+  font-size:14px;font-weight:600;color:var(--roxo);
+  padding:8px 12px;margin:-8px -4px -8px 0;border-radius:var(--r-p);
+}
+.instrucao button:active{background:var(--roxo-fraco)}
+
+/* ─────────── aviso ─────────── */
+.aviso{
+  display:flex;gap:12px;align-items:flex-start;
+  background:var(--justif-fraco);border:1px solid #E7D4A8;color:#6B4E12;
+  padding:12px 16px;border-radius:var(--r-m);font-size:14px;margin-bottom:16px;
+}
+.aviso svg{flex-shrink:0;margin-top:2px}
+
+/* ─────────── lista agrupada ─────────── */
+/* Uma superficie so, com fios internos. Vinte cartoes flutuando cada um
+   com sua sombra e o visual de dashboard web, nao de lista de aplicativo. */
+.lista{
+  list-style:none;margin:0 0 16px;padding:0;
+  background:var(--papel);border:1px solid var(--borda);
+  border-radius:var(--r-m);box-shadow:var(--sombra);overflow:hidden;
+}
+.li{
+  position:relative;display:flex;align-items:center;gap:12px;
+  padding:12px 16px;min-height:64px;
+  transition:background 160ms var(--curva);
+}
+.li+.li::before{
+  content:"";position:absolute;left:68px;right:0;top:0;height:1px;background:var(--borda);
+}
+.li[data-st="Falta"]{background:var(--falta-fraco)}
+.li[data-st="Justificada"]{background:var(--justif-fraco)}
+.li.tocado{background:var(--roxo-fraco)}
+.li[data-st="Falta"].tocado{background:#F6DDE3}
+.li[data-st="Justificada"].tocado{background:#F5EAD3}
+
+.ini{
+  width:40px;height:40px;flex:0 0 40px;border-radius:50%;
+  display:grid;place-items:center;
+  background:var(--roxo-fraco);color:var(--roxo);
+  font-size:13px;font-weight:700;letter-spacing:.02em;
+  transition:background 160ms var(--curva),color 160ms var(--curva);
+}
+.li[data-st="Falta"] .ini{background:var(--falta);color:#fff}
+.li[data-st="Justificada"] .ini{background:var(--justif);color:#fff}
+
+.nome{flex:1;min-width:0;font-size:16px;font-weight:600;line-height:1.25;overflow-wrap:anywhere}
+
+.marca{flex-shrink:0;display:grid;place-items:center}
+.marca .ok{
+  width:26px;height:26px;border-radius:50%;
+  background:var(--presente-fraco);color:var(--presente);
+  display:grid;place-items:center;
+}
+.marca .selo{
+  padding:6px 12px;border-radius:999px;
+  font-size:13px;font-weight:700;white-space:nowrap;
+}
+.li[data-st="Falta"] .selo{background:var(--falta);color:#fff}
+.li[data-st="Justificada"] .selo{background:var(--justif);color:#fff}
+
+/* ─────────── barra de salvar ─────────── */
+.barra{
+  position:fixed;left:0;right:0;bottom:0;z-index:25;
+  background:var(--fundo);border-top:1px solid var(--borda);
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+}
+.barra .dentro{max-width:620px;margin:0 auto}
+.salvar{
+  width:100%;min-height:52px;padding:16px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:17px;font-weight:700;letter-spacing:-.01em;
+  color:#fff;background:var(--roxo);border-radius:var(--r-m);
+  transition:background 160ms var(--curva);
+}
+.salvar:active{background:var(--roxo-fundo)}
+.salvar:disabled{background:#AC9BBA}
+
+/* ─────────── bottom sheet ─────────── */
+.veu{
+  position:fixed;inset:0;z-index:40;background:rgba(27,16,32,.5);
+  opacity:0;transition:opacity 240ms var(--curva);pointer-events:none;
+}
+.veu[data-aberto="true"]{opacity:1;pointer-events:auto}
+
+.folha{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  background:var(--papel);
+  border-radius:var(--r-g) var(--r-g) 0 0;
+  padding:8px 0 calc(12px + env(safe-area-inset-bottom));
+  transform:translateY(100%);
+  transition:transform 300ms var(--curva);
+  max-height:80vh;display:flex;flex-direction:column;
+}
+.folha[data-aberto="true"]{transform:translateY(0)}
+.folha.arrastando{transition:none}
+.puxador{width:38px;height:4px;border-radius:999px;background:#D9CFE2;margin:4px auto 12px;flex-shrink:0}
+.folha h2{margin:0 20px 8px;font-size:17px;font-weight:700;letter-spacing:-.015em;flex-shrink:0}
+.folha .sub{margin:0 20px 12px;font-size:14px;color:var(--apagado);flex-shrink:0}
+.folha .rolo{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 12px}
+.folha ul{list-style:none;margin:0;padding:0}
+.folha .opc{
+  width:100%;display:flex;align-items:center;gap:12px;
+  min-height:56px;padding:12px;text-align:left;
+  font-size:16px;font-weight:600;border-radius:var(--r-p);
+  transition:background 160ms var(--curva);
+}
+.folha .opc:active{background:var(--fundo)}
+.folha .opc .cv{margin-left:auto;color:var(--roxo);opacity:0;flex-shrink:0}
+.folha .opc[aria-selected="true"] .cv{opacity:1}
+.folha .opc.perigo{color:var(--falta)}
+.folha .opc small{display:block;font-size:13px;font-weight:400;color:var(--apagado)}
+.folha .opc .ini{width:34px;height:34px;flex-basis:34px}
+.folha .acoes{display:flex;gap:8px;padding:12px 20px 0;flex-shrink:0}
+.folha .acoes button{
+  flex:1;min-height:52px;border-radius:var(--r-m);font-size:16px;font-weight:700;
+  transition:background 160ms var(--curva);
+}
+.folha .acoes .cancelar{background:var(--fundo);color:var(--tinta)}
+.folha .acoes .cancelar:active{background:var(--borda)}
+.folha .acoes .confirmar{background:var(--falta);color:#fff}
+.folha .acoes .confirmar:active{background:#8E1B2C}
+
+/* ─────────── toast ─────────── */
+.toast{
+  position:fixed;z-index:60;left:16px;right:16px;
+  bottom:calc(16px + var(--barra-h) + env(safe-area-inset-bottom));
+  max-width:560px;margin:0 auto;
+  display:flex;align-items:flex-start;gap:12px;
+  background:var(--tinta);color:#fff;
+  padding:12px 16px;border-radius:var(--r-m);
+  font-size:15px;font-weight:500;line-height:1.35;
+  box-shadow:0 12px 32px rgba(27,16,32,.32);
+  transform:translateY(150%);opacity:0;pointer-events:none;
+  transition:transform 340ms var(--curva),opacity 200ms var(--curva);
+}
+.toast[data-aberto="true"]{transform:translateY(0);opacity:1;pointer-events:auto}
+.toast svg{flex-shrink:0;margin-top:2px}
+.toast .acao{align-self:center}
+.toast span{flex:1;min-width:0}
+.toast[data-tipo="erro"]{background:#7E1828}
+.toast .acao{
+  flex-shrink:0;font-size:15px;font-weight:700;color:#fff;
+  padding:8px 4px;margin:-8px 0;text-decoration:underline;
+}
+
+/* ─────────── esqueleto ─────────── */
+.osso{
+  background:linear-gradient(90deg,#E9E2EF 25%,#F2EDF6 50%,#E9E2EF 75%);
+  background-size:200% 100%;animation:brilho 1.4s linear infinite;border-radius:var(--r-p);
+}
+@keyframes brilho{to{background-position:-200% 0}}
+.esq{display:flex;align-items:center;gap:12px;padding:12px 16px;min-height:64px}
+.esq+.esq{border-top:1px solid var(--borda)}
+.esq .c{width:40px;height:40px;border-radius:50%;flex-shrink:0}
+.esq .t{height:14px;flex:1}
+.esq .s{width:26px;height:26px;border-radius:50%;flex-shrink:0}
+
+/* ─────────── estados de tela inteira ─────────── */
+.estado{text-align:center;padding:48px 24px}
+.estado .circulo{
+  width:64px;height:64px;border-radius:50%;margin:0 auto 16px;
+  display:grid;place-items:center;background:var(--roxo-fraco);color:var(--roxo);
+}
+.estado h2{font-size:21px;margin:0 0 8px;letter-spacing:-.015em}
+.estado p{color:var(--apagado);margin:0;font-size:15px;line-height:1.5}
+.estado .botao{
+  display:inline-block;margin-top:24px;padding:16px 24px;min-height:52px;
+  font-size:16px;font-weight:600;color:var(--roxo);
+  background:var(--papel);border:1px solid var(--borda);
+  border-radius:var(--r-m);box-shadow:var(--sombra);
+}
+
+/* ─────────── sucesso ─────────── */
+/* O unico momento de movimento do aplicativo. Tudo o mais entra parado. */
+.fim{
+  min-height:calc(100vh - 56px);background:var(--roxo);color:#fff;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:24px;
+}
+.fim .selo-ok{
+  width:88px;height:88px;border-radius:50%;margin-bottom:24px;
+  background:rgba(255,255,255,.14);display:grid;place-items:center;
+}
+/* Visível por padrão; a animação só desenha a entrada. Antes o estado
+   base era escondido, e qualquer coisa que impedisse a animação deixava
+   o check invisível para sempre. */
+.fim .selo-ok svg path{
+  stroke-dasharray:32;
+  animation:risca 420ms var(--curva) 120ms both;
+}
+@keyframes risca{from{stroke-dashoffset:32}to{stroke-dashoffset:0}}
+.fim h2{font-size:24px;margin:0 0 8px;letter-spacing:-.02em}
+.fim p{margin:0;color:var(--roxo-claro);font-size:16px;line-height:1.5}
+.fim .botao{
+  margin-top:32px;padding:16px 24px;min-height:52px;
+  font-size:16px;font-weight:700;color:#fff;
+  border:1px solid rgba(255,255,255,.35);border-radius:var(--r-m);
+  transition:background 160ms var(--curva);
+}
+.fim .botao:active{background:rgba(255,255,255,.14)}
+
+/* ─────────── cartoes de navegacao ─────────── */
+.cartoes{list-style:none;margin:0;padding:0}
+.cartoes li{margin-bottom:12px}
+.cartoes .item{
+  width:100%;display:flex;align-items:center;gap:12px;
+  text-align:left;padding:16px;min-height:64px;
+  font-size:17px;font-weight:600;
+  background:var(--papel);border:1px solid var(--borda);
+  border-radius:var(--r-m);box-shadow:var(--sombra);
+  transition:background 160ms var(--curva);
+}
+.cartoes .item:active{background:var(--fundo)}
+.cartoes .item .txt{flex:1;min-width:0}
+.cartoes .item small{display:block;font-size:13px;font-weight:400;color:var(--apagado);margin-top:2px}
+.cartoes .item .seta{margin-left:auto;color:var(--apagado);flex-shrink:0}
+
+/* ─────────── histórico ─────────── */
+.passo{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  background:var(--papel);border:1px solid var(--borda);
+  border-radius:var(--r-m);box-shadow:var(--sombra);
+  padding:4px;margin-bottom:16px;
+}
+.passo b{flex:1;text-align:center;font-size:16px;font-weight:700;letter-spacing:-.01em}
+.passo button{
+  width:44px;height:44px;flex:0 0 44px;border-radius:var(--r-p);
+  display:grid;place-items:center;color:var(--roxo);
+  transition:background 160ms var(--curva);
+}
+.passo button:active{background:var(--roxo-fraco)}
+.passo button:disabled{color:var(--borda)}
+
+.resumo{
+  background:var(--roxo);color:#fff;border-radius:var(--r-m);
+  padding:20px;text-align:center;
+}
+.resumo b{display:block;font-size:32px;font-weight:700;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+.resumo span{display:block;font-size:14px;color:var(--roxo-claro);margin-top:4px}
+
+.dia{font-size:13px;font-weight:600;color:var(--apagado);margin:16px 4px 8px}
+.nome small{display:block;font-size:13px;font-weight:400;color:var(--apagado);margin-top:2px}
+.pct{
+  flex-shrink:0;font-size:16px;font-weight:700;
+  font-variant-numeric:tabular-nums;color:var(--apagado);
+}
+.pct.cheio{color:var(--presente)}
+/* lista sem avatar: o fio interno alinha com o texto, nao com o circulo */
+.lista.sem-avatar .li+.li::before{left:16px}
+
+.cartao-info{
+  background:var(--papel);border:1px solid var(--borda);
+  border-radius:var(--r-m);box-shadow:var(--sombra);
+  padding:20px;margin-bottom:12px;text-align:center;color:var(--roxo);
+}
+.cartao-info b{display:block;font-size:17px;font-weight:700;color:var(--tinta);margin:12px 0 4px}
+.cartao-info span{display:block;font-size:14px;color:var(--apagado);line-height:1.5}
+
+.botao-cheio{
+  width:100%;min-height:52px;padding:16px;border-radius:var(--r-m);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:16px;font-weight:700;color:#fff;background:var(--roxo);
+  text-decoration:none;transition:background 160ms var(--curva);
+}
+.botao-cheio:active{background:var(--roxo-fundo)}
+.botao-cheio:disabled{background:#AC9BBA}
+
+/* ─────────── aniversário ─────────── */
+.bolo{
+  display:flex;gap:12px;align-items:flex-start;
+  background:var(--justif-fraco);border:1px solid #E7D4A8;color:#6B4E12;
+  padding:16px;border-radius:var(--r-m);margin-bottom:20px;
+}
+.bolo b{display:block;font-size:15px;font-weight:700;margin-bottom:4px}
+.bolo span{display:block;font-size:14px;line-height:1.5}
+
+/* ─────────── precisam de atenção ─────────── */
+.risco{
+  background:var(--papel);border:1px solid var(--borda);
+  border-radius:var(--r-m);box-shadow:var(--sombra);
+  padding:16px;margin-bottom:12px;
+}
+.cab-risco{display:flex;align-items:center;gap:12px}
+.cab-risco .ini{background:var(--falta);color:#fff}
+.risco .detalhe{margin:12px 0 0;font-size:14px;color:var(--apagado);line-height:1.5}
+.botao-zap,.botao-vazio{
+  width:100%;min-height:52px;margin-top:16px;padding:14px;border-radius:var(--r-m);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:16px;font-weight:700;text-decoration:none;
+  transition:background 160ms var(--curva);
+}
+.botao-zap{background:var(--presente);color:#fff}
+.botao-zap:active{background:#115A3B}
+.botao-vazio{background:var(--fundo);color:var(--apagado);border:1px dashed var(--borda)}
+.botao-vazio:active{background:var(--borda)}
+
+/* ─────────── números do relatório ─────────── */
+.numeros{display:flex;gap:8px}
+.numeros div{
+  flex:1;background:var(--roxo);color:#fff;border-radius:var(--r-m);
+  padding:16px 8px;text-align:center;
+}
+.numeros b{display:block;font-size:24px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.numeros span{display:block;font-size:12px;color:var(--roxo-claro);margin-top:4px}
+
+/* ─────────── PIN ─────────── */
+.pin{padding:32px 24px calc(24px + env(safe-area-inset-bottom));text-align:center;max-width:400px;margin:0 auto}
+.pin h2{font-size:21px;margin:0 0 8px;letter-spacing:-.015em}
+.pin p{color:var(--apagado);margin:0 0 32px;font-size:15px}
+.pontos{display:flex;justify-content:center;gap:16px;margin-bottom:40px}
+.pontos i{
+  width:14px;height:14px;border-radius:50%;
+  background:var(--borda);transition:background 160ms var(--curva);
+}
+.pontos i.cheio{background:var(--roxo)}
+.pontos.errou{animation:sacode 340ms var(--curva)}
+@keyframes sacode{
+  20%{transform:translateX(-8px)} 40%{transform:translateX(8px)}
+  60%{transform:translateX(-5px)} 80%{transform:translateX(5px)}
+}
+.teclado{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.teclado button{
+  min-height:64px;border-radius:var(--r-m);
+  font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;
+  background:var(--papel);border:1px solid var(--borda);box-shadow:var(--sombra);
+  transition:background 160ms var(--curva);
+}
+.teclado button:active{background:var(--roxo-fraco)}
+.teclado .vazia{background:none;border:none;box-shadow:none;pointer-events:none}
+.teclado .apagar{box-shadow:none;background:none;border:none;color:var(--apagado)}
+
+/* ─────────── campos ─────────── */
+.campo{margin-bottom:16px}
+.campo label{display:block;font-size:13px;font-weight:600;color:var(--apagado);margin-bottom:8px}
+.campo input{
+  width:100%;min-height:52px;padding:12px 16px;
+  font-family:inherit;font-size:16px;color:var(--tinta);
+  background:var(--papel);border:1px solid var(--borda);border-radius:var(--r-m);
+}
+.campo input:focus{outline:none;border-color:var(--roxo);box-shadow:0 0 0 3px var(--roxo-fraco)}
+
+.busca{position:relative;margin-bottom:16px}
+.busca svg{position:absolute;left:16px;top:50%;margin-top:-10px;color:var(--apagado);pointer-events:none}
+.busca input{
+  width:100%;min-height:52px;padding:12px 16px 12px 46px;
+  font-family:inherit;font-size:16px;color:var(--tinta);
+  background:var(--papel);border:1px solid var(--borda);border-radius:var(--r-m);
+}
+.busca input:focus{outline:none;border-color:var(--roxo);box-shadow:0 0 0 3px var(--roxo-fraco)}
+
+/* ─────────── abas de filtro ─────────── */
+.filtro{display:flex;gap:8px;margin-bottom:16px}
+.filtro button{
+  flex:1;min-height:44px;border-radius:var(--r-p);
+  font-size:14px;font-weight:600;color:var(--apagado);
+  background:var(--papel);border:1px solid var(--borda);
+  transition:background 160ms var(--curva),color 160ms var(--curva);
+}
+.filtro button[aria-selected="true"]{background:var(--roxo);border-color:var(--roxo);color:#fff}
+
+/* ─────────── titulo de secao ─────────── */
+.secao{
+  display:flex;align-items:center;gap:8px;
+  font-size:14px;font-weight:600;color:var(--apagado);
+  margin:24px 4px 8px;
+}
+.recolhe{
+  width:100%;display:flex;align-items:center;gap:8px;
+  min-height:52px;padding:0 4px;font-size:14px;font-weight:600;color:var(--apagado);
+}
+.recolhe .seta{transition:transform 200ms var(--curva)}
+.recolhe[aria-expanded="true"] .seta{transform:rotate(90deg)}
+
+/* ─────────── QR ─────────── */
+.folha-qr{
+  background:var(--papel);border:1px solid var(--borda);border-radius:var(--r-m);
+  box-shadow:var(--sombra);padding:24px;text-align:center;margin-bottom:16px;
+}
+.folha-qr .turma{font-size:21px;font-weight:700;letter-spacing:-.015em;margin:0 0 16px;overflow-wrap:anywhere}
+.folha-qr svg{width:100%;height:auto;max-width:280px;display:block;margin:0 auto;shape-rendering:crispEdges}
+.folha-qr .marca{margin:16px 0 0;font-size:13px;font-weight:600;color:var(--apagado)}
+.duplo{display:flex;gap:8px}
+.duplo button{
+  flex:1;min-height:52px;border-radius:var(--r-m);font-size:16px;font-weight:700;
+  transition:background 160ms var(--curva);
+}
+.duplo .principal{background:var(--roxo);color:#fff}
+.duplo .principal:active{background:var(--roxo-fundo)}
+.duplo .secundario{background:var(--papel);color:var(--roxo);border:1px solid var(--borda)}
+.duplo .secundario:active{background:var(--fundo)}
+
+/* ─────────── rodape de acao ─────────── */
+.rodape-acao{
+  position:fixed;left:0;right:0;bottom:0;z-index:25;
+  background:var(--fundo);border-top:1px solid var(--borda);
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+}
+.rodape-acao .dentro{max-width:620px;margin:0 auto}
+.rodape-acao button{
+  width:100%;min-height:52px;padding:16px;border-radius:var(--r-m);
+  font-size:17px;font-weight:700;color:#fff;background:var(--roxo);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:background 160ms var(--curva);
+}
+.rodape-acao button:active{background:var(--roxo-fundo)}
+
+/* imprimir: so o cartaz do QR, sem nada de interface */
+@media print{
+  .cab,.barra,.duplo,.folha,.veu,.toast{display:none !important}
+  body{background:#fff;padding:0}
+  .corpo{padding:0;max-width:none}
+  .folha-qr{border:none;box-shadow:none;padding:0}
+  .folha-qr svg{max-width:60vw}
+  .folha-qr .turma{font-size:24px}
+  @page{size:A5;margin:16mm}
+}
+
+/* ── responsivo ── */
+@media (max-width:359px){
+  .capa{padding:4px 16px 20px}
+  .capa h1{font-size:21px}
+  .capa .conta b{font-size:24px}
+  .corpo{padding:16px 12px 0}
+  .nome{font-size:16px}
+  .teclado button{min-height:56px;font-size:21px}
+}
+@media (min-width:640px){
+  .corpo{padding:24px 24px 0}
+  .capa{padding:4px 24px 24px}
+}
+/* celular deitado: a capa nao pode comer a tela toda */
+@media (orientation:landscape) and (max-height:520px){
+  .capa{padding:0 20px 16px}
+  .capa h1{font-size:21px}
+  .capa .conta b{font-size:24px}
+  .pin{padding-top:16px}
+  .teclado button{min-height:52px}
+  .folha{max-height:92vh}
+}
+/* dvh acompanha a barra de endereco do Chrome no Android */
+@supports (height:100dvh){
+  .fim{min-height:calc(100dvh - 56px)}
+  .folha{max-height:80dvh}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+  .fim .selo-ok svg path{stroke-dashoffset:0}
+}
+</style>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   Mock do google.script.run — SÓ PARA ABRIR NO NAVEGADOR.
+   Não vai para o Apps Script. O gerar-preview.sh injeta este
+   arquivo no topo do Index.html e cria o preview.html.
+
+   Ativa apenas quando window.google não existe.
+
+   Abra assim:
+     preview.html                      -> tela de escolher turma
+     preview.html?turma=Jazz%20Juvenil -> como se viesse do QR
+     preview.html?dev=1                -> painel de rede e falhas
+   Código da gestão no mock: 1234
+   ══════════════════════════════════════════════════════════════ */
+(function () {
+  if (window.google) return;
+
+  var P = new URLSearchParams(location.search);
+  var CFG = { atraso: 420, falha: 0, offline: false };
+
+  /* ─── dados de mentira, no formato da planilha ─── */
+  var TURMAS = [
+    { nome:'Ballet Infantil I', ativa:true },
+    { nome:'Ballet Infantil II', ativa:true },
+    { nome:'Jazz Juvenil', ativa:true },
+    { nome:'Danças Urbanas', ativa:true },
+    { nome:'Contemporâneo Avançado', ativa:true },
+    { nome:'Teatro', ativa:true }
+  ];
+  var PROFS = ['Vera Lúcia Sampaio','Aline Ferreira','Bruno Tavares','Cláudia Nogueira',
+               'Denise Rocha','Iara Mendes','Rafael Duarte','Sâmia Alencar'];
+  var ALUNOS = [];
+  var DDD = ['85'];
+  function fone(i){ return DDD[0] + '9' + String(90000000 + i * 137 % 9999999).padStart(8,'0'); }
+  function nasc(i, idadeBase){
+    var ano = 2026 - idadeBase - (i % 3);
+    var mes = String(1 + (i * 7) % 12).padStart(2,'0');
+    var dia = String(1 + (i * 11) % 27).padStart(2,'0');
+    return ano + '-' + mes + '-' + dia;
+  }
+  var RESP = ['Ana Paula Sousa','Josefa Lima','Marcos Ferreira','Rita de Cássia Alves',
+              'Cleide Nunes','Antônio Barbosa','Sandra Rodrigues','Fabiana Vasconcelos',
+              'Elisângela Pinheiro','Raimundo Costa','Vanessa Gomes','Cícero Freitas'];
+  var seqAluno = 0;
+  function povoar(turma, nomes, inativos, idadeBase){
+    nomes.forEach(function (n){
+      seqAluno++;
+      ALUNOS.push({ turma:turma, nome:n, ativo:true,
+        nascimento: nasc(seqAluno, idadeBase || 8),
+        responsavel: RESP[seqAluno % RESP.length],
+        telefone: fone(seqAluno) });
+    });
+    (inativos || []).forEach(function (n){
+      seqAluno++;
+      ALUNOS.push({ turma:turma, nome:n, ativo:false,
+        nascimento: nasc(seqAluno, idadeBase || 8), responsavel:'', telefone:'' });
+    });
+  }
+  povoar('Ballet Infantil I', [
+    'Ana Beatriz Sousa','Alice Ferreira Lima','Cecília Marques','Clara Nunes Barbosa',
+    'Elisa Rodrigues','Emanuelly Vasconcelos','Gabriela Pinheiro','Helena Costa Braga',
+    'Isabelly Gomes','Júlia Freitas','Lara Cavalcante','Laura Bezerra Pontes',
+    'Lívia Andrade','Maitê Oliveira','Manuela Teixeira','Maria Clara Silva',
+    'Melissa Farias','Sophia Ribeiro','Valentina Moreira','Yasmin Carvalho'
+  ], ['Beatriz Aguiar','Rebeca Lopes'], 8);
+  povoar('Ballet Infantil II', [
+    'Agatha Correia','Bianca Rocha','Catarina Melo','Eloá Santiago','Esther Pereira',
+    'Fernanda Duarte','Giovanna Alves','Heloísa Martins','Ingrid Barros','Larissa Cunha',
+    'Letícia Ramos','Luiza Sales','Marina Fontenele','Nicole Batista','Rafaela Queiroz',
+    'Sarah Colares'
+  ], ['Vitória Amorim'], 10);
+  povoar('Jazz Juvenil', [
+    'Amanda Furtado','Camila Verissimo','Daniel Aragão','Emanuel Girão','Gabriel Uchôa',
+    'Isadora Paiva','João Pedro Bastos','Kauã Nascimento','Lucas Timbó','Mariana Frota',
+    'Matheus Bandeira','Nathália Coelho','Pedro Henrique Rios','Rebeca Studart',
+    'Samuel Linhares','Thaís Girão','Vinícius Parente','Yago Menezes'
+  ], [], 15);
+  povoar('Danças Urbanas', [
+    'Alan Saraiva','Breno Vidal','Caio Feitosa','Davi Lucas Aguiar','Erick Monteiro',
+    'Felipe Cordeiro','Gustavo Bonfim','Igor Marinho','Jonas Peixoto','Kaique Torres',
+    'Lucas Gadelha','Miguel Arruda','Nicolas Viana','Otávio Praxedes','Renan Chaves',
+    'Thiago Bastos','Wesley Simões'
+  ], ['Arthur Pontes'], 16);
+  povoar('Contemporâneo Avançado', [
+    'Beatriz Holanda','Carolina Ximenes','Débora Feijó','Eduarda Salgado','Flávia Rocha',
+    'Isabela Fiúza','Juliana Bastos','Karina Mota','Letícia Sampaio','Marcela Tavares',
+    'Priscila Gondim','Raquel Belchior','Talita Moura','Verônica Lessa'
+  ], [], 19);
+  povoar('Teatro', [
+    'André Luiz Cabral','Bruna Siqueira','Carlos Eduardo Pires','Diana Castelo',
+    'Elias Fontes','Giovana Prado','Henrique Mesquita','Iasmin Vieira','Kelly Damasceno',
+    'Leonardo Pires','Milena Aguiar','Otávio Brandão'
+  ], ['Sabrina Lira'], 14);
+
+  var AULAS = [
+    { data:'2026-08-04', turma:'Ballet Infantil I', professor:'Vera Lúcia Sampaio' },
+    { data:'2026-08-06', turma:'Jazz Juvenil', professor:'Bruno Tavares' },
+    { data:'2026-08-11', turma:'Ballet Infantil I', professor:'Vera Lúcia Sampaio' },
+    { data:'2026-08-13', turma:'Jazz Juvenil', professor:'Bruno Tavares' },
+    { data:'2026-08-18', turma:'Ballet Infantil I', professor:'Vera Lúcia Sampaio' },
+    { data:'2026-08-20', turma:'Jazz Juvenil', professor:'Bruno Tavares' },
+    { data:'2026-08-21', turma:'Danças Urbanas', professor:'Rafael Duarte' },
+    { data:'2026-08-25', turma:'Ballet Infantil I', professor:'Vera Lúcia Sampaio' },
+    { data:'2026-08-27', turma:'Jazz Juvenil', professor:'Bruno Tavares' },
+    { data:'2026-08-28', turma:'Contemporâneo Avançado', professor:'Aline Ferreira' },
+    { data:'2026-08-28', turma:'Danças Urbanas', professor:'Rafael Duarte' },
+    { data:'2026-09-01', turma:'Ballet Infantil I', professor:'Vera Lúcia Sampaio' },
+    { data:'2026-09-01', turma:'Danças Urbanas', professor:'Rafael Duarte' },
+    { data:'2026-09-02', turma:'Jazz Juvenil', professor:'Bruno Tavares' },
+    { data:'2026-09-02', turma:'Teatro', professor:'Iara Mendes' },
+    { data:'2026-09-02', turma:'Ballet Infantil II', professor:'Cláudia Nogueira' }
+  ];
+  /* Quem sumiu de verdade, para a tela de evasão ter o que mostrar. */
+  var SUMIDOS = { 'Cecília Marques':'2026-08-11', 'Kauã Nascimento':'2026-08-13',
+                  'Igor Marinho':'2026-08-21' };
+  var REGISTROS = [];
+  AULAS.forEach(function (aula, ai){
+    ALUNOS.forEach(function (al, i){
+      if (al.turma !== aula.turma || !al.ativo) return;
+      var st = 'Presente';
+      if (SUMIDOS[al.nome] && aula.data >= SUMIDOS[al.nome]) st = 'Falta';
+      else if ((i * 13 + ai * 7) % 23 === 0) st = 'Falta';
+      else if ((i * 13 + ai * 7) % 37 === 0) st = 'Justificada';
+      REGISTROS.push({ data:aula.data, turma:aula.turma, professor:aula.professor,
+                       aluno:al.nome, status:st });
+    });
+  });
+  var CHAMADAS = AULAS.slice();
+
+  var TOKENS = {};
+  var PIN = '1234';
+  var URL_APP = 'https://script.google.com/macros/s/AKfycbwEXEMPLO0000000000000000000000000000/exec';
+
+  function hoje(){
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function chave(s){
+    return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .trim().toLowerCase().replace(/\s+/g,' ');
+  }
+  function pt(a,b){ return String(a).localeCompare(String(b),'pt-BR'); }
+  function idadeEm(nascISO, refISO){
+    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(String(nascISO||''))) return null;
+    var n = nascISO.split('-').map(Number), r = (refISO || hoje()).split('-').map(Number);
+    var i = r[0]-n[0];
+    if (r[1]<n[1] || (r[1]===n[1] && r[2]<n[2])) i--;
+    return i >= 0 ? i : null;
+  }
+  function aniversariosEntre(de, ate, turma){
+    var base = new Date(), alvos = {};
+    for (var d = de; d <= ate; d++){
+      var x = new Date(base.getTime() + d*86400000);
+      var iso = x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
+      alvos[iso.slice(5)] = iso;
+    }
+    var fora = [];
+    ALUNOS.forEach(function(a){
+      if (!a.ativo || !a.nascimento) return;
+      if (turma && a.turma !== turma) return;
+      var md = a.nascimento.slice(5);
+      if (!alvos[md]) return;
+      fora.push({aluno:a.nome, turma:a.turma, dia:alvos[md], faz:idadeEm(a.nascimento, alvos[md])});
+    });
+    return fora.sort(function(x,y){ return x.dia===y.dia ? pt(x.aluno,y.aluno) : (x.dia<y.dia?-1:1); });
+  }
+  function exigirPin(p){ if (String(p) !== PIN) throw new Error('Código errado. Tente de novo.'); }
+  function exigirNome(n){
+    var v = String(n==null?'':n).trim().replace(/\s+/g,' ');
+    if (v.length < 2) throw new Error('Escreva o nome com pelo menos 2 letras.');
+    return v;
+  }
+  function acharAluno(nome, turma){
+    var a = ALUNOS.filter(function(x){
+      return chave(x.nome)===chave(nome) && (!turma || x.turma===turma);
+    });
+    if (!a.length) throw new Error('Aluno não encontrado.');
+    if (a.length > 1) throw new Error('Existe mais de um "'+nome+'". Abra pela turma para não mexer no aluno errado.');
+    return a[0];
+  }
+
+  /* ─── as funções que existem no Codigo.gs ─── */
+  var API = {
+    listarTurmas: function(){
+      var comAluno = {};
+      ALUNOS.forEach(function(a){ if (a.ativo) comAluno[a.turma] = 1; });
+      return TURMAS.filter(function(t){ return t.ativa && comAluno[t.nome]; })
+                   .map(function(t){ return t.nome; }).sort(pt);
+    },
+    carregarTurma: function(turma){
+      var alunos = ALUNOS.filter(function(a){ return a.turma===turma && a.ativo; })
+                         .map(function(a){ return a.nome; }).sort(pt);
+      var ult = '';
+      for (var i = CHAMADAS.length-1; i >= 0; i--)
+        if (CHAMADAS[i].turma === turma && PROFS.indexOf(CHAMADAS[i].professor) !== -1){
+          ult = CHAMADAS[i].professor; break;
+        }
+      return {
+        turma:turma, alunos:alunos, professores:PROFS.slice().sort(pt),
+        professorSugerido:ult, data:hoje(),
+        jaRegistrada: CHAMADAS.some(function(c){ return c.data===hoje() && c.turma===turma; }),
+        aniversarios: aniversariosEntre(0, 0, turma)
+      };
+    },
+    salvarChamada: function(d){
+      if (!d || !d.turma) throw new Error('Turma não informada.');
+      if (!d.professor) throw new Error('Escolha quem está dando a aula.');
+      if (!d.presencas || !d.presencas.length) throw new Error('Nenhum aluno na lista.');
+      if (d.token && TOKENS[d.token]) return TOKENS[d.token];
+      CHAMADAS.push({ data:hoje(), turma:d.turma, professor:d.professor });
+      d.presencas.forEach(function(p){
+        REGISTROS.push({ data:hoje(), turma:d.turma, professor:d.professor,
+                         aluno:p.aluno, status:p.status });
+      });
+      var pres = d.presencas.filter(function(p){ return p.status==='Presente'; }).length;
+      var r = { ok:true, turma:d.turma, professor:d.professor, data:hoje(),
+                total:d.presencas.length, presentes:pres, faltas:d.presencas.length-pres };
+      if (d.token) TOKENS[d.token] = r;
+      return r;
+    },
+    entrarNaGestao: function(pin){
+      exigirPin(pin);
+      return {
+        ok:true,
+        turmas: TURMAS.filter(function(t){ return t.ativa; }).length,
+        alunosAtivos: ALUNOS.filter(function(a){ return a.ativo; }).length,
+        alunosInativos: ALUNOS.filter(function(a){ return !a.ativo; }).length,
+        professores: PROFS.length
+      };
+    },
+    listarTurmasCompleto: function(pin){
+      exigirPin(pin);
+      return TURMAS.filter(function(t){ return t.ativa; }).map(function(t){
+        return { nome:t.nome,
+          ativos: ALUNOS.filter(function(a){ return a.turma===t.nome && a.ativo; }).length,
+          inativos: ALUNOS.filter(function(a){ return a.turma===t.nome && !a.ativo; }).length };
+      }).sort(function(a,b){ return pt(a.nome,b.nome); });
+    },
+    criarTurma: function(pin, nome){
+      exigirPin(pin); var n = exigirNome(nome);
+      var j = TURMAS.filter(function(t){ return chave(t.nome)===chave(n); })[0];
+      if (j && j.ativa) throw new Error('Já existe uma turma com esse nome.');
+      if (j){ j.ativa = true; return {ok:true, nome:j.nome}; }
+      TURMAS.push({ nome:n, ativa:true }); return {ok:true, nome:n};
+    },
+    renomearTurma: function(pin, atual, novo){
+      exigirPin(pin); var n = exigirNome(novo);
+      if (TURMAS.some(function(t){ return chave(t.nome)===chave(n) && t.nome!==atual; }))
+        throw new Error('Já existe uma turma com esse nome.');
+      var t = TURMAS.filter(function(x){ return x.nome===atual; })[0];
+      if (!t) throw new Error('Turma não encontrada.');
+      t.nome = n;
+      ALUNOS.forEach(function(a){ if (a.turma===atual) a.turma = n; });
+      CHAMADAS.forEach(function(c){ if (c.turma===atual) c.turma = n; });
+      return {ok:true, nome:n};
+    },
+    arquivarTurma: function(pin, nome){
+      exigirPin(pin);
+      if (ALUNOS.some(function(a){ return a.turma===nome && a.ativo; }))
+        throw new Error('Mova ou desative os alunos antes de arquivar.');
+      var t = TURMAS.filter(function(x){ return x.nome===nome; })[0];
+      if (!t) throw new Error('Turma não encontrada.');
+      t.ativa = false; return {ok:true};
+    },
+    listarAlunos: function(pin, turma, incluirInativos){
+      exigirPin(pin);
+      return ALUNOS.filter(function(a){
+        if (turma && a.turma!==turma) return false;
+        if (!incluirInativos && !a.ativo) return false;
+        return true;
+      }).map(function(a){ return {nome:a.nome, turma:a.turma, ativo:a.ativo,
+          nascimento:a.nascimento, responsavel:a.responsavel, telefone:a.telefone}; })
+        .sort(function(a,b){ return pt(a.nome,b.nome); });
+    },
+    adicionarAluno: function(pin, turma, nome, dados){
+      exigirPin(pin); var n = exigirNome(nome);
+      if (ALUNOS.some(function(a){ return a.turma===turma && chave(a.nome)===chave(n); }))
+        throw new Error('Esse aluno já está nessa turma.');
+      if (!TURMAS.some(function(t){ return t.nome===turma && t.ativa; }))
+        TURMAS.push({nome:turma, ativa:true});
+      var d = dados || {};
+      ALUNOS.push({turma:turma, nome:n, ativo:true, nascimento:d.nascimento||'',
+                   responsavel:d.responsavel||'', telefone:(d.telefone||'').replace(/[^0-9]/g,'')});
+      return {ok:true};
+    },
+    moverAluno: function(pin, nome, destino, origem){
+      exigirPin(pin);
+      var a = acharAluno(nome, origem);
+      if (a.turma === destino) return {ok:true};
+      if (ALUNOS.some(function(x){ return x.turma===destino && chave(x.nome)===chave(a.nome); }))
+        throw new Error('Já existe um aluno com esse nome em '+destino+'.');
+      a.turma = destino; return {ok:true};
+    },
+    desativarAluno: function(pin, nome, turma){ exigirPin(pin); acharAluno(nome,turma).ativo = false; return {ok:true}; },
+    reativarAluno:  function(pin, nome, turma){ exigirPin(pin); acharAluno(nome,turma).ativo = true;  return {ok:true}; },
+    listarProfessores: function(pin){ exigirPin(pin); return PROFS.slice().sort(pt); },
+    adicionarProfessor: function(pin, nome){
+      exigirPin(pin); var n = exigirNome(nome);
+      if (PROFS.some(function(p){ return chave(p)===chave(n); }))
+        throw new Error('Esse professor já está na equipe.');
+      PROFS.push(n); return {ok:true};
+    },
+    removerProfessor: function(pin, nome){
+      exigirPin(pin);
+      var i = PROFS.findIndex(function(p){ return chave(p)===chave(nome); });
+      if (i === -1) throw new Error('Professor não encontrado.');
+      PROFS.splice(i,1); return {ok:true};
+    },
+    obterUrlApp: function(pin){ exigirPin(pin); return URL_APP; },
+
+    obterLinkPlanilha: function(pin){
+      exigirPin(pin);
+      return { url:'https://docs.google.com/spreadsheets/d/1EXEMPLO000000000000000000000/edit',
+               nome:'Frequência — Veridiana' };
+    },
+    arrumarPlanilha: function(pin){ exigirPin(pin); return {ok:true, mensagem:'Planilha arrumada.'}; },
+
+    mesesComChamada: function(pin){
+      exigirPin(pin);
+      var v = {};
+      CHAMADAS.forEach(function(c){ v[c.data.slice(0,7)] = 1; });
+      return Object.keys(v).sort().reverse();
+    },
+    atualizarAluno: function(pin, nome, turma, dados){
+      exigirPin(pin);
+      var a = acharAluno(nome, turma), d = dados || {};
+      a.nascimento = d.nascimento || '';
+      a.responsavel = d.responsavel || '';
+      a.telefone = (d.telefone || '').replace(/[^0-9]/g,'');
+      return {ok:true};
+    },
+    alunosEmRisco: function(pin, minimo){
+      exigirPin(pin);
+      var alvo = Math.max(2, Number(minimo) || 3);
+      var datas = {}, st = {};
+      REGISTROS.forEach(function(r){
+        if (!datas[r.turma]) datas[r.turma] = {};
+        datas[r.turma][r.data] = 1;
+        st[r.turma+'|'+r.aluno+'|'+r.data] = r.status;
+      });
+      Object.keys(datas).forEach(function(t){
+        datas[t] = Object.keys(datas[t]).sort().reverse();
+      });
+      var fora = [];
+      ALUNOS.forEach(function(a){
+        if (!a.ativo) return;
+        var ds = datas[a.turma];
+        if (!ds || !ds.length) return;
+        var seguidas=0, just=0, ult='', desde='';
+        for (var i=0;i<ds.length;i++){
+          var x = st[a.turma+'|'+a.nome+'|'+ds[i]];
+          if (x === undefined) break;
+          if (x === 'Presente'){ ult = ds[i]; break; }
+          seguidas++; if (x === 'Justificada') just++;
+          desde = ds[i];
+        }
+        if (seguidas >= alvo) fora.push({ aluno:a.nome, turma:a.turma, faltas:seguidas,
+          justificadas:just, desde:desde, ultimaPresenca:ult,
+          responsavel:a.responsavel, telefone:a.telefone, idade:idadeEm(a.nascimento) });
+      });
+      fora.sort(function(x,y){ return y.faltas - x.faltas || pt(x.aluno,y.aluno); });
+      return { minimo:alvo, alunos:fora };
+    },
+    contarRisco: function(pin){ return API.alunosEmRisco(pin, 3).alunos.length; },
+    aniversariantesSemana: function(pin){ exigirPin(pin); return aniversariosEntre(0, 6, ''); },
+    relatorioPeriodo: function(pin, ini, fim){
+      exigirPin(pin);
+      if (ini > fim) throw new Error('A data de início vem depois da data de fim.');
+      var linhas = REGISTROS.filter(function(r){ return r.data >= ini && r.data <= fim; });
+      var ben = {}, aulas = {}, pt2 = {};
+      linhas.forEach(function(r){
+        ben[r.aluno] = 1; aulas[r.data+'|'+r.turma] = 1;
+        if (!pt2[r.turma]) pt2[r.turma] = {turma:r.turma, dias:{}, alunos:{}, presentes:0, total:0};
+        var t = pt2[r.turma];
+        t.dias[r.data]=1; t.alunos[r.aluno]=1; t.total++;
+        if (r.status==='Presente') t.presentes++;
+      });
+      var idades = {};
+      ALUNOS.forEach(function(a){ idades[a.nome] = idadeEm(a.nascimento); });
+      var faixas = {'Crianças (até 11)':0,'Adolescentes (12 a 17)':0,'Jovens (18 a 29)':0,'Sem data de nascimento':0};
+      Object.keys(ben).forEach(function(n){
+        var i = idades[n];
+        if (i === null || i === undefined) faixas['Sem data de nascimento']++;
+        else if (i <= 11) faixas['Crianças (até 11)']++;
+        else if (i <= 17) faixas['Adolescentes (12 a 17)']++;
+        else faixas['Jovens (18 a 29)']++;
+      });
+      var turmas = Object.keys(pt2).map(function(k){
+        var t = pt2[k];
+        return {turma:t.turma, aulas:Object.keys(t.dias).length, alunos:Object.keys(t.alunos).length,
+                presentes:t.presentes, total:t.total,
+                pct: t.total ? Math.round(t.presentes*100/t.total) : 0};
+      }).sort(function(a,b){ return pt(a.turma,b.turma); });
+      var P=0,T=0; turmas.forEach(function(t){ P+=t.presentes; T+=t.total; });
+      return { inicio:ini, fim:fim, beneficiarios:Object.keys(ben).length,
+               aulas:Object.keys(aulas).length, turmas:turmas, faixas:faixas,
+               frequencia: T ? Math.round(P*100/T) : 0 };
+    },
+    resumoHistorico: function(pin, mes){
+      exigirPin(pin);
+      var doMes = REGISTROS.filter(function(r){ return r.data.slice(0,7) === mes; });
+      var mapa = {}, porTurma = {};
+      doMes.forEach(function(r){
+        var k = r.data + '|' + r.turma;
+        if (!mapa[k]) mapa[k] = {data:r.data, turma:r.turma, professor:r.professor, presentes:0, total:0};
+        mapa[k].total++;
+        if (r.status === 'Presente') mapa[k].presentes++;
+        if (!porTurma[r.turma]) porTurma[r.turma] = {turma:r.turma, dias:{}, presentes:0, total:0};
+        porTurma[r.turma].dias[r.data] = 1;
+        porTurma[r.turma].total++;
+        if (r.status === 'Presente') porTurma[r.turma].presentes++;
+      });
+      var aulas = Object.keys(mapa).map(function(k){ return mapa[k]; });
+      aulas.sort(function(a,b){ return a.data===b.data ? pt(a.turma,b.turma) : (a.data<b.data?1:-1); });
+      var turmas = Object.keys(porTurma).map(function(k){
+        var t = porTurma[k];
+        return {turma:t.turma, aulas:Object.keys(t.dias).length, presentes:t.presentes,
+                total:t.total, pct: t.total ? Math.round(t.presentes*100/t.total) : 0};
+      }).sort(function(a,b){ return pt(a.turma,b.turma); });
+      var P=0, T=0;
+      turmas.forEach(function(t){ P+=t.presentes; T+=t.total; });
+      return { mes:mes, aulas:aulas, turmas:turmas,
+               totais:{ aulas:aulas.length, presentes:P, marcacoes:T,
+                        pct: T ? Math.round(P*100/T) : 0 } };
+    }
+  };
+
+  /* ─── a ponte, igualzinha à do Apps Script ─── */
+  function Corredor(ok, err){ this._ok = ok; this._err = err; }
+  Corredor.prototype.withSuccessHandler = function(f){ return new Corredor(f, this._err); };
+  Corredor.prototype.withFailureHandler = function(f){ return new Corredor(this._ok, f); };
+  Object.keys(API).forEach(function(nome){
+    Corredor.prototype[nome] = function(){
+      var args = [].slice.call(arguments), ok = this._ok, err = this._err;
+      var espera = CFG.atraso + Math.random() * CFG.atraso * 0.6;
+      setTimeout(function(){
+        if (CFG.offline){ if (err) err(new Error('Falha na rede.')); return; }
+        if (CFG.falha && Math.random() < CFG.falha){
+          if (err) err(new Error('Falha de rede simulada.')); return;
+        }
+        var r;
+        try { r = API[nome].apply(null, args); }
+        catch (e){ if (err) err(e); return; }
+        if (ok) ok(JSON.parse(JSON.stringify(r)));
+      }, espera);
+      console.log('[mock] ' + nome, args);
+    };
+  });
+
+  window.google = {
+    script: {
+      get run(){ return new Corredor(null, null); },
+      url: {
+        getLocation: function(cb){
+          setTimeout(function(){
+            var p = {};
+            P.forEach(function(v,k){ p[k] = v; });
+            cb({ parameter:p, parameters:{}, hash:'' });
+          }, 60);
+        }
+      },
+      host: { close: function(){}, setHeight: function(){}, origin:'' }
+    }
+  };
+
+  /* ─── painel de rede, só com ?dev=1 ─── */
+  if (P.get('dev') === '1'){
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;right:8px;bottom:8px;z-index:9999;background:#1B1020;color:#fff;'+
+      'font:12px/1.4 system-ui;padding:10px 12px;border-radius:10px;opacity:.94;max-width:190px';
+    d.innerHTML = '<b>mock</b><br>' +
+      '<label><input type="radio" name="rd" checked> boa (420ms)</label><br>' +
+      '<label><input type="radio" name="rd"> 4G ruim (2.5s, 25% falha)</label><br>' +
+      '<label><input type="radio" name="rd"> offline</label><br>' +
+      '<span style="opacity:.6">PIN 1234</span>';
+    document.body.appendChild(d);
+    var rs = d.querySelectorAll('input');
+    rs[0].onchange = function(){ CFG = {atraso:420, falha:0, offline:false}; };
+    rs[1].onchange = function(){ CFG = {atraso:2500, falha:.25, offline:false}; };
+    rs[2].onchange = function(){ CFG = {atraso:300, falha:0, offline:true}; };
+  }
+})();
+
+</script>
+</head>
+<body>
+
+<div class="cab sobre-roxo" id="cab">
+  <div class="linha">
+    <button class="icone" id="btVoltar" type="button" aria-label="Voltar" hidden></button>
+    <div class="meio"><div class="marca">INSTITUTO VERIDIANA</div>
+      <div class="compacto" id="cabTitulo"></div></div>
+    <div class="placar" id="cabPlacar" hidden></div>
+    <button class="icone" id="btGestao" type="button" aria-label="Gestão" hidden></button>
+  </div>
+</div>
+
+<main id="palco"></main>
+
+<div class="barra" id="barra" hidden><div class="dentro" id="barraDentro"></div></div>
+
+<div class="veu" id="veu" data-aberto="false"></div>
+<div class="folha" id="folha" data-aberto="false" role="dialog" aria-modal="true" aria-labelledby="folhaTitulo">
+  <div class="puxador" id="puxador"></div>
+  <h2 id="folhaTitulo"></h2>
+  <div class="rolo" id="folhaCorpo"></div>
+</div>
+
+<div class="toast" id="toast" data-aberto="false" role="status" aria-live="polite">
+  <span id="toastIcone"></span><span id="toastTexto"></span>
+</div>
+
+<script>
+/* Núcleo: estado, ícones, utilidades, ponte com o servidor, toast, folha e roteador. */
+/* ══════════════════════════════════════════════════════════════
+   Chamada — Instituto Veridiana
+   Um arquivo. Sem dependencia. Sem build.
+   ══════════════════════════════════════════════════════════════ */
+
+var S = {
+  turmaInicial:'', pilha:[], viaQr:false,
+  turma:'', data:'', alunos:[], professores:[], professor:'', jaRegistrada:false,
+  token:'', salvando:false,
+  pin:'', gest:null, filtro:'ativos', busca:''
+};
+
+var CICLO = { 'Presente':'Falta', 'Falta':'Justificada', 'Justificada':'Presente' };
+
+/* ─── icones: Lucide, traco 2, colados inline ─── */
+var P = {
+  cheque:'<path d="M20 6 9 17l-5-5"/>',
+  alerta:'<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>',
+  pessoa:'<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  grupo:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  dir:'<path d="m9 18 6-6-6-6"/>',
+  esq:'<path d="m15 18-6-6 6-6"/>',
+  engrenagem:'<path d="M12.2 2h-.4a2 2 0 0 0-2 2v.2a2 2 0 0 1-1 1.7l-.4.2a2 2 0 0 1-2 0l-.2-.1a2 2 0 0 0-2.7.7l-.2.4a2 2 0 0 0 .7 2.7l.2.1a2 2 0 0 1 1 1.7v.5a2 2 0 0 1-1 1.7l-.2.1a2 2 0 0 0-.7 2.7l.2.4a2 2 0 0 0 2.7.7l.2-.1a2 2 0 0 1 2 0l.4.2a2 2 0 0 1 1 1.7V20a2 2 0 0 0 2 2h.4a2 2 0 0 0 2-2v-.2a2 2 0 0 1 1-1.7l.4-.2a2 2 0 0 1 2 0l.2.1a2 2 0 0 0 2.7-.7l.2-.4a2 2 0 0 0-.7-2.7l-.2-.1a2 2 0 0 1-1-1.7v-.5a2 2 0 0 1 1-1.7l.2-.1a2 2 0 0 0 .7-2.7l-.2-.4a2 2 0 0 0-2.7-.7l-.2.1a2 2 0 0 1-2 0l-.4-.2a2 2 0 0 1-1-1.7V4a2 2 0 0 0-2-2Z"/><circle cx="12" cy="12" r="3"/>',
+  lupa:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  mais:'<path d="M12 5v14M5 12h14"/>',
+  qr:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14.5h2.5V17M20 14.5h1M14 20h2M19 19h2M18.5 17H21"/>',
+  partilha:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>',
+  copiar:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  mover:'<path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/>',
+  desativar:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11h-6"/>',
+  reativar:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+  arquivar:'<rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9M10 13h4"/>',
+  renomear:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  apagarTecla:'<path d="M20 5H9l-7 7 7 7h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"/><path d="m18 9-6 6M12 9l6 6"/>',
+  cadeado:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  sino:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  bolo:'<path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"/><path d="M2 21h20"/><path d="M7 8v3M12 8v3M17 8v3"/><path d="M7 4h.01M12 4h.01M17 4h.01"/>',
+  conversa:'<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/>',
+  documento:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5M16 13H8M16 17H8M10 9H8"/>',
+  calendario:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  tabela:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/>',
+  abrir:'<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h6"/>',
+  varinha:'<path d="m3 21 9-9"/><path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8 19 13M17.8 6.2 19 5M12.2 6.2 11 5"/>',
+  prancheta:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/>'
+};
+function ico(n, t){
+  return '<svg width="'+(t||20)+'" height="'+(t||20)+'" viewBox="0 0 24 24" fill="none" '+
+         'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '+
+         'aria-hidden="true" focusable="false">'+P[n]+'</svg>';
+}
+
+/* ─── utilidades ─── */
+function el(id){ return document.getElementById(id); }
+function esc(t){
+  return String(t == null ? '' : t).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function iniciais(n){
+  var p = String(n || '').trim().split(/\s+/).filter(Boolean);
+  if (!p.length) return '?';
+  return (p[0].charAt(0) + (p.length > 1 ? p[p.length-1].charAt(0) : '')).toUpperCase();
+}
+var DIAS = ['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+var MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho',
+             'agosto','setembro','outubro','novembro','dezembro'];
+function dataExtenso(iso){
+  var p = String(iso || '').split('-');
+  if (p.length !== 3) return '';
+  var d = new Date(+p[0], +p[1]-1, +p[2]);
+  return DIAS[d.getDay()] + ', ' + (+p[2]) + ' de ' + MESES[+p[1]-1];
+}
+function mesExtenso(iso){
+  var p = String(iso || '').split('-');
+  if (p.length < 2) return '';
+  var m = MESES[+p[1] - 1] || '';
+  return m.charAt(0).toUpperCase() + m.slice(1) + ' de ' + p[0];
+}
+function dataCurta(iso){
+  var p = String(iso || '').split('-');
+  return p.length === 3 ? p[2] + '/' + p[1] : '';
+}
+/* Monta o link do WhatsApp. Número guardado só com dígitos; se vier sem
+   o 55 do Brasil, entra na hora. */
+function linkZap(tel, texto){
+  var n = String(tel || '').replace(/[^0-9]/g, '');
+  if (!n) return '';
+  if (n.length <= 11) n = '55' + n;
+  return 'https://wa.me/' + n + '?text=' + encodeURIComponent(texto);
+}
+function vibrar(){ try { if (navigator.vibrate) navigator.vibrate(8); } catch(e){} }
+function sorteioToken(){
+  return String(Date.now()) + '-' + Math.random().toString(36).slice(2, 10);
+}
+function semAcento(s){
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+}
+function plural(n, um, muitos){ return n + ' ' + (n === 1 ? um : muitos); }
+
+/* ─── ponte com o Apps Script, com prazo ─── */
+/* Sem prazo, um 4G que cai deixa o botao em "Salvando..." para sempre. */
+var MOCK = (typeof google === 'undefined' || !google.script);
+function api(fn, args, ok, erro){
+  var fim = false;
+  var t = setTimeout(function(){
+    if (fim) return; fim = true;
+    erro({ message:'A internet demorou demais para responder.' });
+  }, 25000);
+  function pronto(f){ return function(v){ if (fim) return; fim = true; clearTimeout(t); f(v); }; }
+  var r = google.script.run
+    .withSuccessHandler(pronto(ok))
+    .withFailureHandler(pronto(erro || function(){}));
+  r[fn].apply(r, args || []);
+}
+
+/* O Apps Script embrulha o erro e chega "Error: ...". Ninguem no
+   instituto precisa ver isso. */
+function textoErro(e){
+  var m = (e && e.message) ? String(e.message) : '';
+  m = m.replace(/^\s*(Error|Exception|ScriptError|GoogleJsonResponseException)\s*:\s*/i, '').trim();
+  return m || 'Não deu certo. Tente de novo.';
+}
+
+/* ─── toast ─── */
+var toastTimer;
+function toast(texto, tipo, acao){
+  var t = el('toast');
+  el('toastIcone').innerHTML = ico(tipo === 'erro' ? 'alerta' : 'cheque');
+  var alvo = el('toastTexto');
+  alvo.textContent = texto;
+  var velha = t.querySelector('.acao');
+  if (velha) velha.remove();
+  if (acao){
+    var b = document.createElement('button');
+    b.className = 'acao'; b.type = 'button'; b.textContent = acao.rotulo;
+    b.addEventListener('click', function(){ fecharToast(); acao.fn(); });
+    t.appendChild(b);
+  }
+  t.dataset.tipo = tipo || 'ok';
+  t.dataset.aberto = 'true';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(fecharToast, acao ? 6000 : 3600);
+}
+function fecharToast(){ el('toast').dataset.aberto = 'false'; }
+
+/* ─── bottom sheet reaproveitavel ─── */
+var folhaAoFechar = null;
+function abrirFolha(titulo, corpoHtml, aoFechar){
+  el('folhaTitulo').textContent = titulo;
+  el('folhaCorpo').innerHTML = corpoHtml;
+  el('folha').dataset.aberto = 'true';
+  el('veu').dataset.aberto = 'true';
+  folhaAoFechar = aoFechar || null;
+}
+function fecharFolha(){
+  el('folha').dataset.aberto = 'false';
+  el('veu').dataset.aberto = 'false';
+  el('folha').style.transform = '';
+  var f = folhaAoFechar; folhaAoFechar = null;
+  if (f) f();
+}
+function folhaAberta(){ return el('folha').dataset.aberto === 'true'; }
+
+/* opcoes: [{txt, sub, ini, icone, marcado, perigo, fn}] */
+function folhaOpcoes(titulo, opcoes){
+  var html = '<ul>';
+  opcoes.forEach(function(o, i){
+    html += '<li><button type="button" class="opc'+(o.perigo?' perigo':'')+'" data-op="'+i+'"'+
+            (o.marcado !== undefined ? ' aria-selected="'+(o.marcado?'true':'false')+'"' : '')+'>';
+    if (o.ini) html += '<span class="ini">'+esc(iniciais(o.ini))+'</span>';
+    else if (o.icone) html += ico(o.icone);
+    html += '<span>'+esc(o.txt)+(o.sub ? '<small>'+esc(o.sub)+'</small>' : '')+'</span>';
+    if (o.marcado !== undefined) html += '<span class="cv">'+ico('cheque')+'</span>';
+    html += '</button></li>';
+  });
+  abrirFolha(titulo, html + '</ul>');
+  el('folhaCorpo').onclick = function(e){
+    var b = e.target.closest('[data-op]');
+    if (!b) return;
+    var o = opcoes[+b.dataset.op];
+    fecharFolha();
+    if (o && o.fn) setTimeout(o.fn, 60);
+  };
+}
+
+/* Folha com vários campos. campos = [{id, rotulo, valor, tipo, dica}] */
+function pedirFicha(titulo, campos, rotuloBotao, fn){
+  var h = '<div style="padding:0 8px">';
+  campos.forEach(function(c){
+    h += '<div class="campo"><label for="f_' + c.id + '">' + esc(c.rotulo) + '</label>' +
+         '<input id="f_' + c.id + '" type="' + (c.tipo || 'text') + '" ' +
+         'autocomplete="off" autocapitalize="' + (c.tipo === 'text' || !c.tipo ? 'words' : 'none') + '" ' +
+         (c.dica ? 'placeholder="' + esc(c.dica) + '" ' : '') +
+         'value="' + esc(c.valor || '') + '"></div>';
+  });
+  abrirFolha(titulo, h + '</div>' +
+    '<div class="acoes"><button type="button" class="cancelar" data-t="0">Cancelar</button>' +
+    '<button type="button" class="confirmar" style="background:var(--roxo)" data-t="1">' +
+    esc(rotuloBotao) + '</button></div>');
+  function enviar(){
+    var r = {};
+    for (var i = 0; i < campos.length; i++){
+      var c = campos[i], v = (el('f_' + c.id).value || '').trim();
+      if (c.obrigatorio && v.length < 2){
+        toast('Preencha ' + c.rotulo.toLowerCase() + '.', 'erro'); return;
+      }
+      r[c.id] = v;
+    }
+    fecharFolha(); setTimeout(function(){ fn(r); }, 60);
+  }
+  el('folhaCorpo').onclick = function(e){
+    var b = e.target.closest('[data-t]');
+    if (!b) return;
+    if (b.dataset.t === '1') enviar(); else fecharFolha();
+  };
+  el('folhaCorpo').onkeydown = function(e){ if (e.key === 'Enter'){ e.preventDefault(); enviar(); } };
+  setTimeout(function(){ var i = el('f_' + campos[0].id); if (i){ i.focus(); i.select(); } }, 320);
+}
+
+/* confirmacao de acao destrutiva */
+function confirmar(titulo, texto, rotulo, fn){
+  abrirFolha(titulo,
+    '<p class="sub">'+esc(texto)+'</p>'+
+    '<div class="acoes"><button type="button" class="cancelar" data-c="0">Cancelar</button>'+
+    '<button type="button" class="confirmar" data-c="1">'+esc(rotulo)+'</button></div>');
+  el('folhaCorpo').onclick = function(e){
+    var b = e.target.closest('[data-c]');
+    if (!b) return;
+    var sim = b.dataset.c === '1';
+    fecharFolha();
+    if (sim) setTimeout(fn, 60);
+  };
+}
+
+el('veu').addEventListener('click', fecharFolha);
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape' && folhaAberta()) fecharFolha();
+});
+
+/* arrastar a folha para baixo para fechar */
+(function(){
+  var y0 = null, dy = 0, f = el('folha');
+  function inicio(e){ if (!folhaAberta()) return; y0 = e.touches[0].clientY; dy = 0; f.classList.add('arrastando'); }
+  function move(e){
+    if (y0 === null) return;
+    dy = e.touches[0].clientY - y0;
+    if (dy > 0){ f.style.transform = 'translateY('+dy+'px)'; }
+  }
+  function fim(){
+    if (y0 === null) return;
+    f.classList.remove('arrastando'); f.style.transform = '';
+    if (dy > 90) fecharFolha();
+    y0 = null;
+  }
+  ['puxador','folhaTitulo'].forEach(function(id){
+    var n = el(id);
+    n.addEventListener('touchstart', inicio, {passive:true});
+    n.addEventListener('touchmove', move, {passive:true});
+    n.addEventListener('touchend', fim);
+    n.addEventListener('touchcancel', fim);
+  });
+})();
+
+/* ─── roteador ─── */
+var TELAS = {};
+var ACOES = {};
+
+function atual(){ return S.pilha[S.pilha.length-1]; }
+function ir(t, p, raiz){ if (raiz) S.pilha = []; S.pilha.push({t:t, p:p||{}}); desenhar(); }
+function trocar(t, p){ S.pilha[S.pilha.length-1] = {t:t, p:p||{}}; desenhar(); }
+function voltar(){ if (S.pilha.length > 1){ S.pilha.pop(); desenhar(); } }
+
+function desenhar(){
+  var a = atual(), tela = TELAS[a.t](a.p);
+
+  el('cabTitulo').textContent = tela.titulo || '';
+  el('btVoltar').hidden = S.pilha.length < 2 && !tela.voltar;
+  el('btVoltar').innerHTML = ico('esq', 24);
+  el('btGestao').hidden = !tela.gestao;
+  el('btGestao').innerHTML = ico('engrenagem', 22);
+  el('cabPlacar').hidden = !tela.placar;
+
+  document.body.classList.toggle('semcapa', !tela.capa);
+  el('palco').innerHTML = (tela.capa || '') +
+    (tela.solto ? tela.html : '<div class="corpo">' + tela.html + '</div>');
+
+  var b = el('barra');
+  if (tela.barra){ el('barraDentro').innerHTML = tela.barra; b.hidden = false; }
+  else { b.hidden = true; }
+  medirBarra();
+
+  window.scrollTo(0, 0);
+  document.body.classList.remove('rolou');
+  if (tela.depois) tela.depois();
+}
+
+function medirBarra(){
+  var b = el('barra');
+  document.documentElement.style.setProperty('--barra-h',
+    b.hidden ? '0px' : b.offsetHeight + 'px');
+}
+
+el('btVoltar').addEventListener('click', voltar);
+el('btGestao').addEventListener('click', function(){ ir('pin'); });
+
+/* Escuta no documento, não no #palco: a barra de ação (#barra) e o
+   cabeçalho ficam FORA do palco, e um listener só no palco deixava
+   "Salvar chamada", "Criar turma", "Adicionar aluno" e "Adicionar
+   professor" sem resposta nenhuma. */
+document.addEventListener('click', function(e){
+  var b = e.target.closest('[data-acao]');
+  if (!b) return;
+  var f = ACOES[b.getAttribute('data-acao')];
+  if (f) f(b, e);
+});
+
+window.addEventListener('scroll', function(){
+  document.body.classList.toggle('rolou', window.scrollY > 32);
+}, {passive:true});
+
+/* realce de toque: sem isso a lista parece morta no Android */
+(function(){
+  var no = null, y0 = 0;
+  function limpa(){ if (no){ no.classList.remove('tocado'); no = null; } }
+  document.addEventListener('touchstart', function(e){
+    var n = e.target.closest('.li[data-acao]');
+    if (n){ no = n; y0 = e.touches[0].clientY; n.classList.add('tocado'); }
+  }, {passive:true});
+  document.addEventListener('touchmove', function(e){
+    if (no && Math.abs(e.touches[0].clientY - y0) > 10) limpa();
+  }, {passive:true});
+  document.addEventListener('touchend', limpa);
+  document.addEventListener('touchcancel', limpa);
+})();
+
+/* ─── esqueleto ─── */
+function esqueleto(n){
+  var h = '<ul class="lista">';
+  for (var i = 0; i < (n || 6); i++){
+    h += '<li class="esq"><div class="osso c"></div>' +
+         '<div class="osso t" style="max-width:' + (48 + (i*17) % 38) + '%"></div>' +
+         '<div class="osso s"></div></li>';
+  }
+  return h + '</ul>';
+}
+function estado(icone, titulo, texto, botao){
+  return '<div class="estado"><div class="circulo">' + ico(icone, 30) + '</div>' +
+         '<h2>' + esc(titulo) + '</h2><p>' + esc(texto) + '</p>' +
+         (botao ? '<button type="button" class="botao" data-acao="' + botao.acao + '">' +
+                  esc(botao.txt) + '</button>' : '') + '</div>';
+}
+</script>
+
+<script>
+/* O fluxo do QR: escolher turma, marcar faltas, salvar. */
+/* ══════════════ TELA: escolher turma ══════════════ */
+TELAS.turmas = function(){
+  return {
+    titulo:'Chamada', gestao:!S.viaQr,
+    capa:'<div class="capa"><div class="topo"><div style="flex:1;min-width:0">' +
+         '<h1>Chamada</h1><p class="data">Qual turma está entrando agora?</p>' +
+         '</div></div></div>',
+    html: esqueleto(4),
+    depois: function(){
+      api('listarTurmas', [], function(turmas){
+        if (!turmas.length){
+          el('palco').querySelector('.corpo').innerHTML =
+            estado('grupo','Nenhuma turma ainda',
+                   'Toque na engrenagem lá em cima para criar a primeira turma e cadastrar os alunos.');
+          return;
+        }
+        var h = '<ul class="cartoes">';
+        turmas.forEach(function(t){
+          h += '<li><button type="button" class="item" data-acao="abrirTurma" data-t="' + esc(t) + '">' +
+               '<span class="txt">' + esc(t) + '</span>' +
+               '<span class="seta">' + ico('dir') + '</span></button></li>';
+        });
+        el('palco').querySelector('.corpo').innerHTML = h + '</ul>';
+      }, function(e){
+        el('palco').querySelector('.corpo').innerHTML =
+          estado('alerta','Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+ACOES.abrirTurma = function(b){ ir('chamada', {turma:b.getAttribute('data-t')}); };
+
+/* ══════════════ TELA: chamada ══════════════ */
+TELAS.chamada = function(p){
+  var t = {
+    titulo: p.turma, placar:true,
+    capa:'<div class="capa"><div class="topo">' +
+         '<div style="flex:1;min-width:0"><h1>' + esc(p.turma) + '</h1>' +
+         '<p class="data" id="capaData">carregando…</p></div>' +
+         '<div class="conta"><b id="capaN">—</b><span id="capaR">&nbsp;</span></div>' +
+         '</div></div>',
+    html: esqueleto(6),
+    voltar: !S.viaQr,
+    depois: function(){
+      api('carregarTurma', [p.turma], montarChamada, function(e){
+        el('palco').querySelector('.corpo').innerHTML =
+          estado('alerta','Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+  return t;
+};
+
+function montarChamada(d){
+  S.turma = d.turma; S.data = d.data;
+  S.professores = d.professores || [];
+  S.professor = d.professorSugerido || '';
+  S.jaRegistrada = !!d.jaRegistrada;
+  S.token = sorteioToken();
+  S.alunos = (d.alunos || []).map(function(n){ return {aluno:n, status:'Presente'}; });
+
+  el('capaData').textContent = dataExtenso(d.data);
+
+  if (!S.alunos.length){
+    el('palco').querySelector('.corpo').innerHTML =
+      estado('grupo','Turma sem alunos',
+             'Ninguém ativo em ' + d.turma + '. Toque na engrenagem na tela inicial para cadastrar.');
+    el('capaN').textContent = '0'; el('capaR').textContent = 'sem alunos';
+    return;
+  }
+
+  var h = '';
+  /* Zero toque a mais: só uma linha que o professor vê antes de começar. */
+  if (d.aniversarios && d.aniversarios.length){
+    h += '<div class="bolo">' + ico('bolo', 22) + '<div><b>Aniversário hoje</b>';
+    d.aniversarios.forEach(function(x){
+      h += '<span>' + esc(x.aluno) + ' está fazendo ' + x.faz + ' anos</span>';
+    });
+    h += '</div></div>';
+  }
+  if (S.jaRegistrada){
+    h += '<div class="aviso">' + ico('alerta', 18) +
+         '<span>Esta turma já teve chamada salva hoje. Se salvar de novo, vai contar duas vezes.</span></div>';
+  }
+  h += '<button type="button" class="prof" id="cartaoProf" data-acao="escolherProf" data-vazio="' +
+       (S.professor ? 'false' : 'true') + '">' + ico('pessoa', 22) +
+       '<span class="txt"><small>Quem está dando a aula</small>' +
+       '<b id="profNome">' + esc(S.professor || 'Escolher') + '</b></span>' +
+       '<span class="seta">' + ico('dir') + '</span></button>';
+  h += '<div class="instrucao"><span>Toque em quem faltou</span>' +
+       '<button type="button" id="btTodos" data-acao="todosPresentes" hidden>Todos presentes</button></div>';
+  h += '<ul class="lista">';
+  S.alunos.forEach(function(a, i){
+    h += '<li class="li" data-st="Presente" id="li' + i + '" data-acao="ciclar" data-i="' + i + '"' +
+         ' role="button" tabindex="0" aria-label="' + esc(a.aluno) + ', presente">' +
+         '<span class="ini">' + esc(iniciais(a.aluno)) + '</span>' +
+         '<span class="nome">' + esc(a.aluno) + '</span>' +
+         '<span class="marca" id="mk' + i + '"></span></li>';
+  });
+  el('palco').querySelector('.corpo').innerHTML = h + '</ul>';
+
+  S.alunos.forEach(function(a, i){ pintar(i); });
+  atualizarPlacar();
+
+  el('barraDentro').innerHTML =
+    '<button type="button" class="salvar" id="btSalvar" data-acao="salvar">Salvar chamada</button>';
+  el('barra').hidden = false;
+  medirBarra();
+
+  /* Sem sugestao de professor a folha abre sozinha: e a primeira pergunta
+     da aula, e assim o fluxo inteiro fecha em cinco toques. */
+  if (!S.professor && S.professores.length) setTimeout(escolherProf, 340);
+}
+
+function pintar(i){
+  var st = S.alunos[i].status, li = el('li' + i);
+  li.dataset.st = st;
+  li.setAttribute('aria-label', S.alunos[i].aluno + ', ' +
+    (st === 'Presente' ? 'presente' : st === 'Falta' ? 'faltou' : 'falta justificada'));
+  el('mk' + i).innerHTML = st === 'Presente'
+    ? '<span class="ok">' + ico('cheque', 16) + '</span>'
+    : '<span class="selo">' + (st === 'Falta' ? 'Faltou' : 'Justificada') + '</span>';
+}
+
+ACOES.ciclar = function(b){
+  var i = +b.getAttribute('data-i');
+  S.alunos[i].status = CICLO[S.alunos[i].status];
+  pintar(i); atualizarPlacar(); vibrar();
+};
+
+ACOES.todosPresentes = function(){
+  var antes = S.alunos.map(function(a){ return a.status; });
+  var mudou = false;
+  S.alunos.forEach(function(a, i){ if (a.status !== 'Presente'){ a.status = 'Presente'; pintar(i); mudou = true; } });
+  if (!mudou) return;
+  atualizarPlacar(); vibrar();
+  toast('Todos marcados como presentes', 'ok', {rotulo:'Desfazer', fn:function(){
+    S.alunos.forEach(function(a, i){ a.status = antes[i]; pintar(i); });
+    atualizarPlacar(); vibrar();
+  }});
+};
+
+function atualizarPlacar(){
+  var p = S.alunos.filter(function(a){ return a.status === 'Presente'; }).length;
+  var n = S.alunos.length, f = n - p;
+  el('capaN').textContent = p + '/' + n;
+  el('capaR').textContent = f === 0 ? 'turma completa' : plural(f, 'faltou', 'faltaram');
+  el('cabPlacar').textContent = p + '/' + n;
+  var bt = el('btTodos');
+  if (bt) bt.hidden = (f === 0);   /* nada a desfazer enquanto todos estao presentes */
+  el('cabPlacar').setAttribute('aria-label', p + ' de ' + n + ' presentes');
+}
+
+function escolherProf(){
+  if (!S.professores.length){
+    toast('Nenhum professor cadastrado. Use a engrenagem na tela inicial.', 'erro');
+    return;
+  }
+  folhaOpcoes('Quem está dando a aula', S.professores.map(function(nome){
+    return { txt:nome, ini:nome, marcado:(nome === S.professor), fn:function(){
+      S.professor = nome;
+      el('profNome').textContent = nome;
+      el('cartaoProf').dataset.vazio = 'false';
+      vibrar();
+    }};
+  }));
+}
+ACOES.escolherProf = escolherProf;
+
+/* ─── salvar ─── */
+ACOES.salvar = function(){
+  if (!S.professor){ toast('Escolha quem está dando a aula', 'erro'); escolherProf(); return; }
+  if (navigator.onLine === false){
+    toast('Sem internet agora. Suas marcações continuam aqui.', 'erro',
+          {rotulo:'Tentar', fn:enviarChamada});
+    return;
+  }
+  enviarChamada();
+};
+
+function enviarChamada(){
+  if (S.salvando) return;
+  S.salvando = true;
+  var b = el('btSalvar');
+  if (b){ b.disabled = true; b.textContent = 'Salvando…'; }
+  api('salvarChamada',
+    [{turma:S.turma, professor:S.professor, token:S.token, presencas:S.alunos}],
+    function(r){ S.salvando = false; vibrar(); ir('fim', {r:r}, true); },
+    function(){
+      /* Nada de re-render aqui: as marcacoes do professor continuam na tela. */
+      S.salvando = false;
+      var bb = el('btSalvar');
+      if (bb){ bb.disabled = false; bb.textContent = 'Salvar chamada'; }
+      toast('Não salvou. Confira a internet e tente de novo.', 'erro',
+            {rotulo:'Tentar de novo', fn:enviarChamada});
+    });
+}
+
+/* ══════════════ TELA: chamada salva ══════════════ */
+TELAS.fim = function(p){
+  var r = p.r || {};
+  var resumo = r.faltas
+    ? plural(r.presentes, 'presente', 'presentes') + ' · ' + plural(r.faltas, 'faltou', 'faltaram')
+    : 'Turma completa, ' + plural(r.total, 'aluno presente', 'alunos presentes');
+  return {
+    titulo:'', solto:true,
+    html:'<div class="fim"><div class="selo-ok">' +
+      '<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>' +
+      '</div><h2>Chamada salva</h2><p>' + esc(r.turma || S.turma) + '<br>' + esc(resumo) + '</p>' +
+      '<button type="button" class="botao" data-acao="outraChamada">Fazer outra chamada</button></div>'
+  };
+};
+ACOES.outraChamada = function(){
+  if (S.viaQr) ir('chamada', {turma:S.turma}, true);
+  else ir('turmas', {}, true);
+};
+</script>
+
+<script>
+/* Área da equipe: PIN, cadastros, QR, histórico e planilha. */
+/* ══════════════ TELA: PIN ══════════════ */
+var pinBuf = '';
+TELAS.pin = function(){
+  pinBuf = '';
+  var teclas = '';
+  for (var i = 1; i <= 9; i++)
+    teclas += '<button type="button" data-acao="pinDig" data-d="' + i + '">' + i + '</button>';
+  teclas += '<span class="vazia"></span>' +
+            '<button type="button" data-acao="pinDig" data-d="0">0</button>' +
+            '<button type="button" class="apagar" data-acao="pinApaga" aria-label="Apagar">' +
+            ico('apagarTecla', 24) + '</button>';
+  return {
+    titulo:'Gestão', solto:true,
+    html:'<div class="pin"><div class="circulo" style="width:64px;height:64px;border-radius:50%;' +
+      'margin:0 auto 16px;display:grid;place-items:center;background:var(--roxo-fraco);color:var(--roxo)">' +
+      ico('cadeado', 26) + '</div>' +
+      '<h2>Área da equipe</h2>' +
+      '<p>Digite o código de 4 números para cuidar de turmas, alunos e professores.</p>' +
+      '<div class="pontos" id="pontos" role="status" aria-label="Código, 0 de 4 números">' +
+      '<i></i><i></i><i></i><i></i></div>' +
+      '<div class="teclado">' + teclas + '</div></div>'
+  };
+};
+function pontos(){
+  var ns = el('pontos');
+  if (!ns) return;
+  for (var i = 0; i < 4; i++) ns.children[i].classList.toggle('cheio', i < pinBuf.length);
+  ns.setAttribute('aria-label', 'Código, ' + pinBuf.length + ' de 4 números');
+}
+ACOES.pinDig = function(b){
+  if (pinBuf.length >= 4) return;
+  pinBuf += b.getAttribute('data-d'); vibrar(); pontos();
+  if (pinBuf.length === 4) setTimeout(validaPin, 120);
+};
+ACOES.pinApaga = function(){ pinBuf = pinBuf.slice(0, -1); vibrar(); pontos(); };
+function validaPin(){
+  var tentativa = pinBuf;
+  api('entrarNaGestao', [tentativa], function(g){
+    S.pin = tentativa; S.gest = g; trocar('gestao');
+  }, function(e){
+    var n = el('pontos');
+    if (n){ n.classList.add('errou'); setTimeout(function(){ n.classList.remove('errou'); }, 360); }
+    pinBuf = ''; pontos();
+    toast(textoErro(e), 'erro');
+  });
+}
+document.addEventListener('keydown', function(e){
+  if (atual().t !== 'pin' || folhaAberta()) return;
+  if (/^[0-9]$/.test(e.key)){ ACOES.pinDig({getAttribute:function(){ return e.key; }}); }
+  else if (e.key === 'Backspace'){ ACOES.pinApaga(); }
+});
+
+/* ══════════════ TELA: menu de gestão ══════════════ */
+TELAS.gestao = function(){
+  var g = S.gest || {};
+  var itens = [
+    {ic:'prancheta', t:'Turmas', s:plural(g.turmas || 0, 'turma ativa', 'turmas ativas'), a:'gTurmas'},
+    {ic:'grupo', t:'Alunos', s:(g.alunosAtivos || 0) + ' ativos, ' + (g.alunosInativos || 0) + ' inativos', a:'gAlunos'},
+    {ic:'pessoa', t:'Professores', s:plural(g.professores || 0, 'na equipe', 'na equipe'), a:'gProfs'},
+    {ic:'qr', t:'QR das turmas', s:'gerar código para imprimir', a:'gQr'},
+    {ic:'sino', t:'Precisam de atenção', s:'carregando…', a:'gRisco', id:'itRisco'},
+    {ic:'calendario', t:'Histórico', s:'quem veio, por dia e por mês', a:'gHistorico'},
+    {ic:'documento', t:'Relatório para edital', s:'beneficiários, aulas e frequência', a:'gRelatorio'},
+    {ic:'tabela', t:'Planilha', s:'abrir e compartilhar a planilha', a:'gPlanilha'}
+  ];
+  var h = '<ul class="cartoes">';
+  itens.forEach(function(i){
+    h += '<li><button type="button" class="item" data-acao="' + i.a + '">' + ico(i.ic, 22) +
+         '<span class="txt">' + esc(i.t) + '<small>' + esc(i.s) + '</small></span>' +
+         '<span class="seta">' + ico('dir') + '</span></button></li>';
+  });
+  return {
+    titulo:'Gestão',
+    html:'<div id="caixaBolo"></div>' + h + '</ul>',
+    depois:function(){
+      /* Fora do carregamento do menu: ler Chamadas para o alerta custa
+         caro e não pode segurar a tela. */
+      api('contarRisco', [S.pin], function(n){
+        var i = el('itRisco');
+        if (!i) return;
+        i.querySelector('small').textContent = n === 0
+          ? 'ninguém faltando seguido, ótimo'
+          : plural(n, 'aluno some há 3 aulas', 'alunos somem há 3 aulas');
+        if (n > 0) i.querySelector('small').style.color = 'var(--falta)';
+      }, function(){});
+      api('aniversariantesSemana', [S.pin], function(lista){
+        if (!lista || !lista.length) return;
+        var c = el('caixaBolo');
+        if (!c) return;
+        var h2 = '<div class="bolo">' + ico('bolo', 22) + '<div><b>' +
+          (lista.length === 1 ? 'Aniversário esta semana' : lista.length + ' aniversários esta semana') +
+          '</b>';
+        lista.forEach(function(a){
+          h2 += '<span>' + esc(a.aluno) + ' faz ' + a.faz + ' em ' + dataCurta(a.dia) + '</span>';
+        });
+        c.innerHTML = h2 + '</div></div>';
+      }, function(){});
+    }
+  };
+};
+ACOES.gTurmas = function(){ ir('gTurmas'); };
+ACOES.gAlunos = function(){ S.busca = ''; S.filtro = 'ativos'; ir('gAlunos'); };
+ACOES.gProfs  = function(){ ir('gProfs'); };
+ACOES.gQr     = function(){ ir('gQr'); };
+ACOES.gHistorico = function(){ ir('gHistorico'); };
+ACOES.gPlanilha  = function(){ ir('gPlanilha'); };
+ACOES.gRisco     = function(){ ir('gRisco'); };
+ACOES.gRelatorio = function(){ ir('gRelatorio'); };
+
+/* recarrega os contadores depois de qualquer escrita */
+function recontar(){
+  api('entrarNaGestao', [S.pin], function(g){ S.gest = g; }, function(){});
+}
+
+/* ─── escrita na gestão: toast vermelho no erro, tela intacta ─── */
+function escrever(fn, args, msgOk, depois){
+  api(fn, [S.pin].concat(args), function(r){
+    vibrar(); toast(msgOk);
+    recontar();
+    if (depois) depois(r);
+  }, function(e){
+    toast(textoErro(e), 'erro');
+  });
+}
+
+/* pedir um nome sem usar prompt() */
+function pedirTexto(titulo, rotulo, valor, rotuloBotao, fn){
+  abrirFolha(titulo,
+    '<div style="padding:0 8px"><div class="campo"><label for="campoTxt">' + esc(rotulo) + '</label>' +
+    '<input id="campoTxt" type="text" autocomplete="off" autocapitalize="words" ' +
+    'spellcheck="false" value="' + esc(valor || '') + '"></div></div>' +
+    '<div class="acoes"><button type="button" class="cancelar" data-t="0">Cancelar</button>' +
+    '<button type="button" class="confirmar" style="background:var(--roxo)" data-t="1">' +
+    esc(rotuloBotao) + '</button></div>');
+  function enviar(){
+    var v = (el('campoTxt').value || '').trim();
+    if (v.length < 2){ toast('Escreva pelo menos 2 letras.', 'erro'); return; }
+    fecharFolha(); setTimeout(function(){ fn(v); }, 60);
+  }
+  el('folhaCorpo').onclick = function(e){
+    var b = e.target.closest('[data-t]');
+    if (!b) return;
+    if (b.dataset.t === '1') enviar(); else fecharFolha();
+  };
+  el('folhaCorpo').onkeydown = function(e){ if (e.key === 'Enter'){ e.preventDefault(); enviar(); } };
+  setTimeout(function(){ var i = el('campoTxt'); if (i){ i.focus(); i.select(); } }, 320);
+}
+
+/* ══════════════ GESTÃO: turmas ══════════════ */
+TELAS.gTurmas = function(){
+  return {
+    titulo:'Turmas', html:esqueleto(4),
+    barra:'<button type="button" class="salvar" data-acao="novaTurma">' + ico('mais') + 'Criar turma</button>',
+    depois:listarTurmasGestao
+  };
+};
+function listarTurmasGestao(){
+  api('listarTurmasCompleto', [S.pin], function(ts){
+    var alvo = el('palco').querySelector('.corpo');
+    if (!ts.length){
+      alvo.innerHTML = estado('prancheta','Nenhuma turma ainda',
+        'Toque em "Criar turma" aqui embaixo para começar.');
+      return;
+    }
+    var h = '<ul class="cartoes">';
+    ts.forEach(function(t){
+      h += '<li><button type="button" class="item" data-acao="abrirFicha" data-t="' + esc(t.nome) + '">' +
+           '<span class="txt">' + esc(t.nome) + '<small>' + plural(t.ativos, 'aluno', 'alunos') +
+           (t.inativos ? ' · ' + t.inativos + ' inativo' + (t.inativos > 1 ? 's' : '') : '') +
+           '</small></span><span class="seta">' + ico('dir') + '</span></button></li>';
+    });
+    alvo.innerHTML = h + '</ul>';
+  }, function(e){
+    el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+  });
+}
+ACOES.novaTurma = function(){
+  pedirTexto('Criar turma', 'Nome da turma', '', 'Criar', function(nome){
+    escrever('criarTurma', [nome], 'Turma ' + nome + ' criada', listarTurmasGestao);
+  });
+};
+ACOES.abrirFicha = function(b){ ir('gTurma', {turma:b.getAttribute('data-t')}); };
+
+/* ══════════════ GESTÃO: ficha da turma ══════════════ */
+TELAS.gTurma = function(p){
+  return {
+    titulo:p.turma, html:esqueleto(4),
+    barra:'<button type="button" class="salvar" data-acao="novoAluno" data-t="' + esc(p.turma) + '">' +
+          ico('mais') + 'Adicionar aluno</button>',
+    depois:function(){ carregarFicha(p.turma); }
+  };
+};
+function carregarFicha(turma){
+  api('listarAlunos', [S.pin, turma, true], function(as){
+    S.todosAlunos = as;
+    var ativos = as.filter(function(a){ return a.ativo; });
+    var inativos = as.filter(function(a){ return !a.ativo; });
+    var h = '<div class="duplo" style="margin-bottom:20px">' +
+      '<button type="button" class="secundario" data-acao="renomearTurma" data-t="' + esc(turma) + '">' +
+      ico('renomear', 18) + ' Renomear</button>' +
+      '<button type="button" class="secundario" data-acao="arquivarTurma" data-t="' + esc(turma) +
+      '" data-n="' + ativos.length + '">' + ico('arquivar', 18) + ' Arquivar</button></div>';
+
+    if (!ativos.length){
+      h += estado('grupo','Turma sem alunos','Toque em "Adicionar aluno" aqui embaixo.');
+    } else {
+      h += '<div class="secao">' + plural(ativos.length, 'aluno', 'alunos') + '</div>';
+      h += linhasAlunos(ativos, false);
+    }
+    if (inativos.length){
+      h += '<button type="button" class="recolhe" data-acao="verInativos" aria-expanded="false">' +
+           '<span class="seta">' + ico('dir', 18) + '</span>' +
+           plural(inativos.length, 'aluno inativo', 'alunos inativos') + '</button>' +
+           '<div id="caixaInativos" hidden>' + linhasAlunos(inativos, true) + '</div>';
+    }
+    el('palco').querySelector('.corpo').innerHTML = h;
+  }, function(e){
+    el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+  });
+}
+function linhasAlunos(lista, inativo){
+  var h = '<ul class="lista">';
+  lista.forEach(function(a){
+    h += '<li class="li" data-acao="acoesAluno" data-n="' + esc(a.nome) + '" data-t="' + esc(a.turma) +
+         '" data-inativo="' + (inativo ? '1' : '') + '" role="button" tabindex="0">' +
+         '<span class="ini"' + (inativo ? ' style="background:var(--fundo);color:var(--apagado)"' : '') + '>' +
+         esc(iniciais(a.nome)) + '</span>' +
+         '<span class="nome"' + (inativo ? ' style="color:var(--apagado)"' : '') + '>' + esc(a.nome) +
+         (a.turma && a.mostrarTurma ? '<small style="display:block;font-size:13px;font-weight:400;color:var(--apagado)">' +
+           esc(a.turma) + '</small>' : '') + '</span>' +
+         '<span class="marca">' + ico('dir', 18) + '</span></li>';
+  });
+  return h + '</ul>';
+}
+ACOES.verInativos = function(b){
+  var c = el('caixaInativos');
+  var ab = b.getAttribute('aria-expanded') === 'true';
+  b.setAttribute('aria-expanded', ab ? 'false' : 'true');
+  c.hidden = ab;
+};
+ACOES.renomearTurma = function(b){
+  var t = b.getAttribute('data-t');
+  pedirTexto('Renomear turma', 'Novo nome', t, 'Renomear', function(novo){
+    escrever('renomearTurma', [t, novo], 'Turma renomeada para ' + novo, function(){
+      trocar('gTurma', {turma:novo});
+    });
+  });
+};
+ACOES.arquivarTurma = function(b){
+  var t = b.getAttribute('data-t');
+  if (+b.getAttribute('data-n') > 0){
+    toast('Mova ou desative os alunos antes de arquivar.', 'erro');
+    return;
+  }
+  confirmar('Arquivar turma', 'A turma ' + t + ' sai da lista de chamada. As chamadas antigas dela continuam guardadas.',
+    'Arquivar', function(){
+      escrever('arquivarTurma', [t], 'Turma ' + t + ' arquivada', function(){
+        voltar(); setTimeout(listarTurmasGestao, 60);
+      });
+    });
+};
+ACOES.novoAluno = function(b){
+  var t = b.getAttribute('data-t');
+  pedirFicha('Adicionar aluno', [
+    {id:'nome', rotulo:'Nome do aluno', obrigatorio:true},
+    {id:'nascimento', rotulo:'Data de nascimento', tipo:'date'},
+    {id:'responsavel', rotulo:'Responsável'},
+    {id:'telefone', rotulo:'Telefone com DDD', tipo:'tel', dica:'85 9 9999 0000'}
+  ], 'Adicionar', function(d){
+    escrever('adicionarAluno', [t, d.nome, d], d.nome + ' entrou em ' + t, recarregarLista);
+  });
+};
+
+function editarAluno(nome, turma, atual){
+  pedirFicha('Dados de ' + nome, [
+    {id:'nascimento', rotulo:'Data de nascimento', tipo:'date', valor:(atual && atual.nascimento) || ''},
+    {id:'responsavel', rotulo:'Responsável', valor:(atual && atual.responsavel) || ''},
+    {id:'telefone', rotulo:'Telefone com DDD', tipo:'tel', dica:'85 9 9999 0000',
+     valor:(atual && atual.telefone) || ''}
+  ], 'Salvar', function(d){
+    escrever('atualizarAluno', [nome, turma, d], 'Dados de ' + nome + ' salvos', recarregarLista);
+  });
+}
+ACOES.acoesAluno = function(b){
+  var nome = b.getAttribute('data-n'), turma = b.getAttribute('data-t');
+  var inativo = !!b.getAttribute('data-inativo');
+  if (inativo){
+    folhaOpcoes(nome, [
+      {txt:'Voltar para a chamada', sub:'em ' + turma, icone:'reativar', fn:function(){
+        escrever('reativarAluno', [nome, turma], nome + ' voltou para a chamada', recarregarLista);
+      }}
+    ]);
+    return;
+  }
+  var ficha = (S.todosAlunos || []).filter(function(x){
+    return x.nome === nome && x.turma === turma;
+  })[0];
+  folhaOpcoes(nome, [
+    {txt:'Editar dados', sub:'nascimento, responsável, telefone', icone:'renomear',
+     fn:function(){ editarAluno(nome, turma, ficha); }},
+    {txt:'Mudar de turma', sub:'hoje em ' + turma, icone:'mover', fn:function(){ moverAluno(nome, turma); }},
+    {txt:'Desativar', sub:'sai da chamada, histórico fica', icone:'desativar', perigo:true, fn:function(){
+      escrever('desativarAluno', [nome, turma], nome + ' saiu da chamada', recarregarLista);
+    }}
+  ]);
+};
+function moverAluno(nome, turmaAtual){
+  api('listarTurmasCompleto', [S.pin], function(ts){
+    var opc = ts.filter(function(t){ return t.nome !== turmaAtual; }).map(function(t){
+      return { txt:t.nome, sub:plural(t.ativos, 'aluno', 'alunos'), ini:t.nome, fn:function(){
+        escrever('moverAluno', [nome, t.nome, turmaAtual], nome + ' agora está em ' + t.nome, recarregarLista);
+      }};
+    });
+    opc.push({ txt:'Criar turma nova', icone:'mais', fn:function(){
+      pedirTexto('Criar turma', 'Nome da turma', '', 'Criar e mover', function(nova){
+        escrever('criarTurma', [nova], 'Turma ' + nova + ' criada', function(){
+          escrever('moverAluno', [nome, nova, turmaAtual], nome + ' agora está em ' + nova, recarregarLista);
+        });
+      });
+    }});
+    folhaOpcoes('Mover ' + nome + ' para', opc);
+  }, function(e){ toast(textoErro(e), 'erro'); });
+}
+/* depois de escrever, sempre relê do servidor */
+function recarregarLista(){
+  var a = atual();
+  if (a.t === 'gTurma') carregarFicha(a.p.turma);
+  else if (a.t === 'gAlunos') carregarAlunos();
+  else if (a.t === 'gTurmas') listarTurmasGestao();
+  else if (a.t === 'gProfs') carregarProfs();
+}
+
+/* ══════════════ GESTÃO: todos os alunos ══════════════ */
+TELAS.gAlunos = function(){
+  return {
+    titulo:'Alunos',
+    html:'<div class="busca">' + ico('lupa') +
+      '<input id="campoBusca" type="search" placeholder="Procurar pelo nome" autocomplete="off" ' +
+      'aria-label="Procurar aluno"></div>' +
+      '<div class="filtro">' +
+      '<button type="button" data-acao="filtro" data-f="ativos" aria-selected="true">Na chamada</button>' +
+      '<button type="button" data-acao="filtro" data-f="inativos" aria-selected="false">Inativos</button>' +
+      '</div><div id="listaAlunos">' + esqueleto(5) + '</div>',
+    depois:function(){
+      el('campoBusca').addEventListener('input', function(){
+        S.busca = this.value; pintarAlunos();
+      });
+      carregarAlunos();
+    }
+  };
+};
+function carregarAlunos(){
+  api('listarAlunos', [S.pin, '', true], function(as){
+    S.todosAlunos = as; pintarAlunos();
+  }, function(e){
+    el('listaAlunos').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+  });
+}
+function pintarAlunos(){
+  var b = semAcento(S.busca);
+  var lista = (S.todosAlunos || []).filter(function(a){
+    if (S.filtro === 'ativos' ? !a.ativo : a.ativo) return false;
+    return !b || semAcento(a.nome).indexOf(b) !== -1 || semAcento(a.turma).indexOf(b) !== -1;
+  });
+  lista.forEach(function(a){ a.mostrarTurma = true; });
+  var alvo = el('listaAlunos');
+  if (!alvo) return;
+  if (!lista.length){
+    alvo.innerHTML = b
+      ? estado('lupa','Ninguém com esse nome', 'Confira a escrita ou troque para a outra aba.')
+      : estado('grupo', S.filtro === 'ativos' ? 'Nenhum aluno na chamada' : 'Nenhum aluno inativo',
+               S.filtro === 'ativos' ? 'Cadastre alunos dentro de cada turma.'
+                                     : 'Todo mundo cadastrado está na chamada.');
+    return;
+  }
+  alvo.innerHTML = linhasAlunos(lista, S.filtro === 'inativos');
+}
+ACOES.filtro = function(b){
+  S.filtro = b.getAttribute('data-f');
+  var bs = b.parentNode.children;
+  for (var i = 0; i < bs.length; i++)
+    bs[i].setAttribute('aria-selected', bs[i] === b ? 'true' : 'false');
+  vibrar(); pintarAlunos();
+};
+
+/* ══════════════ GESTÃO: professores ══════════════ */
+TELAS.gProfs = function(){
+  return {
+    titulo:'Professores', html:esqueleto(4),
+    barra:'<button type="button" class="salvar" data-acao="novoProf">' + ico('mais') + 'Adicionar professor</button>',
+    depois:carregarProfs
+  };
+};
+function carregarProfs(){
+  api('listarProfessores', [S.pin], function(ps){
+    var alvo = el('palco').querySelector('.corpo');
+    if (!ps.length){
+      alvo.innerHTML = estado('pessoa','Ninguém na equipe ainda',
+        'Toque em "Adicionar professor" aqui embaixo.');
+      return;
+    }
+    var h = '<ul class="lista">';
+    ps.forEach(function(n){
+      h += '<li class="li" data-acao="acoesProf" data-n="' + esc(n) + '" role="button" tabindex="0">' +
+           '<span class="ini">' + esc(iniciais(n)) + '</span>' +
+           '<span class="nome">' + esc(n) + '</span>' +
+           '<span class="marca">' + ico('dir', 18) + '</span></li>';
+    });
+    alvo.innerHTML = h + '</ul>';
+  }, function(e){
+    el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+  });
+}
+ACOES.novoProf = function(){
+  pedirTexto('Adicionar professor', 'Nome', '', 'Adicionar', function(nome){
+    escrever('adicionarProfessor', [nome], nome + ' entrou na equipe', carregarProfs);
+  });
+};
+ACOES.acoesProf = function(b){
+  var n = b.getAttribute('data-n');
+  folhaOpcoes(n, [{txt:'Tirar da equipe', sub:'as chamadas antigas continuam com o nome',
+    icone:'desativar', perigo:true, fn:function(){
+      confirmar('Tirar da equipe', n + ' some da escolha na chamada. As chamadas já salvas continuam com o nome.',
+        'Tirar da equipe', function(){
+          escrever('removerProfessor', [n], n + ' saiu da equipe', carregarProfs);
+        });
+    }}]);
+};
+
+/* ══════════════ GESTÃO: QR das turmas ══════════════ */
+TELAS.gQr = function(){
+  return {
+    titulo:'QR das turmas', html:esqueleto(4),
+    depois:function(){
+      api('obterUrlApp', [S.pin], function(url){
+        S.urlApp = url || '';
+        if (!S.urlApp){
+          el('palco').querySelector('.corpo').innerHTML = estado('alerta','Falta o endereço do app',
+            'Publique o app e abra esta tela de novo. Se continuar assim, use "Configurar endereço do app" no menu Veridiana da planilha, uma vez só.');
+          return;
+        }
+        api('listarTurmasCompleto', [S.pin], function(ts){
+          var alvo = el('palco').querySelector('.corpo');
+          if (!ts.length){
+            alvo.innerHTML = estado('prancheta','Nenhuma turma ainda','Crie uma turma para gerar o QR dela.');
+            return;
+          }
+          var h = '<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
+                  'Escolha a turma para gerar o código de colar na parede.</p><ul class="cartoes">';
+          ts.forEach(function(t){
+            h += '<li><button type="button" class="item" data-acao="verQr" data-t="' + esc(t.nome) + '">' +
+                 '<span class="txt">' + esc(t.nome) + '</span>' +
+                 '<span class="seta">' + ico('qr', 20) + '</span></button></li>';
+          });
+          alvo.innerHTML = h + '</ul>';
+        }, function(e){
+          el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+        });
+      }, function(e){
+        el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+ACOES.verQr = function(b){ ir('gQrTurma', {turma:b.getAttribute('data-t')}); };
+
+TELAS.gQrTurma = function(p){
+  var url = S.urlApp + (S.urlApp.indexOf('?') === -1 ? '?' : '&') + 'turma=' + encodeURIComponent(p.turma);
+  var podeCompartilhar = !!navigator.share;
+  var h = '<div class="folha-qr" id="paraImprimir">' +
+    '<p class="turma">' + esc(p.turma) + '</p>' + qrSvg(url) +
+    '<p class="marca">INSTITUTO VERIDIANA · aponte a câmera para fazer a chamada</p></div>';
+  h += '<div class="duplo">';
+  if (podeCompartilhar)
+    h += '<button type="button" class="principal" data-acao="partilhar" data-u="' + esc(url) +
+         '" data-t="' + esc(p.turma) + '">' + ico('partilha', 18) + ' Compartilhar</button>';
+  h += '<button type="button" class="' + (podeCompartilhar ? 'secundario' : 'principal') +
+       '" data-acao="copiarLink" data-u="' + esc(url) + '">' + ico('copiar', 18) + ' Copiar link</button>';
+  h += '</div>';
+  return { titulo:p.turma, html:h };
+};
+ACOES.partilhar = function(b){
+  var url = b.getAttribute('data-u'), t = b.getAttribute('data-t');
+  try {
+    navigator.share({ title:'Chamada · ' + t, text:'Chamada da turma ' + t, url:url })
+      .catch(function(){ /* cancelou ou o iframe bloqueou: silencio */ });
+  } catch(e){ copiar(url); }
+};
+ACOES.copiarLink = function(b){ copiar(b.getAttribute('data-u')); };
+function copiar(txt){
+  function ok(){ vibrar(); toast('Link copiado'); }
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(ok, function(){ copiaAntiga(txt, ok); });
+  } else copiaAntiga(txt, ok);
+}
+function copiaAntiga(txt, ok){
+  var a = document.createElement('textarea');
+  a.value = txt; a.setAttribute('readonly','');
+  a.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+  document.body.appendChild(a); a.focus(); a.select();
+  var deu = false;
+  try { deu = document.execCommand('copy'); } catch(e){}
+  document.body.removeChild(a);
+  if (deu) ok(); else toast('Não deu para copiar sozinho. Segure o dedo no link.', 'erro');
+}
+
+/* ══════════════ GESTÃO: precisam de atenção ══════════════ */
+/* Três faltas seguidas é o gatilho que a busca ativa usa na rede
+   pública. O dado já existia; faltava alguém ler. */
+TELAS.gRisco = function(){
+  return {
+    titulo:'Precisam de atenção', html:esqueleto(3),
+    depois:function(){
+      api('alunosEmRisco', [S.pin, 3], function(r){
+        var alvo = el('palco').querySelector('.corpo');
+        if (!r.alunos.length){
+          alvo.innerHTML = estado('cheque', 'Ninguém sumido',
+            'Nenhum aluno faltou 3 aulas seguidas. Continue olhando aqui de vez em quando.');
+          return;
+        }
+        var h = '<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
+          esc(plural(r.alunos.length, 'aluno faltou', 'alunos faltaram')) +
+          ' 3 aulas ou mais seguidas. Uma ligação agora costuma trazer de volta.</p>';
+        r.alunos.forEach(function(a){
+          var texto = 'Oi! Aqui é do Instituto Veridiana. Sentimos falta d' +
+            (a.aluno ? 'e ' + a.aluno : 'o aluno') + ' nas últimas ' + a.faltas +
+            ' aulas de ' + a.turma + '. Está tudo bem? A gente gostaria muito de ver de volta.';
+          var zap = linkZap(a.telefone, texto);
+          h += '<div class="risco">' +
+            '<div class="cab-risco"><span class="ini">' + esc(iniciais(a.aluno)) + '</span>' +
+            '<span class="nome">' + esc(a.aluno) +
+            '<small>' + esc(a.turma) + (a.idade !== null && a.idade !== undefined ? ' · ' + a.idade + ' anos' : '') + '</small></span>' +
+            '<span class="pct" style="color:var(--falta)">' + a.faltas + '</span></div>' +
+            '<p class="detalhe">' + plural(a.faltas, 'falta seguida', 'faltas seguidas') +
+            (a.justificadas ? ' (' + a.justificadas + ' justificada' + (a.justificadas > 1 ? 's' : '') + ')' : '') +
+            (a.ultimaPresenca ? ' · veio pela última vez em ' + dataCurta(a.ultimaPresenca) : ' · sem presença nas aulas recentes') +
+            '</p>';
+          if (zap){
+            h += '<a class="botao-zap" href="' + esc(zap) + '" target="_blank" rel="noopener">' +
+                 ico('conversa', 18) + ' ' + esc(rotuloZap(a.responsavel)) + '</a>';
+          } else {
+            h += '<button type="button" class="botao-vazio" data-acao="contatoFalta" ' +
+                 'data-n="' + esc(a.aluno) + '" data-t="' + esc(a.turma) + '">' +
+                 ico('pessoa', 18) + ' Sem telefone — cadastrar agora</button>';
+          }
+          h += '</div>';
+        });
+        alvo.innerHTML = h;
+      }, function(e){
+        el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+/* "Falar com Ana" quando há nome; senão não inventa parentesco. */
+function rotuloZap(responsavel){
+  var p = String(responsavel || '').trim().split(/\s+/)[0] || '';
+  return p && p.length > 2 ? 'Falar com ' + p : 'Falar no WhatsApp';
+}
+ACOES.contatoFalta = function(b){
+  editarAluno(b.getAttribute('data-n'), b.getAttribute('data-t'), null);
+};
+
+/* ══════════════ GESTÃO: relatório para edital ══════════════ */
+TELAS.gRelatorio = function(){
+  var hj = new Date();
+  var fim = hj.getFullYear() + '-' + String(hj.getMonth()+1).padStart(2,'0') + '-' + String(hj.getDate()).padStart(2,'0');
+  var ini = fim.slice(0,8) + '01';
+  return {
+    titulo:'Relatório para edital',
+    html:'<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
+      'Os números que a prestação de contas pede: beneficiários atendidos, aulas realizadas e frequência.</p>' +
+      '<div class="duplo" style="margin-bottom:12px">' +
+      '<div class="campo" style="flex:1;margin:0"><label for="dtIni">De</label>' +
+      '<input id="dtIni" type="date" value="' + ini + '"></div>' +
+      '<div class="campo" style="flex:1;margin:0"><label for="dtFim">Até</label>' +
+      '<input id="dtFim" type="date" value="' + fim + '"></div></div>' +
+      '<button type="button" class="botao-cheio" data-acao="gerarRel">' +
+      ico('documento', 18) + ' Gerar relatório</button>' +
+      '<div id="saidaRel"></div>',
+    depois:function(){ ACOES.gerarRel(); }
+  };
+};
+ACOES.gerarRel = function(){
+  var de = el('dtIni').value, ate = el('dtFim').value;
+  el('saidaRel').innerHTML = '<div style="margin-top:20px">' + esqueleto(2) + '</div>';
+  api('relatorioPeriodo', [S.pin, de, ate], function(r){
+    S.rel = r;
+    var h = '<div class="secao">Resumo</div><div class="numeros">';
+    h += '<div><b>' + r.beneficiarios + '</b><span>beneficiários</span></div>';
+    h += '<div><b>' + r.aulas + '</b><span>aulas</span></div>';
+    h += '<div><b>' + r.frequencia + '%</b><span>frequência</span></div>';
+    h += '</div>';
+
+    h += '<div class="secao">Faixa etária</div><ul class="lista sem-avatar">';
+    Object.keys(r.faixas).forEach(function(k){
+      if (!r.faixas[k]) return;
+      h += '<li class="li"><span class="nome">' + esc(k) + '</span>' +
+           '<span class="pct">' + r.faixas[k] + '</span></li>';
+    });
+    h += '</ul>';
+
+    if (r.turmas.length){
+      h += '<div class="secao">Por turma</div><ul class="lista sem-avatar">';
+      r.turmas.forEach(function(t){
+        h += '<li class="li"><span class="nome">' + esc(t.turma) +
+             '<small>' + plural(t.aulas,'aula','aulas') + ' · ' +
+             plural(t.alunos,'aluno','alunos') + '</small></span>' +
+             '<span class="pct">' + t.pct + '%</span></li>';
+      });
+      h += '</ul>';
+    }
+    h += '<button type="button" class="botao-cheio" style="margin-top:20px" data-acao="copiarRel">' +
+         ico('copiar', 18) + ' Copiar para colar no edital</button>';
+    el('saidaRel').innerHTML = '<div style="margin-top:4px">' + h + '</div>';
+  }, function(e){
+    el('saidaRel').innerHTML = '<div style="margin-top:20px">' +
+      estado('alerta','Não deu para gerar', textoErro(e)) + '</div>';
+  });
+};
+ACOES.copiarRel = function(){
+  var r = S.rel;
+  if (!r) return;
+  var L = [];
+  L.push('INSTITUTO VERIDIANA — Relatório de frequência');
+  L.push('Período: ' + dataCurta(r.inicio) + '/' + r.inicio.slice(0,4) +
+         ' a ' + dataCurta(r.fim) + '/' + r.fim.slice(0,4));
+  L.push('');
+  L.push('Beneficiários atendidos: ' + r.beneficiarios);
+  L.push('Aulas realizadas: ' + r.aulas);
+  L.push('Frequência média: ' + r.frequencia + '%');
+  L.push('');
+  L.push('Faixa etária:');
+  Object.keys(r.faixas).forEach(function(k){
+    if (r.faixas[k]) L.push('- ' + k + ': ' + r.faixas[k]);
+  });
+  L.push('');
+  L.push('Por turma:');
+  r.turmas.forEach(function(t){
+    L.push('- ' + t.turma + ': ' + t.aulas + ' aulas, ' + t.alunos +
+           ' alunos, ' + t.pct + '% de frequência');
+  });
+  copiar(L.join('\n'));
+};
+
+/* ══════════════ GESTÃO: histórico ══════════════ */
+/* Só leitura, calculado das mesmas linhas de Chamadas. Sem gráfico:
+   a análise a fundo vive na planilha, com Tabela Dinâmica. */
+TELAS.gHistorico = function(){
+  return {
+    titulo:'Histórico', html:esqueleto(4),
+    depois:function(){
+      api('mesesComChamada', [S.pin], function(meses){
+        S.meses = meses || []; S.mesIdx = 0;
+        if (!S.meses.length){
+          el('palco').querySelector('.corpo').innerHTML = estado('calendario',
+            'Nenhuma chamada ainda', 'Assim que a primeira turma for salva, o histórico aparece aqui.');
+          return;
+        }
+        carregarMes();
+      }, function(e){
+        el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+
+function carregarMes(){
+  var mes = S.meses[S.mesIdx];
+  var alvo = el('palco').querySelector('.corpo');
+  alvo.innerHTML = passoMes(mes) + esqueleto(3);
+  api('resumoHistorico', [S.pin, mes], function(r){
+    var h = passoMes(mes);
+    var t = r.totais;
+
+    h += '<div class="resumo"><b>' + t.pct + '%</b>' +
+         '<span>de presença em ' + plural(t.aulas, 'aula', 'aulas') + '</span></div>';
+
+    if (r.turmas.length){
+      h += '<div class="secao">Por turma</div><ul class="lista sem-avatar">';
+      r.turmas.forEach(function(x){
+        h += '<li class="li"><span class="nome">' + esc(x.turma) +
+             '<small>' + plural(x.aulas, 'aula', 'aulas') + ' · ' +
+             x.presentes + ' de ' + x.total + ' presenças</small></span>' +
+             '<span class="pct">' + x.pct + '%</span></li>';
+      });
+      h += '</ul>';
+    }
+
+    if (r.aulas.length){
+      h += '<div class="secao">Aulas do mês</div>';
+      var diaAtual = '';
+      r.aulas.forEach(function(a, i){
+        if (a.data !== diaAtual){
+          if (diaAtual) h += '</ul>';
+          diaAtual = a.data;
+          h += '<div class="dia">' + esc(dataExtenso(a.data)) + '</div><ul class="lista sem-avatar">';
+        }
+        h += '<li class="li"><span class="nome">' + esc(a.turma) +
+             '<small>' + esc(a.professor || 'sem professor') + '</small></span>' +
+             '<span class="pct' + (a.presentes === a.total ? ' cheio' : '') + '">' +
+             a.presentes + '/' + a.total + '</span></li>';
+      });
+      h += '</ul>';
+    }
+    alvo.innerHTML = h;
+  }, function(e){
+    alvo.innerHTML = passoMes(mes) + estado('alerta','Não deu para carregar', textoErro(e));
+  });
+}
+
+function passoMes(mes){
+  var temAntes = S.mesIdx < S.meses.length - 1;
+  var temDepois = S.mesIdx > 0;
+  return '<div class="passo">' +
+    '<button type="button" data-acao="mesAntes" aria-label="Mês anterior"' +
+      (temAntes ? '' : ' disabled') + '>' + ico('esq', 22) + '</button>' +
+    '<b>' + esc(mesExtenso(mes)) + '</b>' +
+    '<button type="button" data-acao="mesDepois" aria-label="Próximo mês"' +
+      (temDepois ? '' : ' disabled') + '>' + ico('dir', 22) + '</button></div>';
+}
+ACOES.mesAntes  = function(){ if (S.mesIdx < S.meses.length - 1){ S.mesIdx++; vibrar(); carregarMes(); } };
+ACOES.mesDepois = function(){ if (S.mesIdx > 0){ S.mesIdx--; vibrar(); carregarMes(); } };
+
+/* ══════════════ GESTÃO: planilha ══════════════ */
+TELAS.gPlanilha = function(){
+  return {
+    titulo:'Planilha', html:esqueleto(2),
+    depois:function(){
+      api('obterLinkPlanilha', [S.pin], function(d){
+        var podeCompartilhar = !!navigator.share;
+        var h = '<div class="cartao-info">' + ico('tabela', 26) +
+          '<b>' + esc(d.nome) + '</b>' +
+          '<span>Todo dado do app mora aqui. A aba Painel mostra a frequência por turma e por dia.</span></div>';
+
+        h += '<a class="botao-cheio" href="' + esc(d.url) + '" target="_blank" rel="noopener">' +
+             ico('abrir', 18) + ' Abrir planilha</a>';
+        h += '<div class="duplo" style="margin-top:8px">';
+        h += '<button type="button" class="secundario" data-acao="copiarLink" data-u="' + esc(d.url) + '">' +
+             ico('copiar', 18) + ' Copiar link</button>';
+        if (podeCompartilhar)
+          h += '<button type="button" class="secundario" data-acao="partilharPlanilha" data-u="' +
+               esc(d.url) + '" data-n="' + esc(d.nome) + '">' + ico('partilha', 18) + ' Compartilhar</button>';
+        h += '</div>';
+
+        h += '<div class="aviso" style="margin-top:20px">' + ico('alerta', 18) +
+             '<span>O link sozinho não libera nada. Quem abrir precisa já ter permissão. ' +
+             'Para dar acesso a alguém, use o botão Compartilhar dentro da própria planilha.</span></div>';
+
+        h += '<div class="secao">Padronizar</div>';
+        h += '<div class="cartao-info" style="text-align:left">' +
+             '<span>Deixa cabeçalho, larguras, cores, listas de SIM/NAO e o Painel no padrão. ' +
+             'Pode rodar quantas vezes quiser, não duplica nada.</span></div>';
+        h += '<button type="button" class="botao-cheio" id="btArrumar" data-acao="arrumar">' +
+             ico('varinha', 18) + ' Arrumar planilha</button>';
+
+        el('palco').querySelector('.corpo').innerHTML = h;
+      }, function(e){
+        el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+ACOES.partilharPlanilha = function(b){
+  try {
+    navigator.share({ title:b.getAttribute('data-n'), url:b.getAttribute('data-u') }).catch(function(){});
+  } catch(e){ copiar(b.getAttribute('data-u')); }
+};
+ACOES.arrumar = function(){
+  var bt = el('btArrumar');
+  bt.disabled = true; bt.textContent = 'Arrumando…';
+  api('arrumarPlanilha', [S.pin], function(){
+    bt.disabled = false; bt.innerHTML = ico('varinha', 18) + ' Arrumar planilha';
+    vibrar(); toast('Planilha arrumada. O Painel está na primeira aba.');
+  }, function(e){
+    bt.disabled = false; bt.innerHTML = ico('varinha', 18) + ' Arrumar planilha';
+    toast(textoErro(e), 'erro');
+  });
+};
+</script>
+
+<script>
+/* Encoder de QR e desenho em SVG. */
+/* ══════════════════════════════════════════════════════════════
+   Encoder de QR — modo byte, correção M, versões 1 a 20.
+   Escrito para este arquivo e conferido contra um leitor
+   independente: 124 textos, round-trip completo, síndromes
+   Reed-Solomon zeradas em todos os blocos.
+   Nada de API externa: serviço de terceiro sai do ar e o QR
+   some no dia em que ela precisar reimprimir.
+   ══════════════════════════════════════════════════════════════ */
+/* Encoder de QR, modo byte, correção M. Versões 1 a 20. */
+var QR = (function () {
+  var TAB = [
+    [10,1,16,0,0],[16,1,28,0,0],[26,1,44,0,0],[18,2,32,0,0],[24,2,43,0,0],
+    [16,4,27,0,0],[18,4,31,0,0],[22,2,38,2,39],[22,3,36,2,37],[26,4,43,1,44],
+    [30,1,50,4,51],[22,6,36,2,37],[22,8,37,1,38],[24,4,40,5,41],[24,5,41,5,42],
+    [28,7,45,3,46],[28,10,46,1,47],[26,9,43,4,44],[26,3,44,11,45],[26,3,41,13,42]
+  ];
+  var ALI = ['','6,18','6,22','6,26','6,30','6,34','6,22,38','6,24,42','6,26,46',
+    '6,28,50','6,30,54','6,32,58','6,34,62','6,26,46,66','6,26,48,70','6,26,50,74',
+    '6,30,54,78','6,30,56,82','6,30,58,86','6,34,62,90'];
+  var EXP = new Uint8Array(512), LOG = new Uint8Array(256);
+  for (var i = 0, x = 1; i < 255; i++) { EXP[i] = x; LOG[x] = i; x <<= 1; if (x & 256) x ^= 285; }
+  for (i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
+  function mul(a, b) { return (a && b) ? EXP[LOG[a] + LOG[b]] : 0; }
+  function gerador(n) {
+    var g = [1];
+    for (var i = 0; i < n; i++) {
+      var novo = new Array(g.length + 1).fill(0);
+      for (var j = 0; j < g.length; j++) {
+        novo[j] ^= g[j];
+        novo[j + 1] ^= mul(g[j], EXP[i]);
+      }
+      g = novo;
+    }
+    return g;
+  }
+  function resto(dados, n) {
+    var g = gerador(n), r = dados.concat(new Array(n).fill(0));
+    for (var i = 0; i < dados.length; i++) {
+      var c = r[i];
+      if (!c) continue;
+      for (var j = 0; j < g.length; j++) r[i + j] ^= mul(g[j], c);
+    }
+    return r.slice(dados.length);
+  }
+  function bytesUtf8(s) {
+    var out = [], u = encodeURIComponent(s);
+    for (var i = 0; i < u.length; i++) {
+      if (u[i] === '%') { out.push(parseInt(u.substr(i + 1, 2), 16)); i += 2; }
+      else out.push(u.charCodeAt(i));
+    }
+    return out;
+  }
+  function totalDados(v) {
+    var t = TAB[v - 1];
+    return t[1] * t[2] + t[3] * t[4];
+  }
+  function alinhamentos(v) {
+    return ALI[v - 1] ? ALI[v - 1].split(',').map(Number) : [];
+  }
+  function montar(txt, versaoFixa) {
+    var d = bytesUtf8(txt), v = versaoFixa || 0;
+    if (!v) {
+      for (v = 1; v <= 20; v++) {
+        var bitsCont = v < 10 ? 8 : 16;
+        if (d.length * 8 + 4 + bitsCont <= totalDados(v) * 8) break;
+      }
+      if (v > 20) throw new Error('Texto grande demais para o QR.');
+    }
+    var t = TAB[v - 1], nDados = totalDados(v), cont = v < 10 ? 8 : 16;
+    var bits = [];
+    function push(val, n) { for (var i = n - 1; i >= 0; i--) bits.push((val >> i) & 1); }
+    push(4, 4); push(d.length, cont);
+    for (var i = 0; i < d.length; i++) push(d[i], 8);
+    var sobra = nDados * 8 - bits.length;
+    push(0, Math.min(4, sobra));
+    while (bits.length % 8) bits.push(0);
+    var pad = [236, 17], k = 0;
+    while (bits.length < nDados * 8) { push(pad[k++ % 2], 8); }
+    var cw = [];
+    for (i = 0; i < bits.length; i += 8) {
+      var b = 0;
+      for (var j = 0; j < 8; j++) b = (b << 1) | bits[i + j];
+      cw.push(b);
+    }
+    var blocos = [], ecs = [], p = 0;
+    for (i = 0; i < t[1]; i++) { blocos.push(cw.slice(p, p + t[2])); p += t[2]; }
+    for (i = 0; i < t[3]; i++) { blocos.push(cw.slice(p, p + t[4])); p += t[4]; }
+    for (i = 0; i < blocos.length; i++) ecs.push(resto(blocos[i], t[0]));
+    var fluxo = [], max = Math.max(t[2], t[4]);
+    for (i = 0; i < max; i++)
+      for (j = 0; j < blocos.length; j++)
+        if (i < blocos[j].length) fluxo.push(blocos[j][i]);
+    for (i = 0; i < t[0]; i++)
+      for (j = 0; j < ecs.length; j++) fluxo.push(ecs[j][i]);
+    return { v: v, fluxo: fluxo };
+  }
+  function matriz(txt, versaoFixa, mascaraFixa) {
+    var r = montar(txt, versaoFixa), v = r.v, n = v * 4 + 17;
+    var m = [], res = [];
+    for (var i = 0; i < n; i++) { m.push(new Array(n).fill(0)); res.push(new Array(n).fill(0)); }
+    function po(y, x, val) { if (y >= 0 && y < n && x >= 0 && x < n) { m[y][x] = val; res[y][x] = 1; } }
+    [[0, 0], [0, n - 7], [n - 7, 0]].forEach(function (c) {
+      for (var y = -1; y <= 7; y++) for (var x = -1; x <= 7; x++) {
+        var dentro = (y >= 0 && y <= 6 && x >= 0 && x <= 6);
+        var preto = dentro && (y === 0 || y === 6 || x === 0 || x === 6 ||
+                    (y >= 2 && y <= 4 && x >= 2 && x <= 4));
+        po(c[0] + y, c[1] + x, preto ? 1 : 0);
+      }
+    });
+    var a = alinhamentos(v);
+    for (i = 0; i < a.length; i++) for (var j2 = 0; j2 < a.length; j2++) {
+      var cy = a[i], cx = a[j2];
+      if ((cy <= 8 && cx <= 8) || (cy <= 8 && cx >= n - 9) || (cy >= n - 9 && cx <= 8)) continue;
+      for (var y2 = -2; y2 <= 2; y2++) for (var x2 = -2; x2 <= 2; x2++)
+        po(cy + y2, cx + x2, (Math.abs(y2) === 2 || Math.abs(x2) === 2 || (!y2 && !x2)) ? 1 : 0);
+    }
+    for (i = 8; i < n - 8; i++) { po(6, i, i % 2 ? 0 : 1); po(i, 6, i % 2 ? 0 : 1); }
+    po(n - 8, 8, 1); // módulo escuro
+    for (i = 0; i < 9; i++) { if (i !== 6) { po(8, i, 0); po(i, 8, 0); } }
+    for (i = 0; i < 8; i++) { po(8, n - 1 - i, 0); po(n - 1 - i, 8, 0); }
+    if (v >= 7) for (i = 0; i < 6; i++) for (j2 = 0; j2 < 3; j2++) { po(n - 11 + j2, i, 0); po(i, n - 11 + j2, 0); }
+    var bit = 0, dir = -1, col = n - 1, fluxo = r.fluxo;
+    function proximo() {
+      if (bit >= fluxo.length * 8) return 0;
+      var b = (fluxo[bit >> 3] >> (7 - (bit & 7))) & 1;
+      bit++; return b;
+    }
+    while (col > 0) {
+      if (col === 6) col--;
+      for (var linha = (dir < 0 ? n - 1 : 0); linha >= 0 && linha < n; linha += dir) {
+        for (var c2 = 0; c2 < 2; c2++) {
+          var cc = col - c2;
+          if (!res[linha][cc]) { m[linha][cc] = proximo(); }
+        }
+      }
+      dir = -dir; col -= 2;
+    }
+    function aplicar(msk, mat) {
+      var f = [
+        function (y, x) { return (y + x) % 2 === 0; },
+        function (y) { return y % 2 === 0; },
+        function (y, x) { return x % 3 === 0; },
+        function (y, x) { return (y + x) % 3 === 0; },
+        function (y, x) { return (((y / 2) | 0) + ((x / 3) | 0)) % 2 === 0; },
+        function (y, x) { return (y * x) % 2 + (y * x) % 3 === 0; },
+        function (y, x) { return ((y * x) % 2 + (y * x) % 3) % 2 === 0; },
+        function (y, x) { return ((y + x) % 2 + (y * x) % 3) % 2 === 0; }
+      ][msk];
+      for (var y = 0; y < n; y++) for (var x = 0; x < n; x++)
+        if (!res[y][x] && f(y, x)) mat[y][x] ^= 1;
+    }
+    function formato(msk, mat) {
+      var bch = msk << 10;                       // nivel M = 00, entao dados = msk
+      for (var i = 4; i >= 0; i--) if (bch & (1 << (i + 10))) bch ^= 0x537 << i;
+      var f = (((msk << 10) | bch) ^ 0x5412);
+      function b(k) { return (f >> (14 - k)) & 1; }   // k=0 e o bit mais alto
+      for (i = 0; i <= 5; i++) mat[8][i] = b(i);
+      mat[8][7] = b(6); mat[8][8] = b(7); mat[7][8] = b(8);
+      for (i = 9; i <= 14; i++) mat[14 - i][8] = b(i);
+      for (i = 0; i <= 6; i++) mat[n - 1 - i][8] = b(i);
+      for (i = 7; i <= 14; i++) mat[8][n - 15 + i] = b(i);
+      mat[n - 8][8] = 1;                         // modulo escuro
+    }
+    function versaoInfo(mat) {
+      if (v < 7) return;
+      var bch = v << 12, d = v << 12;
+      for (var i = 5; i >= 0; i--) if (bch & (1 << (i + 12))) bch ^= 0x1F25 << i;
+      var f = d | bch;
+      for (i = 0; i < 18; i++) {
+        var b = (f >> i) & 1, y = (i / 3) | 0, x = i % 3;
+        mat[n - 11 + x][y] = b; mat[y][n - 11 + x] = b;
+      }
+    }
+    function copia(src) { return src.map(function (l) { return l.slice(); }); }
+    function penal(mat) {
+      var p = 0, y, x, i, run, cor;
+      for (y = 0; y < n; y++) { run = 1; for (x = 1; x < n; x++) { if (mat[y][x] === mat[y][x - 1]) { run++; } else { if (run >= 5) p += run - 2; run = 1; } } if (run >= 5) p += run - 2; }
+      for (x = 0; x < n; x++) { run = 1; for (y = 1; y < n; y++) { if (mat[y][x] === mat[y - 1][x]) { run++; } else { if (run >= 5) p += run - 2; run = 1; } } if (run >= 5) p += run - 2; }
+      for (y = 0; y < n - 1; y++) for (x = 0; x < n - 1; x++) { var s = mat[y][x] + mat[y][x + 1] + mat[y + 1][x] + mat[y + 1][x + 1]; if (s === 0 || s === 4) p += 3; }
+      var A = '10111010000', B = '00001011101';
+      function conta(s2) {
+        var c = 0, k;
+        for (k = 0; k + 11 <= s2.length; k++) {
+          var t = s2.substr(k, 11);
+          if (t === A || t === B) c++;
+        }
+        return c * 40;
+      }
+      for (y = 0; y < n; y++) p += conta(mat[y].join(''));
+      for (x = 0; x < n; x++) { var col2 = ''; for (y = 0; y < n; y++) col2 += mat[y][x]; p += conta(col2); }
+      var escuros = 0;
+      for (y = 0; y < n; y++) for (x = 0; x < n; x++) escuros += mat[y][x];
+      p += Math.floor(Math.abs(escuros * 100 / (n * n) - 50) / 5) * 10;
+      return p;
+    }
+    var melhor = null, melhorP = Infinity, msk;
+    var faixa = (mascaraFixa === undefined || mascaraFixa === null) ? [0, 1, 2, 3, 4, 5, 6, 7] : [mascaraFixa];
+    for (var mi = 0; mi < faixa.length; mi++) {
+      msk = faixa[mi];
+      var cand = copia(m);
+      aplicar(msk, cand); formato(msk, cand); versaoInfo(cand);
+      var pen = penal(cand);
+      if (pen < melhorP) { melhorP = pen; melhor = cand; var mUsada = msk; }
+    }
+    return { n: n, v: v, mascara: mUsada, m: melhor };
+  }
+  return { matriz: matriz };
+})();
+
+/* desenha o QR como SVG: vetor, imprime nítido em qualquer tamanho */
+function qrSvg(txt){
+  var r = QR.matriz(txt), n = r.n, q = 4, tot = n + q * 2, d = '';
+  for (var y = 0; y < n; y++){
+    var x = 0;
+    while (x < n){
+      if (r.m[y][x]){
+        var w = 1;
+        while (x + w < n && r.m[y][x + w]) w++;
+        d += 'M' + (x + q) + ' ' + (y + q) + 'h' + w + 'v1h-' + w + 'z';
+        x += w;
+      } else x++;
+    }
+  }
+  return '<svg viewBox="0 0 ' + tot + ' ' + tot + '" xmlns="http://www.w3.org/2000/svg" ' +
+         'role="img" aria-label="Código QR da turma"><rect width="' + tot + '" height="' + tot +
+         '" fill="#fff"/><path d="' + d + '" fill="#1B1020"/></svg>';
+}
+</script>
+
+<script>
+/* Partida: lê a turma da URL e abre a primeira tela. Roda por último. */
+/* ══════════════ partida ══════════════ */
+function iniciar(){
+  function semParametro(){ S.viaQr = false; ir('turmas', {}, true); }
+  try {
+    if (google.script.url && google.script.url.getLocation){
+      var respondeu = false;
+      var prazo = setTimeout(function(){ if (!respondeu){ respondeu = true; semParametro(); } }, 4000);
+      google.script.url.getLocation(function(loc){
+        if (respondeu) return;
+        respondeu = true; clearTimeout(prazo);
+        var t = (loc && loc.parameter && loc.parameter.turma) ? String(loc.parameter.turma) : '';
+        if (t){ S.viaQr = true; ir('chamada', {turma:t}, true); }
+        else semParametro();
+      });
+    } else semParametro();
+  } catch(e){ semParametro(); }
+}
+
+window.addEventListener('resize', medirBarra);
+iniciar();
+</script>
+
+</body>
+</html>
