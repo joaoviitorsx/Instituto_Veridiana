@@ -19,12 +19,12 @@
 
   /* ─── dados de mentira, no formato da planilha ─── */
   var TURMAS = [
-    { nome:'Ballet Infantil I', ativa:true },
-    { nome:'Ballet Infantil II', ativa:true },
-    { nome:'Jazz Juvenil', ativa:true },
-    { nome:'Danças Urbanas', ativa:true },
-    { nome:'Contemporâneo Avançado', ativa:true },
-    { nome:'Teatro', ativa:true }
+    { nome:'Ballet Infantil I', ativa:true, minutos:60 },
+    { nome:'Ballet Infantil II', ativa:true, minutos:60 },
+    { nome:'Jazz Juvenil', ativa:true, minutos:90 },
+    { nome:'Danças Urbanas', ativa:true, minutos:90 },
+    { nome:'Contemporâneo Avançado', ativa:true, minutos:120 },
+    { nome:'Teatro', ativa:true, minutos:90 }
   ];
   var PROFS = ['Vera Lúcia Sampaio','Aline Ferreira','Bruno Tavares','Cláudia Nogueira',
                'Denise Rocha','Iara Mendes','Rafael Duarte','Sâmia Alencar'];
@@ -307,6 +307,44 @@
     },
     obterUrlApp: function(pin){ exigirPin(pin); return URL_APP; },
 
+    alunosParaCertificado: function(pin, turma){
+      exigirPin(pin);
+      var min = {}; TURMAS.forEach(function(t){ min[t.nome] = t.minutos || 60; });
+      var h = {};
+      REGISTROS.forEach(function(r){
+        if (!h[r.aluno]) h[r.aluno] = {primeira:r.data, ultima:r.data, aulas:0, minutos:0};
+        var x = h[r.aluno];
+        if (r.data < x.primeira) x.primeira = r.data;
+        if (r.data > x.ultima) x.ultima = r.data;
+        if (r.status === 'Presente'){ x.aulas++; x.minutos += (min[r.turma] || 60); }
+      });
+      return ALUNOS.filter(function(a){ return !turma || a.turma === turma; })
+        .map(function(a){
+          var x = h[a.nome];
+          return { nome:a.nome, turma:a.turma, ativo:a.ativo,
+                   aulas: x ? x.aulas : 0, horas: x ? Math.round(x.minutos/60) : 0,
+                   desde: x ? x.primeira : '',
+                   responsavel:a.responsavel, telefone:a.telefone };
+        }).sort(function(a,b){ return pt(a.nome,b.nome); });
+    },
+    gerarCertificado: function(pin, nomes, turma){
+      exigirPin(pin);
+      var lista = (nomes || []).filter(Boolean);
+      if (!lista.length) throw new Error('Escolha pelo menos um aluno.');
+      var comAula = API.alunosParaCertificado(pin, '').filter(function(a){
+        return lista.indexOf(a.nome) !== -1 && a.aulas > 0;
+      }).map(function(a){ return a.nome; });
+      if (!comAula.length) throw new Error('Nenhum desses alunos tem presença registrada ainda.');
+      return { ok:true,
+        url:'https://drive.google.com/file/d/1EXEMPLO_CERTIFICADO_0000000/view',
+        nome: comAula.length === 1
+          ? 'Certificado — ' + comAula[0] + ' — ' + hoje() + '.pdf'
+          : 'Certificados — ' + (turma || 'vários') + ' — ' + hoje() + '.pdf',
+        quantidade: comAula.length,
+        aluno: comAula.length === 1 ? comAula[0] : '',
+        publico: comAula.length === 1,
+        ignorados: lista.filter(function(n){ return comAula.indexOf(n) === -1; }) };
+    },
     obterLinkPlanilha: function(pin){
       exigirPin(pin);
       return { url:'https://docs.google.com/spreadsheets/d/1EXEMPLO000000000000000000000/edit',

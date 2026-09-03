@@ -68,7 +68,7 @@ function obterLinkPlanilha(pin) {
 const ABAS_PADRAO = [
   { nome: 'Alunos',      cab: ['Turma','Aluno','Ativo','Nascimento','Responsável','Telefone'], larg: [170, 230, 70, 110, 200, 130] },
   { nome: 'Professores', cab: ['Professor'],                                                  larg: [260] },
-  { nome: 'Turmas',      cab: ['Turma', 'Ativa'],                                             larg: [240, 80] },
+  { nome: 'Turmas',      cab: ['Turma', 'Ativa', 'Minutos por aula'],                        larg: [230, 70, 140] },
   { nome: 'Chamadas',    cab: ['Registro','Data','Turma','Professor','Aluno','Status'],       larg: [150, 100, 190, 200, 250, 120] }
 ];
 

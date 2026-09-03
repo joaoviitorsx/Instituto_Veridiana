@@ -616,12 +616,12 @@ main{padding:0 0 24px}
 
   /* ─── dados de mentira, no formato da planilha ─── */
   var TURMAS = [
-    { nome:'Ballet Infantil I', ativa:true },
-    { nome:'Ballet Infantil II', ativa:true },
-    { nome:'Jazz Juvenil', ativa:true },
-    { nome:'Danças Urbanas', ativa:true },
-    { nome:'Contemporâneo Avançado', ativa:true },
-    { nome:'Teatro', ativa:true }
+    { nome:'Ballet Infantil I', ativa:true, minutos:60 },
+    { nome:'Ballet Infantil II', ativa:true, minutos:60 },
+    { nome:'Jazz Juvenil', ativa:true, minutos:90 },
+    { nome:'Danças Urbanas', ativa:true, minutos:90 },
+    { nome:'Contemporâneo Avançado', ativa:true, minutos:120 },
+    { nome:'Teatro', ativa:true, minutos:90 }
   ];
   var PROFS = ['Vera Lúcia Sampaio','Aline Ferreira','Bruno Tavares','Cláudia Nogueira',
                'Denise Rocha','Iara Mendes','Rafael Duarte','Sâmia Alencar'];
@@ -904,6 +904,44 @@ main{padding:0 0 24px}
     },
     obterUrlApp: function(pin){ exigirPin(pin); return URL_APP; },
 
+    alunosParaCertificado: function(pin, turma){
+      exigirPin(pin);
+      var min = {}; TURMAS.forEach(function(t){ min[t.nome] = t.minutos || 60; });
+      var h = {};
+      REGISTROS.forEach(function(r){
+        if (!h[r.aluno]) h[r.aluno] = {primeira:r.data, ultima:r.data, aulas:0, minutos:0};
+        var x = h[r.aluno];
+        if (r.data < x.primeira) x.primeira = r.data;
+        if (r.data > x.ultima) x.ultima = r.data;
+        if (r.status === 'Presente'){ x.aulas++; x.minutos += (min[r.turma] || 60); }
+      });
+      return ALUNOS.filter(function(a){ return !turma || a.turma === turma; })
+        .map(function(a){
+          var x = h[a.nome];
+          return { nome:a.nome, turma:a.turma, ativo:a.ativo,
+                   aulas: x ? x.aulas : 0, horas: x ? Math.round(x.minutos/60) : 0,
+                   desde: x ? x.primeira : '',
+                   responsavel:a.responsavel, telefone:a.telefone };
+        }).sort(function(a,b){ return pt(a.nome,b.nome); });
+    },
+    gerarCertificado: function(pin, nomes, turma){
+      exigirPin(pin);
+      var lista = (nomes || []).filter(Boolean);
+      if (!lista.length) throw new Error('Escolha pelo menos um aluno.');
+      var comAula = API.alunosParaCertificado(pin, '').filter(function(a){
+        return lista.indexOf(a.nome) !== -1 && a.aulas > 0;
+      }).map(function(a){ return a.nome; });
+      if (!comAula.length) throw new Error('Nenhum desses alunos tem presença registrada ainda.');
+      return { ok:true,
+        url:'https://drive.google.com/file/d/1EXEMPLO_CERTIFICADO_0000000/view',
+        nome: comAula.length === 1
+          ? 'Certificado — ' + comAula[0] + ' — ' + hoje() + '.pdf'
+          : 'Certificados — ' + (turma || 'vários') + ' — ' + hoje() + '.pdf',
+        quantidade: comAula.length,
+        aluno: comAula.length === 1 ? comAula[0] : '',
+        publico: comAula.length === 1,
+        ignorados: lista.filter(function(n){ return comAula.indexOf(n) === -1; }) };
+    },
     obterLinkPlanilha: function(pin){
       exigirPin(pin);
       return { url:'https://docs.google.com/spreadsheets/d/1EXEMPLO000000000000000000000/edit',
@@ -1143,6 +1181,7 @@ var P = {
   renomear:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   apagarTecla:'<path d="M20 5H9l-7 7 7 7h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"/><path d="m18 9-6 6M12 9l6 6"/>',
   cadeado:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  medalha:'<circle cx="12" cy="8" r="6"/><path d="M15.5 13.6 17 22l-5-3-5 3 1.5-8.4"/>',
   sino:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
   bolo:'<path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"/><path d="M2 21h20"/><path d="M7 8v3M12 8v3M17 8v3"/><path d="M7 4h.01M12 4h.01M17 4h.01"/>',
   conversa:'<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/>',
@@ -1746,6 +1785,7 @@ TELAS.gestao = function(){
     {ic:'qr', t:'QR das turmas', s:'gerar código para imprimir', a:'gQr'},
     {ic:'sino', t:'Precisam de atenção', s:'carregando…', a:'gRisco', id:'itRisco'},
     {ic:'calendario', t:'Histórico', s:'quem veio, por dia e por mês', a:'gHistorico'},
+    {ic:'medalha', t:'Certificados', s:'comprovante de horas para as alunas', a:'gCert'},
     {ic:'documento', t:'Relatório para edital', s:'beneficiários, aulas e frequência', a:'gRelatorio'},
     {ic:'tabela', t:'Planilha', s:'abrir e compartilhar a planilha', a:'gPlanilha'}
   ];
@@ -1792,6 +1832,7 @@ ACOES.gHistorico = function(){ ir('gHistorico'); };
 ACOES.gPlanilha  = function(){ ir('gPlanilha'); };
 ACOES.gRisco     = function(){ ir('gRisco'); };
 ACOES.gRelatorio = function(){ ir('gRelatorio'); };
+ACOES.gCert      = function(){ ir('gCert'); };
 
 /* recarrega os contadores depois de qualquer escrita */
 function recontar(){
@@ -2189,6 +2230,131 @@ function copiaAntiga(txt, ok){
   document.body.removeChild(a);
   if (deu) ok(); else toast('Não deu para copiar sozinho. Segure o dedo no link.', 'erro');
 }
+
+/* ══════════════ GESTÃO: certificados ══════════════ */
+/* O documento que a aluna leva embora. Vale para currículo de Jovem
+   Aprendiz, atividade complementar na escola e comprovação de vínculo. */
+TELAS.gCert = function(){
+  return {
+    titulo:'Certificados', html:esqueleto(4),
+    depois:function(){
+      api('listarTurmasCompleto', [S.pin], function(ts){
+        var alvo = el('palco').querySelector('.corpo');
+        if (!ts.length){
+          alvo.innerHTML = estado('prancheta','Nenhuma turma ainda','Crie uma turma para emitir certificados.');
+          return;
+        }
+        var h = '<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
+          'Escolha a turma. O certificado conta as aulas em que a aluna esteve presente.</p><ul class="cartoes">';
+        ts.forEach(function(t){
+          h += '<li><button type="button" class="item" data-acao="certTurma" data-t="' + esc(t.nome) + '">' +
+               '<span class="txt">' + esc(t.nome) + '<small>' + plural(t.ativos,'aluno','alunos') + '</small></span>' +
+               '<span class="seta">' + ico('dir') + '</span></button></li>';
+        });
+        alvo.innerHTML = h + '</ul>';
+      }, function(e){
+        el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+ACOES.certTurma = function(b){ ir('gCertTurma', {turma:b.getAttribute('data-t')}); };
+
+TELAS.gCertTurma = function(p){
+  return {
+    titulo:p.turma, html:esqueleto(5),
+    barra:'<button type="button" class="salvar" data-acao="certTodos" data-t="' + esc(p.turma) + '">' +
+          ico('medalha') + 'Gerar da turma inteira</button>',
+    depois:function(){
+      api('alunosParaCertificado', [S.pin, p.turma], function(as){
+        S.certAlunos = as;
+        var com = as.filter(function(a){ return a.aulas > 0; });
+        var alvo = el('palco').querySelector('.corpo');
+        if (!com.length){
+          alvo.innerHTML = estado('medalha','Ninguém com presença ainda',
+            'O certificado conta aulas frequentadas. Salve algumas chamadas primeiro.');
+          return;
+        }
+        var h = '<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
+                'Toque na aluna para gerar o certificado dela.</p><ul class="lista">';
+        as.forEach(function(a){
+          var vazio = a.aulas === 0;
+          h += '<li class="li"' + (vazio ? '' : ' data-acao="certUm" data-n="' + esc(a.nome) +
+               '" data-t="' + esc(p.turma) + '" role="button" tabindex="0"') + '>' +
+               '<span class="ini"' + (vazio ? ' style="background:var(--fundo);color:var(--apagado)"' : '') + '>' +
+               esc(iniciais(a.nome)) + '</span>' +
+               '<span class="nome"' + (vazio ? ' style="color:var(--apagado)"' : '') + '>' + esc(a.nome) +
+               '<small>' + (vazio ? 'sem presença ainda'
+                  : plural(a.aulas,'aula','aulas') + ' · ' + plural(a.horas,'hora','horas')) + '</small></span>' +
+               (vazio ? '' : '<span class="marca">' + ico('dir', 18) + '</span>') + '</li>';
+        });
+        alvo.innerHTML = h + '</ul>';
+      }, function(e){
+        el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+
+ACOES.certUm = function(b){
+  var nome = b.getAttribute('data-n'), turma = b.getAttribute('data-t');
+  emitir([nome], turma, nome);
+};
+ACOES.certTodos = function(b){
+  var turma = b.getAttribute('data-t');
+  var com = (S.certAlunos || []).filter(function(a){ return a.aulas > 0; });
+  if (!com.length){ toast('Ninguém da turma tem presença registrada ainda.', 'erro'); return; }
+  confirmar('Gerar ' + com.length + ' certificados',
+    'Sai um PDF com uma página por aluna, de ' + turma + '. Bom para imprimir e entregar no fim do ano.',
+    'Gerar', function(){
+      emitir(com.map(function(a){ return a.nome; }), turma, '');
+    });
+};
+
+function emitir(nomes, turma, umNome){
+  toast('Gerando… pode levar alguns segundos.');
+  api('gerarCertificado', [S.pin, nomes, turma], function(r){
+    fecharToast(); vibrar();
+    var ficha = umNome ? (S.certAlunos || []).filter(function(a){ return a.nome === umNome; })[0] : null;
+    var h = '<p class="sub">' + esc(r.nome) + '</p><div style="padding:0 8px">';
+    h += '<a class="botao-cheio" href="' + esc(r.url) + '" target="_blank" rel="noopener">' +
+         ico('abrir', 18) + ' Abrir o PDF</a>';
+
+    if (umNome && r.publico && ficha && ficha.telefone){
+      var texto = 'Oi! Segue o certificado de participação d' +
+        (umNome ? 'e ' + umNome : 'a aluna') + ' no Instituto Veridiana. ' +
+        'É só abrir o link e salvar: ' + r.url;
+      h += '<a class="botao-zap" href="' + esc(linkZap(ficha.telefone, texto)) +
+           '" target="_blank" rel="noopener">' + ico('conversa', 18) + ' Enviar no WhatsApp</a>';
+    } else if (umNome && r.publico){
+      h += '<button type="button" class="botao-vazio" data-acao="certSemFone" data-n="' + esc(umNome) +
+           '" data-t="' + esc(turma) + '">' + ico('pessoa', 18) + ' Sem telefone — cadastrar</button>';
+    }
+
+    h += '<button type="button" class="botao-cheio" style="margin-top:8px;background:var(--fundo);' +
+         'color:var(--roxo)" data-acao="copiarLink" data-u="' + esc(r.url) + '">' +
+         ico('copiar', 18) + ' Copiar link</button>';
+
+    if (!r.publico && nomes.length > 1){
+      h += '<p style="font-size:13px;color:var(--apagado);line-height:1.5;margin:16px 4px 0">' +
+           'O PDF da turma inteira fica só no seu Drive, sem link público — ele tem o nome de ' +
+           r.quantidade + ' crianças. Certificado individual sai com link para enviar à família.</p>';
+    }
+    if (r.ignorados && r.ignorados.length){
+      h += '<p style="font-size:13px;color:var(--apagado);margin:12px 4px 0">Fora: ' +
+           esc(r.ignorados.join(', ')) + ' — sem presença registrada.</p>';
+    }
+    h += '</div>';
+    abrirFolha(r.quantidade === 1 ? 'Certificado pronto' : r.quantidade + ' certificados prontos', h);
+  }, function(e){
+    fecharToast();
+    toast(textoErro(e), 'erro');
+  });
+}
+ACOES.certSemFone = function(b){
+  fecharFolha();
+  setTimeout(function(){ editarAluno(b.getAttribute('data-n'), b.getAttribute('data-t'), null); }, 80);
+};
 
 /* ══════════════ GESTÃO: precisam de atenção ══════════════ */
 /* Três faltas seguidas é o gatilho que a busca ativa usa na rede

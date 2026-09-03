@@ -43,13 +43,28 @@ function abaTurmas(){
 function turmasRegistradas(){
   const aba = abaTurmas();
   if (aba.getLastRow() < 2) return [];
-  return aba.getRange(2, 1, aba.getLastRow() - 1, 2).getValues()
+  const cols = Math.min(3, aba.getMaxColumns());
+  return aba.getRange(2, 1, aba.getLastRow() - 1, cols).getValues()
     .map(function (l, i){
+      const min = Number(l[2]);
       return { nome: String(l[0] || '').trim(),
                ativa: String(l[1] || 'SIM').trim().toUpperCase() !== 'NAO',
+               /* Duração da aula. Sem ela não existe carga horária no
+                  certificado, então 60 min é o palpite padrão. */
+               minutos: (min > 0 && min <= 480) ? min : 60,
                linha: i + 2 };
     })
     .filter(function (t){ return t.nome; });
+}
+
+/** Cria a coluna C (Minutos por aula) se ainda não existir. */
+function garantirColunaTurmas_(){
+  const aba = abaTurmas();
+  if (aba.getMaxColumns() < 3) aba.insertColumnsAfter(aba.getMaxColumns(), 3 - aba.getMaxColumns());
+  if (String(aba.getRange(1, 3).getValue() || '').trim() === ''){
+    aba.getRange(1, 3).setValue('Minutos por aula');
+  }
+  return aba;
 }
 
 function contarAlunos(){

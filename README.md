@@ -56,6 +56,36 @@ com o celular na mão, o olho acha as três faltas sem procurar.
 
 ## Além da chamada
 
+### Certificado de participação
+
+<img src="assets/certificado-pdf.png" width="250" align="right" alt="Certificado gerado em PDF">
+
+Uma menina de 17 anos aqui não tem nada no papel. Sem currículo, sem
+certificado, sem comprovante de nada.
+
+O instituto tem, na planilha, o registro exato: desde quando ela vem,
+quantas aulas frequentou, em quais turmas. **É o único lugar do mundo que
+consegue emitir esse documento** — e até agora ele não existia.
+
+Serve para currículo de Jovem Aprendiz, atividade complementar na escola
+e comprovação de vínculo em programa social.
+
+O PDF sai com um toque, com link pronto para mandar no WhatsApp da
+família. Ou a turma inteira de uma vez, uma página por aluna, para
+imprimir e entregar no fim do ano.
+
+<br clear="right">
+
+<p align="center">
+  <img src="assets/certificados.png" width="240" alt="Lista de alunas com aulas e horas">
+  <img src="assets/certificado-envio.png" width="240" alt="Certificado pronto para enviar">
+</p>
+
+> O certificado individual sai com link público, para o PDF abrir no
+> celular da família, que não tem conta Google. O da turma inteira **não**
+> — teria o nome de 20 crianças num link aberto. Esse fica só no Drive,
+> para imprimir.
+
 ### Precisam de atenção
 
 <img src="assets/evasao.png" width="260" align="right" alt="Tela de evasão">
@@ -132,7 +162,7 @@ mínimo 44px.
 ## Estrutura
 
 ```
-apps-script/        cole estes 14 arquivos no editor do Apps Script
+apps-script/        cole estes 15 arquivos no editor do Apps Script
   Codigo.gs           constantes, doGet e montagem da página
   Util.gs             planilha, datas, cache e trava
   Chamada.gs          o fluxo do QR
@@ -140,6 +170,7 @@ apps-script/        cole estes 14 arquivos no editor do Apps Script
   Planilha.gs         link, padronização, Painel e menu
   Historico.gs        leitura do histórico por mês
   Impacto.gs          evasão, relatório de edital, aniversários
+  Certificado.gs      certificado em PDF com carga horária
   Index.html          casca da página
   Estilo.html         todo o CSS
   AppNucleo.html      estado, ícones, ponte com o servidor, roteador
@@ -192,11 +223,11 @@ PY
 
 ## 1. Colar no Apps Script
 
-São 14 arquivos. No editor, o botão **+** ao lado de "Arquivos" cria cada um.
+São 15 arquivos. No editor, o botão **+** ao lado de "Arquivos" cria cada um.
 
 **Arquivos de script** (`+` → **Script**). Digite o nome sem `.gs`:
 
-`Codigo` · `Util` · `Chamada` · `Gestao` · `Planilha` · `Historico` · `Impacto`
+`Codigo` · `Util` · `Chamada` · `Gestao` · `Planilha` · `Historico` · `Impacto` · `Certificado`
 
 **Arquivos de HTML** (`+` → **HTML**). Digite o nome sem `.html`:
 
@@ -210,6 +241,10 @@ da pasta `apps-script/`, `Ctrl+S`.
 
 Depois: **Implantar → Gerenciar implantações → ✏️ → Versão: Nova
 versão → Implantar**. Sem isso o link continua servindo o código antigo.
+
+> O `Certificado.gs` usa o Drive para salvar o PDF. Na primeira vez que
+> você gerar um certificado, o Google vai pedir autorização de novo —
+> é o escopo do Drive entrando. Autorize e siga.
 
 Na primeira vez, em **Implantar → Nova implantação → Tipo: App da Web**:
 
@@ -323,7 +358,7 @@ cartaz, no tamanho A5.
 | `Alunos` | Turma, Aluno, Ativo (SIM/NAO), Nascimento, Responsável, Telefone |
 | `Professores` | Professor |
 | `Chamadas` | Registro, Data, Turma, Professor, Aluno, Status |
-| `Turmas` | Turma, Ativa (SIM/NAO) |
+| `Turmas` | Turma, Ativa (SIM/NAO), Minutos por aula |
 
 `Chamadas` e `Turmas` nascem sozinhas no primeiro uso.
 
