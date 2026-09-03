@@ -17,7 +17,7 @@
  */
 
 const ABA_CAIXA = 'Caixa';
-const JANELA_CAIXA = 5000;   // linhas recentes lidas
+const TETO_CAIXA = 40000;    // teto de segurança; o caixa é lido inteiro
 
 const CAT_ENTRADA = ['Doação', 'Bazar', 'Edital', 'Rifa', 'Evento', 'Outro'];
 const CAT_SAIDA   = ['Aluguel', 'Água e luz', 'Internet', 'Figurino', 'Material de dança',
@@ -31,6 +31,7 @@ function abaCaixa() {
     aba.appendRow(['Registro', 'Data', 'Tipo', 'Valor', 'Categoria',
                    'Descrição', 'Fonte', 'Comprovante', 'Quem registrou']);
     aba.setFrozenRows(1);
+    aba.getRange(2, 2, aba.getMaxRows() - 1, 1).setNumberFormat('@');
   }
   return aba;
 }
@@ -58,11 +59,15 @@ function valorNumero_(v) {
   return parseFloat(s);
 }
 
+/* "Tem quanto em caixa?" só tem resposta certa somando tudo desde o
+   começo. Janela de linhas dava um saldo errado sem avisar. Um livro
+   caixa de instituto pequeno faz umas 400 linhas por ano — ler inteiro
+   é barato. */
 function lerCaixa_() {
   const aba = abaCaixa();
   const ultima = aba.getLastRow();
   if (ultima < 2) return [];
-  const inicio = Math.max(2, ultima - JANELA_CAIXA + 1);
+  const inicio = Math.max(2, ultima - TETO_CAIXA + 1);
   return aba.getRange(inicio, 1, ultima - inicio + 1, 9).getValues()
     .map(function (l, i) {
       return {

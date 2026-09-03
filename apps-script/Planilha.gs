@@ -113,13 +113,18 @@ function arrumarPlanilha(pin) {
     const ch = ss.getSheetByName(ABA_CHAMADAS);
     if (ch && ch.getMaxRows() > 1) {
       ch.getRange(2, 1, ch.getMaxRows() - 1, 1).setNumberFormat('dd/mm/yyyy hh:mm');
-      ch.getRange(2, 2, ch.getMaxRows() - 1, 1).setNumberFormat('dd/mm/yyyy');
+      /* Texto, não data: ver o comentário de textoData em Util.gs. */
+      ch.getRange(2, 2, ch.getMaxRows() - 1, 1).setNumberFormat('@');
+    }
+
+    if (alunos && alunos.getMaxRows() > 1) {
+      alunos.getRange(2, 4, alunos.getMaxRows() - 1, 1).setNumberFormat('@');
     }
 
     const cx = ss.getSheetByName(ABA_CAIXA);
     if (cx && cx.getMaxRows() > 1) {
       cx.getRange(2, 1, cx.getMaxRows() - 1, 1).setNumberFormat('dd/mm/yyyy hh:mm');
-      cx.getRange(2, 2, cx.getMaxRows() - 1, 1).setNumberFormat('dd/mm/yyyy');
+      cx.getRange(2, 2, cx.getMaxRows() - 1, 1).setNumberFormat('@');
       cx.getRange(2, 4, cx.getMaxRows() - 1, 1).setNumberFormat('R$ #,##0.00');
     }
 
@@ -189,6 +194,12 @@ function montarPainel_(ss) {
   aba.getRange('A2').setValue('Tudo aqui se atualiza sozinho a cada chamada salva.')
     .setFontSize(10).setFontColor('#6B5E78');
 
+  /* As duas dinâmicas ficam LADO A LADO, não uma embaixo da outra.
+     Empilhadas, "POR DIA" em A14 caía dentro do resultado da primeira
+     assim que a instituição passava de 6 turmas — e aí ou o Apps Script
+     lançava erro no meio do arrumarPlanilha, deixando a planilha meio
+     formatada, ou a segunda dava #REF!. Lado a lado a colisão é
+     impossível, porque cada uma cresce só para baixo. */
   aba.getRange('A4').setValue('POR TURMA')
     .setFontWeight('bold').setFontSize(11).setFontColor('#4A1D6E');
   const p1 = aba.getRange('A5').createPivotTable(origem);
@@ -196,16 +207,17 @@ function montarPainel_(ss) {
   p1.addColumnGroup(6);                                // F = Status
   p1.addPivotValue(5, SpreadsheetApp.PivotTableSummarizeFunction.COUNTA); // E = Aluno
 
-  aba.getRange('A14').setValue('POR DIA')
+  aba.getRange('G4').setValue('POR DIA')
     .setFontWeight('bold').setFontSize(11).setFontColor('#4A1D6E');
-  const p2 = aba.getRange('A15').createPivotTable(origem);
+  const p2 = aba.getRange('G5').createPivotTable(origem);
   p2.addRowGroup(2);                                   // B = Data
   p2.addRowGroup(3);                                   // C = Turma
   p2.addColumnGroup(6);                                // F = Status
   p2.addPivotValue(5, SpreadsheetApp.PivotTableSummarizeFunction.COUNTA);
 
   aba.setColumnWidth(1, 200);
-  aba.setColumnWidth(2, 200);
+  aba.setColumnWidth(7, 110);
+  aba.setColumnWidth(8, 180);
   ss.setActiveSheet(aba);
   ss.moveActiveSheet(1);
   return aba;

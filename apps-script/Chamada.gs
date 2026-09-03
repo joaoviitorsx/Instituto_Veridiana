@@ -86,20 +86,24 @@ function abaChamadas() {
     aba = ss.insertSheet(ABA_CHAMADAS);
     aba.appendRow(['Registro', 'Data', 'Turma', 'Professor', 'Aluno', 'Status']);
     aba.setFrozenRows(1);
+    /* Coluna Data como texto: o Sheets não converte para Date e o fuso
+       deixa de entrar na conta. */
+    aba.getRange(2, 2, aba.getMaxRows() - 1, 1).setNumberFormat('@');
   }
   return aba;
 }
 
-/** Últimas linhas de Chamadas. Evita ler uma aba que cresce para sempre. */
+/**
+ * Chamadas dos últimos DIAS_RECENTES dias.
+ *
+ * Serve para duas coisas: saber se a turma já teve chamada hoje, e qual
+ * professora deu essa turma da última vez. Antes eram 500 linhas fixas —
+ * com 10 turmas isso é uns 2 dias, então numa turma semanal a sugestão
+ * de professora simplesmente não achava nada.
+ */
 function lerRecentes() {
-  const aba = abaChamadas();
-  const ultima = aba.getLastRow();
-  if (ultima < 2) return [];
-  const inicio = Math.max(2, ultima - JANELA_BUSCA + 1);
-  /* So B (Data), C (Turma) e D (Professor). Ler as 6 colunas era o dobro
-     de celulas por abertura, e a aba Chamadas so cresce. */
-  return aba.getRange(inicio, 2, ultima - inicio + 1, 3).getValues()
-    .map(function (l) { return [null, l[0], l[1], l[2]]; });
+  return lerChamadasDesde_(diasAtras_(DIAS_RECENTES), 20000).linhas
+    .map(function (r) { return [null, r.data, r.turma, r.professor]; });
 }
 
 /** Quem deu essa turma da última vez. Some da sugestão se saiu da equipe. */

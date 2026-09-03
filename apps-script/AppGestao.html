@@ -608,6 +608,11 @@ function emitir(nomes, turma, umNome){
       return a.nome === umNome && a.turma === turma;
     })[0] : null;
     var h = '<p class="sub">' + esc(r.nome) + '</p><div style="padding:0 8px">';
+    if (r.completo === false){
+      h += '<div class="aviso" style="margin-bottom:12px">' + ico('alerta', 18) +
+           '<span>O histórico é grande demais e a leitura parou antes do fim. ' +
+           'As horas podem estar por baixo.</span></div>';
+    }
     h += '<a class="botao-cheio" href="' + esc(r.url) + '" target="_blank" rel="noopener">' +
          ico('abrir', 18) + ' Abrir o PDF</a>';
 
@@ -732,6 +737,14 @@ ACOES.gerarRel = function(){
     if (!el('saidaRel')) return;
     S.rel = r;
     var h = '<div class="secao">Resumo</div><div class="numeros">';
+    /* Leitura truncada = números por baixo. Dizer isso é o ponto:
+       relatório errado em silêncio é pior que erro na cara. */
+    if (r.completo === false){
+      h += '<div class="aviso">' + ico('alerta', 18) +
+           '<span>O histórico é grande demais e a leitura parou antes do fim. ' +
+           'Estes números estão <b>por baixo</b>. Gere por períodos menores, ' +
+           'um semestre de cada vez.</span></div>';
+    }
     h += '<div><b>' + r.beneficiarios + '</b><span>beneficiários</span></div>';
     h += '<div><b>' + r.aulas + '</b><span>aulas</span></div>';
     h += '<div><b>' + r.frequencia + '%</b><span>frequência</span></div>';

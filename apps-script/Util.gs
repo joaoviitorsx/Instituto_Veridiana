@@ -30,10 +30,29 @@ function hoje() {
   return Utilities.formatDate(new Date(), FUSO, 'yyyy-MM-dd');
 }
 
+/**
+ * Data de uma célula em aaaa-mm-dd.
+ *
+ * O Sheets converte a string gravada em Date usando o fuso DA PLANILHA.
+ * Ler de volta formatando em America/Fortaleza numa planilha em GMT
+ * devolvia o dia ANTERIOR: 'já teve chamada hoje' nunca ficava
+ * verdadeiro, o histórico ficava um dia atrás e o relatório perdia o
+ * primeiro dia do período. Formatar no mesmo fuso em que foi gravado
+ * faz o valor voltar igual ao que entrou.
+ */
+let _fusoPlanilha = null;
+function fusoPlanilha_() {
+  if (_fusoPlanilha === null) {
+    try { _fusoPlanilha = planilha().getSpreadsheetTimeZone() || FUSO; }
+    catch (e) { _fusoPlanilha = FUSO; }
+  }
+  return _fusoPlanilha;
+}
+
 function textoData(v) {
   return v instanceof Date
-    ? Utilities.formatDate(v, FUSO, 'yyyy-MM-dd')
-    : String(v).trim();
+    ? Utilities.formatDate(v, fusoPlanilha_(), 'yyyy-MM-dd')
+    : String(v == null ? '' : v).trim();
 }
 
 function chave(s){
@@ -70,4 +89,56 @@ function comTrava(fn){
 function garantirLinhas_(aba, precisa) {
   const max = aba.getMaxRows();
   if (precisa > max) aba.insertRowsAfter(max, precisa - max + 500);
+}
+
+/**
+ * Lê Chamadas de trás para frente até passar da data pedida.
+ *
+ * Antes cada consulta usava uma janela fixa de linhas (1500, 20000,
+ * 50000). Passado o volume, as linhas mais antigas saíam da janela e o
+ * relatório de edital devolvia MENOS beneficiários e MENOS aulas, sem
+ * avisar. Relatório ausente faz procurar o dado; relatório errado a
+ * pessoa confia e cola na prestação de contas.
+ *
+ * Devolve { linhas, completo }. Se completo for false, a leitura bateu
+ * no teto de segurança e o número está por baixo — quem chama precisa
+ * dizer isso na tela.
+ */
+function lerChamadasDesde_(dataMin, tetoLinhas) {
+  const aba = abaChamadas();
+  const ultima = aba.getLastRow();
+  if (ultima < 2) return { linhas: [], completo: true };
+
+  const teto = tetoLinhas || 60000;
+  const BLOCO = 3000;
+  const linhas = [];
+  let fim = ultima, completo = false;
+
+  while (fim >= 2) {
+    if (linhas.length >= teto) break;
+    const inicio = Math.max(2, fim - BLOCO + 1);
+    const vals = aba.getRange(inicio, 2, fim - inicio + 1, 5).getValues();
+    let passou = false;
+    for (let i = vals.length - 1; i >= 0; i--) {
+      const data = textoData(vals[i][0]);
+      if (!data) continue;
+      if (dataMin && data < dataMin) { passou = true; break; }
+      linhas.push({
+        data: data,
+        turma: String(vals[i][1] || '').trim(),
+        professor: String(vals[i][2] || '').trim(),
+        aluno: String(vals[i][3] || '').trim(),
+        status: String(vals[i][4] || '').trim()
+      });
+    }
+    if (passou) { completo = true; break; }
+    if (inicio === 2) { completo = true; break; }
+    fim = inicio - 1;
+  }
+  return { linhas: linhas.filter(function (r) { return r.turma && r.aluno; }), completo: completo };
+}
+
+/** aaaa-mm-dd de N dias atrás, no fuso do instituto. */
+function diasAtras_(n) {
+  return Utilities.formatDate(new Date(Date.now() - n * 86400000), FUSO, 'yyyy-MM-dd');
 }

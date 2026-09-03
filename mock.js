@@ -376,7 +376,7 @@
         nome: comAula.length === 1
           ? 'Certificado — ' + comAula[0] + ' — ' + hoje() + '.pdf'
           : 'Certificados — ' + (turma || 'vários') + ' — ' + hoje() + '.pdf',
-        quantidade: comAula.length,
+        quantidade: comAula.length, completo:true,
         aluno: comAula.length === 1 ? comAula[0] : '',
         publico: comAula.length === 1,
         ignorados: lista.filter(function(n){ return comAula.indexOf(n) === -1; }) };
@@ -529,7 +529,7 @@
                 pct: t.total ? Math.round(t.presentes*100/t.total) : 0};
       }).sort(function(a,b){ return pt(a.turma,b.turma); });
       var P=0,T=0; turmas.forEach(function(t){ P+=t.presentes; T+=t.total; });
-      return { inicio:ini, fim:fim, beneficiarios:Object.keys(ben).length,
+      return { inicio:ini, fim:fim, completo:true, beneficiarios:Object.keys(ben).length,
                aulas:Object.keys(aulas).length, turmas:turmas, faixas:faixas,
                frequencia: T ? Math.round(P*100/T) : 0 };
     },

@@ -6,14 +6,28 @@
 function mesesComChamada(pin) {
   exigirPin(pin);
   const aba = abaChamadas();
-  if (aba.getLastRow() < 2) return [];
-  const vals = aba.getRange(2, 2, aba.getLastRow() - 1, 1).getValues();
-  const vistos = {};
-  vals.forEach(function (l) {
-    const d = textoData(l[0]);
-    if (d && d.length >= 7) vistos[d.slice(0, 7)] = 1;
-  });
-  return Object.keys(vistos).sort().reverse().slice(0, 24);
+  const ultima = aba.getLastRow();
+  if (ultima < 2) return [];
+
+  /* Lê de trás para frente e para ao juntar 24 meses. Antes varria a
+     coluna inteira — dezenas de milhares de células — para devolver uma
+     lista que já era cortada em 24 na linha seguinte. */
+  const BLOCO = 3000;
+  const vistos = {}, ordem = [];
+  let fim = ultima;
+  while (fim >= 2 && ordem.length < 24) {
+    const inicio = Math.max(2, fim - BLOCO + 1);
+    const vals = aba.getRange(inicio, 2, fim - inicio + 1, 1).getValues();
+    for (let i = vals.length - 1; i >= 0 && ordem.length < 24; i--) {
+      const d = textoData(vals[i][0]);
+      if (d && d.length >= 7 && !vistos[d.slice(0, 7)]) {
+        vistos[d.slice(0, 7)] = 1;
+        ordem.push(d.slice(0, 7));
+      }
+    }
+    fim = inicio - 1;
+  }
+  return ordem.sort().reverse();
 }
 
 /**

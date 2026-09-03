@@ -40,32 +40,24 @@ function mesAno_(iso) {
  * das duas turmas. Documento oficial com dado inventado.
  */
 function historicoCompleto_() {
-  const aba = abaChamadas();
-  const ultima = aba.getLastRow();
-  if (ultima < 2) return {};
-  const inicio = Math.max(2, ultima - LIMITE_HISTORICO + 1);
-  const vals = aba.getRange(inicio, 2, ultima - inicio + 1, 5).getValues();
+  /* O certificado precisa do histórico INTEIRO da aluna — é o número de
+     horas que vai no documento. Lê tudo, com teto de segurança. */
+  const lido = lerChamadasDesde_('', LIMITE_HISTORICO);
 
   const minutos = {};
   turmasRegistradas().forEach(function (t) { minutos[t.nome] = t.minutos; });
 
-  const por = {};
-  vals.forEach(function (l) {
-    const data = textoData(l[0]);
-    const turma = String(l[1] || '').trim();
-    const aluno = String(l[3] || '').trim();
-    const status = String(l[4] || '').trim();
-    if (!data || !turma || !aluno) return;
-
-    const k = turma + '|' + aluno;
-    if (!por[k]) por[k] = { primeira: data, ultima: data, turmas: {}, aulas: 0, minutos: 0 };
+  const por = { _completo: lido.completo };
+  lido.linhas.forEach(function (r) {
+    const k = r.turma + '|' + r.aluno;
+    if (!por[k]) por[k] = { primeira: r.data, ultima: r.data, turmas: {}, aulas: 0, minutos: 0 };
     const h = por[k];
-    if (data < h.primeira) h.primeira = data;
-    if (data > h.ultima) h.ultima = data;
-    h.turmas[turma] = 1;
-    if (status === 'Presente') {
+    if (r.data < h.primeira) h.primeira = r.data;
+    if (r.data > h.ultima) h.ultima = r.data;
+    h.turmas[r.turma] = 1;
+    if (r.status === 'Presente') {
       h.aulas++;
-      h.minutos += (minutos[turma] || 60);
+      h.minutos += (minutos[r.turma] || 60);
     }
   });
   return por;
@@ -85,6 +77,7 @@ function historicoDe_(hist, nome, turma, ambiguo) {
   const junto = { primeira: '', ultima: '', turmas: {}, aulas: 0, minutos: 0 };
   Object.keys(hist).forEach(function (k) {
     const p = k.indexOf('|');
+    if (p === -1) return;                    // _completo, não é aluno
     if (k.slice(p + 1) !== nome) return;
     if (ambiguo && k.slice(0, p) !== turma) return;
     const h = hist[k];
@@ -191,6 +184,7 @@ function gerarCertificado(pin, nomes, turma) {
 
   return {
     ok: true, url: arquivo.getUrl(), nome: arquivo.getName(),
+    completo: hist._completo !== false,
     quantidade: paginas.length, aluno: feitos.length === 1 ? feitos[0] : '',
     publico: publico,
     ignorados: lista.filter(function (n) { return feitos.indexOf(n) === -1; })

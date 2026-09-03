@@ -42,7 +42,7 @@ const ABA_ALUNOS = 'Alunos';
 const ABA_PROFESSORES = 'Professores';
 const ABA_CHAMADAS = 'Chamadas';
 const FUSO = 'America/Fortaleza';
-const JANELA_BUSCA = 500;   // linhas recentes lidas em Chamadas
+const DIAS_RECENTES = 60;   // dias lidos para 'já teve chamada hoje' e sugestão de professora
 const TTL_TOKEN = 21600;    // 6 h de proteção contra gravação duplicada
 const TTL_CACHE = 300;      // 5 min de cache das listas
 

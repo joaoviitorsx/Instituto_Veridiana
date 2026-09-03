@@ -6,8 +6,6 @@
  * Alunos que o app já grava — a diferença é que agora alguém lê.
  */
 
-const JANELA_RISCO = 1500;   // linhas de Chamadas lidas para o alerta
-
 /* ─── idade ─── */
 function idadeEm_(nascISO, refISO) {
   if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(String(nascISO || ''))) return null;
@@ -19,19 +17,9 @@ function idadeEm_(nascISO, refISO) {
 }
 
 /* ─── leitura de Chamadas para análise ─── */
-/* Colunas B (Data), C (Turma), E (Aluno) e F (Status). */
-function lerParaAnalise_(limite) {
-  const aba = abaChamadas();
-  const ultima = aba.getLastRow();
-  if (ultima < 2) return [];
-  const inicio = Math.max(2, ultima - (limite || JANELA_RISCO) + 1);
-  return aba.getRange(inicio, 2, ultima - inicio + 1, 5).getValues()
-    .map(function (l) {
-      return { data: textoData(l[0]), turma: String(l[1] || '').trim(),
-               aluno: String(l[3] || '').trim(), status: String(l[4] || '').trim() };
-    })
-    .filter(function (r) { return r.data && r.turma && r.aluno; });
-}
+/* 120 dias cobrem 3 faltas seguidas com folga enorme, e a leitura para
+   de crescer com o histórico. */
+const DIAS_RISCO = 120;
 
 /**
  * Quem faltou N aulas seguidas da própria turma.
@@ -46,7 +34,7 @@ function lerParaAnalise_(limite) {
 function alunosEmRisco(pin, minimo) {
   exigirPin(pin);
   const alvo = Math.max(2, Number(minimo) || 3);
-  const linhas = lerParaAnalise_();
+  const linhas = lerChamadasDesde_(diasAtras_(DIAS_RISCO)).linhas;
 
   const datasPorTurma = {}, statusPor = {};
   linhas.forEach(function (r) {
@@ -109,7 +97,9 @@ function relatorioPeriodo(pin, inicio, fim) {
     throw new Error('Escolha as duas datas do período.');
   if (de > ate) throw new Error('A data de início vem depois da data de fim.');
 
-  const linhas = lerParaAnalise_(20000).filter(function (r) {
+  /* Lê exatamente o período pedido, não uma quantidade fixa de linhas. */
+  const lido = lerChamadasDesde_(de);
+  const linhas = lido.linhas.filter(function (r) {
     return r.data >= de && r.data <= ate;
   });
 
@@ -151,6 +141,9 @@ function relatorioPeriodo(pin, inicio, fim) {
 
   return {
     inicio: de, fim: ate,
+    /* false = a leitura bateu no teto e os números estão por baixo.
+       A tela precisa dizer isso: número errado é pior que número nenhum. */
+    completo: lido.completo,
     beneficiarios: Object.keys(beneficiarios).length,
     aulas: Object.keys(aulas).length,
     turmas: turmas,
