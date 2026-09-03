@@ -69,6 +69,8 @@ const ABAS_PADRAO = [
   { nome: 'Alunos',      cab: ['Turma','Aluno','Ativo','Nascimento','Responsável','Telefone'], larg: [170, 230, 70, 110, 200, 130] },
   { nome: 'Professores', cab: ['Professor'],                                                  larg: [260] },
   { nome: 'Turmas',      cab: ['Turma', 'Ativa', 'Minutos por aula'],                        larg: [230, 70, 140] },
+  { nome: 'Caixa',       cab: ['Registro','Data','Tipo','Valor','Categoria','Descrição','Fonte','Comprovante','Quem registrou'],
+                                                                                        larg: [140, 90, 80, 100, 140, 220, 150, 130, 150] },
   { nome: 'Chamadas',    cab: ['Registro','Data','Turma','Professor','Aluno','Status'],       larg: [150, 100, 190, 200, 250, 120] }
 ];
 
@@ -86,6 +88,7 @@ function arrumarPlanilha(pin) {
 
     abaChamadas();   // garante que existem antes de formatar
     abaTurmas();
+    abaCaixa();
 
     ABAS_PADRAO.forEach(function (def) { formatarAba_(ss, def); });
 
@@ -111,6 +114,13 @@ function arrumarPlanilha(pin) {
     if (ch && ch.getMaxRows() > 1) {
       ch.getRange(2, 1, ch.getMaxRows() - 1, 1).setNumberFormat('dd/mm/yyyy hh:mm');
       ch.getRange(2, 2, ch.getMaxRows() - 1, 1).setNumberFormat('dd/mm/yyyy');
+    }
+
+    const cx = ss.getSheetByName(ABA_CAIXA);
+    if (cx && cx.getMaxRows() > 1) {
+      cx.getRange(2, 1, cx.getMaxRows() - 1, 1).setNumberFormat('dd/mm/yyyy hh:mm');
+      cx.getRange(2, 2, cx.getMaxRows() - 1, 1).setNumberFormat('dd/mm/yyyy');
+      cx.getRange(2, 4, cx.getMaxRows() - 1, 1).setNumberFormat('R$ #,##0.00');
     }
 
     montarPainel_(ss);

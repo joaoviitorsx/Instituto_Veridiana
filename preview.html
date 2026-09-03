@@ -410,6 +410,72 @@ main{padding:0 0 24px}
 .botao-cheio:active{background:var(--roxo-fundo)}
 .botao-cheio:disabled{background:#AC9BBA}
 
+/* ─────────── caixa ─────────── */
+.saldo{
+  background:var(--roxo);color:#fff;border-radius:var(--r-m);
+  padding:20px;text-align:center;margin-bottom:8px;
+}
+.saldo>span{display:block;font-size:13px;color:var(--roxo-claro)}
+.saldo>b{
+  display:block;font-size:32px;font-weight:700;letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;margin-top:4px;
+}
+.saldo-linha{
+  display:flex;gap:8px;margin-top:16px;padding-top:16px;
+  border-top:1px solid rgba(255,255,255,.2);
+}
+.saldo-linha div{
+  flex:1;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;
+}
+.saldo-linha small{display:block;font-size:12px;color:var(--roxo-claro);font-weight:400;margin-top:2px}
+.saldo-linha .ent{color:#A8E6C6}
+.saldo-linha .sai{color:#F2B8C2}
+
+.dinheiro{
+  flex-shrink:0;font-size:16px;font-weight:700;
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.dinheiro.ent{color:var(--presente)}
+.dinheiro.sai{color:var(--falta)}
+
+.bt-entrada,.bt-saida{
+  flex:1;min-height:52px;border-radius:var(--r-m);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:16px;font-weight:700;color:#fff;
+  transition:background 160ms var(--curva);
+}
+.bt-entrada{background:var(--presente)}
+.bt-entrada:active{background:#115A3B}
+.bt-saida{background:var(--falta)}
+.bt-saida:active{background:#8E1B2C}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  min-height:44px;padding:10px 14px;border-radius:999px;
+  font-size:14px;font-weight:600;color:var(--apagado);
+  background:var(--fundo);border:1px solid var(--borda);
+  transition:background 160ms var(--curva),color 160ms var(--curva);
+}
+.chip.on{background:var(--roxo);border-color:var(--roxo);color:#fff}
+
+.campo label i{font-style:normal;font-weight:400;color:var(--apagado)}
+.dica{display:block;font-size:13px;color:var(--apagado);line-height:1.5;margin-top:8px}
+
+.foto{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  min-height:52px;border-radius:var(--r-m);
+  border:1px dashed var(--borda);background:var(--fundo);
+  color:var(--apagado);font-size:15px;font-weight:600;cursor:pointer;
+}
+.foto.ok{border-style:solid;border-color:var(--presente);color:var(--presente)}
+
+.detalhe-valor{
+  text-align:center;font-size:32px;font-weight:700;
+  letter-spacing:-.03em;font-variant-numeric:tabular-nums;padding:8px 0;
+}
+.detalhe-valor.ent{color:var(--presente)}
+.detalhe-valor.sai{color:var(--falta)}
+
 /* ─────────── aniversário ─────────── */
 .bolo{
   display:flex;gap:12px;align-items:flex-start;
@@ -723,6 +789,32 @@ main{padding:0 0 24px}
   });
   var CHAMADAS = AULAS.slice();
 
+  var CAT_ENTRADA = ['Doação','Bazar','Edital','Rifa','Evento','Outro'];
+  var CAT_SAIDA   = ['Aluguel','Água e luz','Internet','Figurino','Material de dança',
+                     'Transporte','Lanche','Manutenção','Outro'];
+  var CAIXA = [
+    {registro:'', data:'2026-08-05', tipo:'Entrada', valor:2500,   categoria:'Edital',   descricao:'1ª parcela', fonte:'Edital Secult 2026', comprovante:'https://drive.google.com/x1', quem:'Vera Lúcia Sampaio', linha:2},
+    {registro:'', data:'2026-08-07', tipo:'Saída',   valor:1200,   categoria:'Aluguel',  descricao:'sala de ensaio', fonte:'Edital Secult 2026', comprovante:'https://drive.google.com/x2', quem:'Vera Lúcia Sampaio', linha:3},
+    {registro:'', data:'2026-08-12', tipo:'Entrada', valor:340.50, categoria:'Bazar',    descricao:'bazar de sábado', fonte:'Recursos próprios', comprovante:'', quem:'Vera Lúcia Sampaio', linha:4},
+    {registro:'', data:'2026-08-19', tipo:'Saída',   valor:186.90, categoria:'Figurino', descricao:'collants do infantil', fonte:'Recursos próprios', comprovante:'', quem:'Aline Ferreira', linha:5},
+    {registro:'', data:'2026-08-28', tipo:'Saída',   valor:220,    categoria:'Água e luz', descricao:'', fonte:'Edital Secult 2026', comprovante:'https://drive.google.com/x3', quem:'Vera Lúcia Sampaio', linha:6},
+    {registro:'', data:'2026-09-02', tipo:'Entrada', valor:150,    categoria:'Doação',   descricao:'doação da vizinha', fonte:'Recursos próprios', comprovante:'', quem:'Vera Lúcia Sampaio', linha:7},
+    {registro:'', data:'2026-09-02', tipo:'Saída',   valor:95.40,  categoria:'Lanche',   descricao:'lanche do ensaio geral', fonte:'Recursos próprios', comprovante:'https://drive.google.com/x4', quem:'Vera Lúcia Sampaio', linha:8}
+  ];
+  var proximaLinha = 9;
+  function valorNumero(v){
+    if (typeof v === 'number') return v;
+    var s2 = String(v==null?'':v).replace(/[^0-9,.-]/g,'').trim();
+    if (!s2) return NaN;
+    var vi = s2.lastIndexOf(','), po = s2.lastIndexOf('.');
+    s2 = vi > po ? s2.replace(/\./g,'').replace(',','.') : s2.replace(/,/g,'');
+    return parseFloat(s2);
+  }
+  function fontesUsadas(){
+    var v = {}; CAIXA.forEach(function(r){ if (r.fonte) v[r.fonte] = 1; });
+    return Object.keys(v).sort(function(a,b){ return pt(a,b); });
+  }
+
   var TOKENS = {};
   var PIN = '1234';
   var URL_APP = 'https://script.google.com/macros/s/AKfycbwEXEMPLO0000000000000000000000000000/exec';
@@ -941,6 +1033,70 @@ main{padding:0 0 24px}
         aluno: comAula.length === 1 ? comAula[0] : '',
         publico: comAula.length === 1,
         ignorados: lista.filter(function(n){ return comAula.indexOf(n) === -1; }) };
+    },
+    mesesCaixa: function(pin){
+      exigirPin(pin);
+      var v = {}; CAIXA.forEach(function(r){ v[r.data.slice(0,7)] = 1; });
+      var ms = Object.keys(v).sort().reverse();
+      var ag = hoje().slice(0,7);
+      if (ms.indexOf(ag) === -1) ms.unshift(ag);
+      return ms;
+    },
+    listarCaixa: function(pin, mes){
+      exigirPin(pin);
+      var doMes = CAIXA.filter(function(r){ return r.data.slice(0,7) === mes; });
+      var entrou = 0, saiu = 0;
+      doMes.forEach(function(r){ if (r.tipo === 'Entrada') entrou += r.valor; else saiu += r.valor; });
+      var acc = 0;
+      CAIXA.forEach(function(r){
+        if (r.data.slice(0,7) > mes) return;
+        acc += (r.tipo === 'Entrada' ? r.valor : -r.valor);
+      });
+      doMes.sort(function(a,b){ return a.data === b.data ? b.linha - a.linha : (a.data < b.data ? 1 : -1); });
+      return { mes:mes, lancamentos:doMes.slice(), entrou:entrou, saiu:saiu,
+               doMes:entrou-saiu, acumulado:acc,
+               categorias:{Entrada:CAT_ENTRADA, 'Saída':CAT_SAIDA}, fontes:fontesUsadas() };
+    },
+    lancarCaixa: function(pin, d){
+      exigirPin(pin);
+      var tipo = d.tipo === 'Entrada' ? 'Entrada' : (d.tipo === 'Saída' ? 'Saída' : '');
+      if (!tipo) throw new Error('Diga se é entrada ou saída.');
+      var valor = valorNumero(d.valor);
+      if (!(valor > 0)) throw new Error('Escreva um valor maior que zero.');
+      CAIXA.push({ registro:'', data:d.data || hoje(), tipo:tipo, valor:valor,
+        categoria:d.categoria || 'Outro', descricao:d.descricao || '', fonte:d.fonte || '',
+        comprovante: d.foto ? 'https://drive.google.com/mock' : '',
+        quem:d.quem || '', linha: proximaLinha++ });
+      return { ok:true, comFoto: !!d.foto, pediuFoto: !!d.foto };
+    },
+    apagarLancamento: function(pin, linha, valorConfere){
+      exigirPin(pin);
+      var i = CAIXA.findIndex(function(r){ return String(r.linha) === String(linha); });
+      if (i === -1) throw new Error('Lançamento não encontrado.');
+      if (valorConfere !== undefined && Math.abs(CAIXA[i].valor - Number(valorConfere)) > 0.005)
+        throw new Error('A lista mudou desde que você abriu. Recarregue e tente de novo.');
+      CAIXA.splice(i,1); return {ok:true};
+    },
+    resumoCaixa: function(pin, ini, fim){
+      exigirPin(pin);
+      if (ini > fim) throw new Error('A data de início vem depois da data de fim.');
+      var doP = CAIXA.filter(function(r){ return r.data >= ini && r.data <= fim; });
+      var cat = {Entrada:{}, 'Saída':{}}, fon = {}, entrou = 0, saiu = 0, sem = 0;
+      doP.forEach(function(r){
+        var lado = r.tipo === 'Entrada' ? 'Entrada' : 'Saída';
+        cat[lado][r.categoria] = (cat[lado][r.categoria] || 0) + r.valor;
+        var f = r.fonte || 'Sem fonte informada';
+        if (!fon[f]) fon[f] = {fonte:f, entrou:0, saiu:0};
+        if (lado === 'Entrada'){ fon[f].entrou += r.valor; entrou += r.valor; }
+        else { fon[f].saiu += r.valor; saiu += r.valor; if (!r.comprovante) sem++; }
+      });
+      function ord(m){ return Object.keys(m).map(function(k){ return {nome:k, valor:m[k]}; })
+        .sort(function(a,b){ return b.valor - a.valor; }); }
+      return { inicio:ini, fim:fim, entrou:entrou, saiu:saiu, saldo:entrou-saiu,
+               lancamentos:doP.length, semComprovante:sem,
+               entradas:ord(cat.Entrada), saidas:ord(cat['Saída']),
+               fontes:Object.keys(fon).map(function(k){ return fon[k]; })
+                 .sort(function(a,b){ return (b.entrou+b.saiu)-(a.entrou+a.saiu); }) };
     },
     obterLinkPlanilha: function(pin){
       exigirPin(pin);
@@ -1181,6 +1337,9 @@ var P = {
   renomear:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   apagarTecla:'<path d="M20 5H9l-7 7 7 7h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"/><path d="m18 9-6 6M12 9l6 6"/>',
   cadeado:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  menos:'<path d="M5 12h14"/>',
+  camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/>',
+  carteira:'<path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5"/><path d="M17.5 13h.01"/>',
   medalha:'<circle cx="12" cy="8" r="6"/><path d="M15.5 13.6 17 22l-5-3-5 3 1.5-8.4"/>',
   sino:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
   bolo:'<path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"/><path d="M2 21h20"/><path d="M7 8v3M12 8v3M17 8v3"/><path d="M7 4h.01M12 4h.01M17 4h.01"/>',
@@ -1785,6 +1944,7 @@ TELAS.gestao = function(){
     {ic:'qr', t:'QR das turmas', s:'gerar código para imprimir', a:'gQr'},
     {ic:'sino', t:'Precisam de atenção', s:'carregando…', a:'gRisco', id:'itRisco'},
     {ic:'calendario', t:'Histórico', s:'quem veio, por dia e por mês', a:'gHistorico'},
+    {ic:'carteira', t:'Caixa', s:'entradas, saídas e comprovantes', a:'gCaixa'},
     {ic:'medalha', t:'Certificados', s:'comprovante de horas para as alunas', a:'gCert'},
     {ic:'documento', t:'Relatório para edital', s:'beneficiários, aulas e frequência', a:'gRelatorio'},
     {ic:'tabela', t:'Planilha', s:'abrir e compartilhar a planilha', a:'gPlanilha'}
@@ -1833,6 +1993,7 @@ ACOES.gPlanilha  = function(){ ir('gPlanilha'); };
 ACOES.gRisco     = function(){ ir('gRisco'); };
 ACOES.gRelatorio = function(){ ir('gRelatorio'); };
 ACOES.gCert      = function(){ ir('gCert'); };
+ACOES.gCaixa     = function(){ ir('gCaixa'); };
 
 /* recarrega os contadores depois de qualquer escrita */
 function recontar(){
@@ -2628,6 +2789,368 @@ ACOES.arrumar = function(){
     bt.disabled = false; bt.innerHTML = ico('varinha', 18) + ' Arrumar planilha';
     toast(textoErro(e), 'erro');
   });
+};
+</script>
+
+<script>
+/* Fluxo de caixa: lançar em 4 toques, do celular, entre uma aula e outra. */
+
+function reais(v){
+  var n = Number(v || 0);
+  return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+/* Reduz a foto ANTES de subir. Nota fiscal de 4 MB em 4G instável não
+   chega — e o comprovante é justamente o que não pode faltar. */
+function reduzirFoto(file, cb){
+  if (!file){ cb(''); return; }
+  var r = new FileReader();
+  r.onerror = function(){ cb(''); };
+  r.onload = function(){
+    var img = new Image();
+    img.onerror = function(){ cb(''); };
+    img.onload = function(){
+      var max = 1400;
+      var e = Math.min(1, max / Math.max(img.width, img.height));
+      var c = document.createElement('canvas');
+      c.width = Math.round(img.width * e);
+      c.height = Math.round(img.height * e);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      try { cb(c.toDataURL('image/jpeg', 0.75)); } catch(err){ cb(''); }
+    };
+    img.src = r.result;
+  };
+  r.readAsDataURL(file);
+}
+
+/* ══════════════ CAIXA: o mês ══════════════ */
+TELAS.gCaixa = function(){
+  return {
+    titulo:'Caixa', html:esqueleto(4),
+    barra:'<div class="duplo">' +
+      '<button type="button" class="bt-entrada" data-acao="lancar" data-tipo="Entrada">' +
+      ico('mais', 18) + ' Entrou</button>' +
+      '<button type="button" class="bt-saida" data-acao="lancar" data-tipo="Saída">' +
+      ico('menos', 18) + ' Saiu</button></div>',
+    depois:function(){
+      api('mesesCaixa', [S.pin], function(ms){
+        S.mesesCx = ms; S.mesCxIdx = 0;
+        carregarCaixa();
+      }, function(e){
+        el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+
+function carregarCaixa(){
+  var mes = S.mesesCx[S.mesCxIdx];
+  var alvo = el('palco').querySelector('.corpo');
+  alvo.innerHTML = passoCaixa(mes) + esqueleto(3);
+  api('listarCaixa', [S.pin, mes], function(r){
+    S.caixa = r;
+    var h = passoCaixa(mes);
+
+    h += '<div class="saldo"><span>em caixa</span><b>' + reais(r.acumulado) + '</b>' +
+         '<div class="saldo-linha">' +
+           '<div class="ent">' + reais(r.entrou) + '<small>entrou no mês</small></div>' +
+           '<div class="sai">' + reais(r.saiu) + '<small>saiu no mês</small></div>' +
+         '</div></div>';
+
+    if (!r.lancamentos.length){
+      alvo.innerHTML = h + estado('carteira','Nada lançado neste mês',
+        'Use os botões aqui embaixo assim que entrar ou sair dinheiro.');
+      return;
+    }
+
+    h += '<div class="secao">' + plural(r.lancamentos.length, 'lançamento', 'lançamentos') + '</div>';
+    var dia = '';
+    r.lancamentos.forEach(function(l, i){
+      if (l.data !== dia){
+        if (dia) h += '</ul>';
+        dia = l.data;
+        h += '<div class="dia">' + esc(dataExtenso(l.data)) + '</div><ul class="lista sem-avatar">';
+      }
+      var entrada = l.tipo === 'Entrada';
+      h += '<li class="li" data-acao="verLanc" data-i="' + i + '" role="button" tabindex="0">' +
+           '<span class="nome">' + esc(l.categoria) +
+             '<small>' + esc(l.descricao || l.fonte || (entrada ? 'entrada' : 'saída')) +
+             (l.comprovante ? ' · com nota' : (entrada ? '' : ' · sem nota')) + '</small></span>' +
+           '<span class="dinheiro ' + (entrada ? 'ent' : 'sai') + '">' +
+             (entrada ? '+' : '−') + ' ' + reais(l.valor) + '</span></li>';
+    });
+    h += '</ul>';
+    h += '<button type="button" class="botao-cheio" style="margin-top:20px;background:var(--fundo);' +
+         'color:var(--roxo)" data-acao="gCaixaResumo">' + ico('documento', 18) +
+         ' Resumo para prestação de contas</button>';
+    alvo.innerHTML = h;
+  }, function(e){
+    alvo.innerHTML = passoCaixa(mes) + estado('alerta','Não deu para carregar', textoErro(e));
+  });
+}
+
+function passoCaixa(mes){
+  var antes = S.mesCxIdx < S.mesesCx.length - 1, depois = S.mesCxIdx > 0;
+  return '<div class="passo">' +
+    '<button type="button" data-acao="cxAntes" aria-label="Mês anterior"' + (antes?'':' disabled') + '>' +
+      ico('esq', 22) + '</button><b>' + esc(mesExtenso(mes)) + '</b>' +
+    '<button type="button" data-acao="cxDepois" aria-label="Próximo mês"' + (depois?'':' disabled') + '>' +
+      ico('dir', 22) + '</button></div>';
+}
+ACOES.cxAntes  = function(){ if (S.mesCxIdx < S.mesesCx.length - 1){ S.mesCxIdx++; vibrar(); carregarCaixa(); } };
+ACOES.cxDepois = function(){ if (S.mesCxIdx > 0){ S.mesCxIdx--; vibrar(); carregarCaixa(); } };
+
+/* ══════════════ CAIXA: lançar ══════════════ */
+var fotoAtual = '';
+ACOES.lancar = function(b){
+  var tipo = b.getAttribute('data-tipo');
+  var entrada = tipo === 'Entrada';
+  var cats = (S.caixa && S.caixa.categorias) ? S.caixa.categorias[tipo] : [];
+  var fontes = (S.caixa && S.caixa.fontes) ? S.caixa.fontes : [];
+  fotoAtual = '';
+
+  var h = '<div style="padding:0 8px">';
+  h += '<div class="campo"><label for="cxValor">Valor</label>' +
+       '<input id="cxValor" type="text" inputmode="decimal" placeholder="0,00" ' +
+       'autocomplete="off"></div>';
+
+  h += '<div class="campo"><label>Categoria</label><div class="chips" id="cxCats">';
+  cats.forEach(function(c, i){
+    h += '<button type="button" class="chip' + (i===0?' on':'') + '" data-cat="' + esc(c) + '">' +
+         esc(c) + '</button>';
+  });
+  h += '</div></div>';
+
+  h += '<div class="campo"><label for="cxDesc">Do que se trata <i>(opcional)</i></label>' +
+       '<input id="cxDesc" type="text" autocomplete="off" placeholder="' +
+       (entrada ? 'doação da vizinha do bazar' : 'sapatilhas do infantil') + '"></div>';
+
+  h += '<div class="campo"><label for="cxFonte">Fonte <i>(opcional)</i></label>' +
+       '<input id="cxFonte" type="text" autocomplete="off" list="cxFontes" placeholder="' +
+       (entrada ? 'de onde veio' : 'que bolso pagou') + '">' +
+       '<datalist id="cxFontes">';
+  fontes.forEach(function(f){ h += '<option value="' + esc(f) + '">'; });
+  h += '</datalist>' +
+       '<small class="dica">Separa dinheiro de edital do resto. É isso que a prestação de contas cobra.</small></div>';
+
+  if (!entrada){
+    h += '<div class="campo"><label>Comprovante</label>' +
+         '<label class="foto" for="cxFoto" id="cxFotoRot">' + ico('camera', 20) +
+         ' <span>Fotografar a nota</span></label>' +
+         '<input id="cxFoto" type="file" accept="image/*" capture="environment" hidden>' +
+         '<small class="dica">Despesa sem nota não entra na prestação de contas.</small></div>';
+  }
+
+  h += '<div class="campo"><label for="cxData">Quando</label>' +
+       '<input id="cxData" type="date" value="' + hojeISO() + '"></div>';
+  h += '</div>';
+
+  abrirFolha(entrada ? 'Entrou dinheiro' : 'Saiu dinheiro',
+    h + '<div class="acoes"><button type="button" class="cancelar" data-t="0">Cancelar</button>' +
+    '<button type="button" class="confirmar" style="background:' +
+    (entrada ? 'var(--presente)' : 'var(--falta)') + '" data-t="1">Salvar</button></div>');
+
+  el('folhaCorpo').onclick = function(e){
+    var c = e.target.closest('[data-cat]');
+    if (c){
+      var todos = el('cxCats').children;
+      for (var i = 0; i < todos.length; i++) todos[i].classList.remove('on');
+      c.classList.add('on'); vibrar();
+      return;
+    }
+    var b2 = e.target.closest('[data-t]');
+    if (!b2) return;
+    if (b2.dataset.t === '1') salvarLanc(tipo); else fecharFolha();
+  };
+
+  var inFoto = el('cxFoto');
+  if (inFoto) inFoto.onchange = function(){
+    var rot = el('cxFotoRot');
+    rot.querySelector('span').textContent = 'Reduzindo a foto…';
+    reduzirFoto(this.files && this.files[0], function(d){
+      fotoAtual = d || '';
+      rot.querySelector('span').textContent = fotoAtual
+        ? 'Foto pronta — tocar para trocar'
+        : 'Não deu para ler a foto. Salve sem ela.';
+      if (fotoAtual) rot.classList.add('ok');
+    });
+  };
+  setTimeout(function(){ var i = el('cxValor'); if (i) i.focus(); }, 320);
+};
+
+function hojeISO(){
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') +
+         '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function salvarLanc(tipo){
+  var valor = (el('cxValor').value || '').trim();
+  if (!valor){ toast('Escreva o valor.', 'erro'); return; }
+  var sel = el('cxCats').querySelector('.chip.on');
+  var dados = {
+    tipo: tipo, valor: valor,
+    categoria: sel ? sel.getAttribute('data-cat') : 'Outro',
+    descricao: (el('cxDesc').value || '').trim(),
+    fonte: (el('cxFonte').value || '').trim(),
+    data: el('cxData').value || hojeISO(),
+    quem: S.professor || '',
+    foto: fotoAtual
+  };
+  fecharFolha();
+  toast('Salvando…');
+  api('lancarCaixa', [S.pin, dados], function(r){
+    fecharToast(); vibrar();
+    toast(tipo === 'Entrada' ? 'Entrada registrada' : 'Saída registrada' +
+      (r.pediuFoto && !r.comFoto ? ' — a foto não subiu' : ''));
+    fotoAtual = '';
+    S.mesCxIdx = 0;
+    api('mesesCaixa', [S.pin], function(ms){ S.mesesCx = ms; carregarCaixa(); }, carregarCaixa);
+  }, function(e){
+    fecharToast();
+    toast(textoErro(e), 'erro');
+  });
+}
+
+/* ══════════════ CAIXA: ver e apagar ══════════════ */
+ACOES.verLanc = function(b){
+  var l = S.caixa.lancamentos[+b.getAttribute('data-i')];
+  if (!l) return;
+  var entrada = l.tipo === 'Entrada';
+  var h = '<div style="padding:0 8px">';
+  h += '<div class="detalhe-valor ' + (entrada?'ent':'sai') + '">' +
+       (entrada?'+':'−') + ' ' + reais(l.valor) + '</div>';
+  h += '<ul class="lista sem-avatar" style="margin-top:16px">';
+  function linha(r, v){ return '<li class="li"><span class="nome">' + esc(r) +
+    '</span><span class="pct" style="font-weight:600;font-size:14px">' + esc(v) + '</span></li>'; }
+  h += linha('Categoria', l.categoria);
+  h += linha('Quando', dataExtenso(l.data));
+  if (l.descricao) h += linha('Descrição', l.descricao);
+  if (l.fonte) h += linha('Fonte', l.fonte);
+  if (l.quem) h += linha('Registrou', l.quem);
+  h += '</ul>';
+  if (l.comprovante){
+    h += '<a class="botao-cheio" style="margin-top:16px" href="' + esc(l.comprovante) +
+         '" target="_blank" rel="noopener">' + ico('abrir', 18) + ' Ver o comprovante</a>';
+  } else if (!entrada){
+    h += '<p class="dica" style="margin:16px 4px 0">Sem comprovante. Prestação de contas ' +
+         'costuma recusar despesa sem nota.</p>';
+  }
+  h += '<button type="button" class="botao-vazio" style="color:var(--falta);border-color:#EDC6CE" ' +
+       'data-acao="apagarLanc" data-l="' + l.linha + '" data-v="' + l.valor + '">' +
+       ico('desativar', 18) + ' Apagar lançamento</button>';
+  h += '</div>';
+  abrirFolha(entrada ? 'Entrada' : 'Saída', h);
+};
+
+ACOES.apagarLanc = function(b){
+  var linha = b.getAttribute('data-l'), valor = b.getAttribute('data-v');
+  fecharFolha();
+  setTimeout(function(){
+    confirmar('Apagar lançamento',
+      'Some da planilha e do saldo. Use só para corrigir digitação.',
+      'Apagar', function(){
+        api('apagarLancamento', [S.pin, linha, valor], function(){
+          vibrar(); toast('Lançamento apagado'); carregarCaixa();
+        }, function(e){ toast(textoErro(e), 'erro'); });
+      });
+  }, 80);
+};
+
+/* ══════════════ CAIXA: resumo do período ══════════════ */
+ACOES.gCaixaResumo = function(){ ir('gCaixaResumo'); };
+
+TELAS.gCaixaResumo = function(){
+  var fim = hojeISO(), ini = fim.slice(0,8) + '01';
+  return {
+    titulo:'Resumo do caixa',
+    html:'<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
+      'Totais por categoria e por fonte, para colar na prestação de contas.</p>' +
+      '<div class="duplo" style="margin-bottom:12px">' +
+      '<div class="campo" style="flex:1;margin:0"><label for="cxIni">De</label>' +
+      '<input id="cxIni" type="date" value="' + ini + '"></div>' +
+      '<div class="campo" style="flex:1;margin:0"><label for="cxFim">Até</label>' +
+      '<input id="cxFim" type="date" value="' + fim + '"></div></div>' +
+      '<button type="button" class="botao-cheio" data-acao="gerarCx">' +
+      ico('documento', 18) + ' Gerar resumo</button><div id="saidaCx"></div>',
+    depois:function(){ ACOES.gerarCx(); }
+  };
+};
+
+ACOES.gerarCx = function(){
+  el('saidaCx').innerHTML = '<div style="margin-top:20px">' + esqueleto(2) + '</div>';
+  api('resumoCaixa', [S.pin, el('cxIni').value, el('cxFim').value], function(r){
+    S.resCx = r;
+    var h = '<div class="secao">Resumo</div><div class="numeros">';
+    h += '<div style="background:var(--presente)"><b>' + reais(r.entrou).replace('R$ ','') +
+         '</b><span>entrou</span></div>';
+    h += '<div style="background:var(--falta)"><b>' + reais(r.saiu).replace('R$ ','') +
+         '</b><span>saiu</span></div>';
+    h += '<div><b>' + reais(r.saldo).replace('R$ ','') + '</b><span>saldo</span></div></div>';
+
+    function bloco(titulo, itens){
+      if (!itens.length) return '';
+      var s = '<div class="secao">' + titulo + '</div><ul class="lista sem-avatar">';
+      itens.forEach(function(x){
+        s += '<li class="li"><span class="nome">' + esc(x.nome) + '</span>' +
+             '<span class="pct" style="font-size:15px">' + reais(x.valor) + '</span></li>';
+      });
+      return s + '</ul>';
+    }
+    h += bloco('Entradas por categoria', r.entradas);
+    h += bloco('Saídas por categoria', r.saidas);
+
+    if (r.fontes.length){
+      h += '<div class="secao">Por fonte</div><ul class="lista sem-avatar">';
+      r.fontes.forEach(function(f){
+        h += '<li class="li"><span class="nome">' + esc(f.fonte) +
+             '<small>entrou ' + reais(f.entrou) + ' · saiu ' + reais(f.saiu) + '</small></span>' +
+             '<span class="pct" style="font-size:15px">' + reais(f.entrou - f.saiu) + '</span></li>';
+      });
+      h += '</ul>';
+    }
+
+    if (r.semComprovante){
+      h += '<div class="aviso" style="margin-top:16px">' + ico('alerta', 18) +
+           '<span>' + plural(r.semComprovante, 'saída está', 'saídas estão') +
+           ' sem comprovante. Prestação de contas costuma recusar despesa sem nota.</span></div>';
+    }
+    h += '<button type="button" class="botao-cheio" style="margin-top:20px" data-acao="copiarCx">' +
+         ico('copiar', 18) + ' Copiar para colar no relatório</button>';
+    el('saidaCx').innerHTML = '<div style="margin-top:4px">' + h + '</div>';
+  }, function(e){
+    el('saidaCx').innerHTML = '<div style="margin-top:20px">' +
+      estado('alerta','Não deu para gerar', textoErro(e)) + '</div>';
+  });
+};
+
+ACOES.copiarCx = function(){
+  var r = S.resCx;
+  if (!r) return;
+  var L = ['INSTITUTO VERIDIANA — Movimentação financeira',
+    'Período: ' + dataCurta(r.inicio) + '/' + r.inicio.slice(0,4) +
+      ' a ' + dataCurta(r.fim) + '/' + r.fim.slice(0,4), '',
+    'Entradas: ' + reais(r.entrou),
+    'Saídas:   ' + reais(r.saiu),
+    'Saldo:    ' + reais(r.saldo),
+    'Lançamentos: ' + r.lancamentos, ''];
+  if (r.entradas.length){
+    L.push('Entradas por categoria:');
+    r.entradas.forEach(function(x){ L.push('- ' + x.nome + ': ' + reais(x.valor)); });
+    L.push('');
+  }
+  if (r.saidas.length){
+    L.push('Saídas por categoria:');
+    r.saidas.forEach(function(x){ L.push('- ' + x.nome + ': ' + reais(x.valor)); });
+    L.push('');
+  }
+  if (r.fontes.length){
+    L.push('Por fonte:');
+    r.fontes.forEach(function(f){
+      L.push('- ' + f.fonte + ': entrou ' + reais(f.entrou) + ', saiu ' + reais(f.saiu));
+    });
+  }
+  copiar(L.join('\n'));
 };
 </script>
 

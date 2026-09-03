@@ -126,6 +126,32 @@
   });
   var CHAMADAS = AULAS.slice();
 
+  var CAT_ENTRADA = ['Doação','Bazar','Edital','Rifa','Evento','Outro'];
+  var CAT_SAIDA   = ['Aluguel','Água e luz','Internet','Figurino','Material de dança',
+                     'Transporte','Lanche','Manutenção','Outro'];
+  var CAIXA = [
+    {registro:'', data:'2026-08-05', tipo:'Entrada', valor:2500,   categoria:'Edital',   descricao:'1ª parcela', fonte:'Edital Secult 2026', comprovante:'https://drive.google.com/x1', quem:'Vera Lúcia Sampaio', linha:2},
+    {registro:'', data:'2026-08-07', tipo:'Saída',   valor:1200,   categoria:'Aluguel',  descricao:'sala de ensaio', fonte:'Edital Secult 2026', comprovante:'https://drive.google.com/x2', quem:'Vera Lúcia Sampaio', linha:3},
+    {registro:'', data:'2026-08-12', tipo:'Entrada', valor:340.50, categoria:'Bazar',    descricao:'bazar de sábado', fonte:'Recursos próprios', comprovante:'', quem:'Vera Lúcia Sampaio', linha:4},
+    {registro:'', data:'2026-08-19', tipo:'Saída',   valor:186.90, categoria:'Figurino', descricao:'collants do infantil', fonte:'Recursos próprios', comprovante:'', quem:'Aline Ferreira', linha:5},
+    {registro:'', data:'2026-08-28', tipo:'Saída',   valor:220,    categoria:'Água e luz', descricao:'', fonte:'Edital Secult 2026', comprovante:'https://drive.google.com/x3', quem:'Vera Lúcia Sampaio', linha:6},
+    {registro:'', data:'2026-09-02', tipo:'Entrada', valor:150,    categoria:'Doação',   descricao:'doação da vizinha', fonte:'Recursos próprios', comprovante:'', quem:'Vera Lúcia Sampaio', linha:7},
+    {registro:'', data:'2026-09-02', tipo:'Saída',   valor:95.40,  categoria:'Lanche',   descricao:'lanche do ensaio geral', fonte:'Recursos próprios', comprovante:'https://drive.google.com/x4', quem:'Vera Lúcia Sampaio', linha:8}
+  ];
+  var proximaLinha = 9;
+  function valorNumero(v){
+    if (typeof v === 'number') return v;
+    var s2 = String(v==null?'':v).replace(/[^0-9,.-]/g,'').trim();
+    if (!s2) return NaN;
+    var vi = s2.lastIndexOf(','), po = s2.lastIndexOf('.');
+    s2 = vi > po ? s2.replace(/\./g,'').replace(',','.') : s2.replace(/,/g,'');
+    return parseFloat(s2);
+  }
+  function fontesUsadas(){
+    var v = {}; CAIXA.forEach(function(r){ if (r.fonte) v[r.fonte] = 1; });
+    return Object.keys(v).sort(function(a,b){ return pt(a,b); });
+  }
+
   var TOKENS = {};
   var PIN = '1234';
   var URL_APP = 'https://script.google.com/macros/s/AKfycbwEXEMPLO0000000000000000000000000000/exec';
@@ -344,6 +370,70 @@
         aluno: comAula.length === 1 ? comAula[0] : '',
         publico: comAula.length === 1,
         ignorados: lista.filter(function(n){ return comAula.indexOf(n) === -1; }) };
+    },
+    mesesCaixa: function(pin){
+      exigirPin(pin);
+      var v = {}; CAIXA.forEach(function(r){ v[r.data.slice(0,7)] = 1; });
+      var ms = Object.keys(v).sort().reverse();
+      var ag = hoje().slice(0,7);
+      if (ms.indexOf(ag) === -1) ms.unshift(ag);
+      return ms;
+    },
+    listarCaixa: function(pin, mes){
+      exigirPin(pin);
+      var doMes = CAIXA.filter(function(r){ return r.data.slice(0,7) === mes; });
+      var entrou = 0, saiu = 0;
+      doMes.forEach(function(r){ if (r.tipo === 'Entrada') entrou += r.valor; else saiu += r.valor; });
+      var acc = 0;
+      CAIXA.forEach(function(r){
+        if (r.data.slice(0,7) > mes) return;
+        acc += (r.tipo === 'Entrada' ? r.valor : -r.valor);
+      });
+      doMes.sort(function(a,b){ return a.data === b.data ? b.linha - a.linha : (a.data < b.data ? 1 : -1); });
+      return { mes:mes, lancamentos:doMes.slice(), entrou:entrou, saiu:saiu,
+               doMes:entrou-saiu, acumulado:acc,
+               categorias:{Entrada:CAT_ENTRADA, 'Saída':CAT_SAIDA}, fontes:fontesUsadas() };
+    },
+    lancarCaixa: function(pin, d){
+      exigirPin(pin);
+      var tipo = d.tipo === 'Entrada' ? 'Entrada' : (d.tipo === 'Saída' ? 'Saída' : '');
+      if (!tipo) throw new Error('Diga se é entrada ou saída.');
+      var valor = valorNumero(d.valor);
+      if (!(valor > 0)) throw new Error('Escreva um valor maior que zero.');
+      CAIXA.push({ registro:'', data:d.data || hoje(), tipo:tipo, valor:valor,
+        categoria:d.categoria || 'Outro', descricao:d.descricao || '', fonte:d.fonte || '',
+        comprovante: d.foto ? 'https://drive.google.com/mock' : '',
+        quem:d.quem || '', linha: proximaLinha++ });
+      return { ok:true, comFoto: !!d.foto, pediuFoto: !!d.foto };
+    },
+    apagarLancamento: function(pin, linha, valorConfere){
+      exigirPin(pin);
+      var i = CAIXA.findIndex(function(r){ return String(r.linha) === String(linha); });
+      if (i === -1) throw new Error('Lançamento não encontrado.');
+      if (valorConfere !== undefined && Math.abs(CAIXA[i].valor - Number(valorConfere)) > 0.005)
+        throw new Error('A lista mudou desde que você abriu. Recarregue e tente de novo.');
+      CAIXA.splice(i,1); return {ok:true};
+    },
+    resumoCaixa: function(pin, ini, fim){
+      exigirPin(pin);
+      if (ini > fim) throw new Error('A data de início vem depois da data de fim.');
+      var doP = CAIXA.filter(function(r){ return r.data >= ini && r.data <= fim; });
+      var cat = {Entrada:{}, 'Saída':{}}, fon = {}, entrou = 0, saiu = 0, sem = 0;
+      doP.forEach(function(r){
+        var lado = r.tipo === 'Entrada' ? 'Entrada' : 'Saída';
+        cat[lado][r.categoria] = (cat[lado][r.categoria] || 0) + r.valor;
+        var f = r.fonte || 'Sem fonte informada';
+        if (!fon[f]) fon[f] = {fonte:f, entrou:0, saiu:0};
+        if (lado === 'Entrada'){ fon[f].entrou += r.valor; entrou += r.valor; }
+        else { fon[f].saiu += r.valor; saiu += r.valor; if (!r.comprovante) sem++; }
+      });
+      function ord(m){ return Object.keys(m).map(function(k){ return {nome:k, valor:m[k]}; })
+        .sort(function(a,b){ return b.valor - a.valor; }); }
+      return { inicio:ini, fim:fim, entrou:entrou, saiu:saiu, saldo:entrou-saiu,
+               lancamentos:doP.length, semComprovante:sem,
+               entradas:ord(cat.Entrada), saidas:ord(cat['Saída']),
+               fontes:Object.keys(fon).map(function(k){ return fon[k]; })
+                 .sort(function(a,b){ return (b.entrou+b.saiu)-(a.entrou+a.saiu); }) };
     },
     obterLinkPlanilha: function(pin){
       exigirPin(pin);

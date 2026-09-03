@@ -390,6 +390,72 @@ main{padding:0 0 24px}
 .botao-cheio:active{background:var(--roxo-fundo)}
 .botao-cheio:disabled{background:#AC9BBA}
 
+/* ─────────── caixa ─────────── */
+.saldo{
+  background:var(--roxo);color:#fff;border-radius:var(--r-m);
+  padding:20px;text-align:center;margin-bottom:8px;
+}
+.saldo>span{display:block;font-size:13px;color:var(--roxo-claro)}
+.saldo>b{
+  display:block;font-size:32px;font-weight:700;letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;margin-top:4px;
+}
+.saldo-linha{
+  display:flex;gap:8px;margin-top:16px;padding-top:16px;
+  border-top:1px solid rgba(255,255,255,.2);
+}
+.saldo-linha div{
+  flex:1;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;
+}
+.saldo-linha small{display:block;font-size:12px;color:var(--roxo-claro);font-weight:400;margin-top:2px}
+.saldo-linha .ent{color:#A8E6C6}
+.saldo-linha .sai{color:#F2B8C2}
+
+.dinheiro{
+  flex-shrink:0;font-size:16px;font-weight:700;
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.dinheiro.ent{color:var(--presente)}
+.dinheiro.sai{color:var(--falta)}
+
+.bt-entrada,.bt-saida{
+  flex:1;min-height:52px;border-radius:var(--r-m);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:16px;font-weight:700;color:#fff;
+  transition:background 160ms var(--curva);
+}
+.bt-entrada{background:var(--presente)}
+.bt-entrada:active{background:#115A3B}
+.bt-saida{background:var(--falta)}
+.bt-saida:active{background:#8E1B2C}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  min-height:44px;padding:10px 14px;border-radius:999px;
+  font-size:14px;font-weight:600;color:var(--apagado);
+  background:var(--fundo);border:1px solid var(--borda);
+  transition:background 160ms var(--curva),color 160ms var(--curva);
+}
+.chip.on{background:var(--roxo);border-color:var(--roxo);color:#fff}
+
+.campo label i{font-style:normal;font-weight:400;color:var(--apagado)}
+.dica{display:block;font-size:13px;color:var(--apagado);line-height:1.5;margin-top:8px}
+
+.foto{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  min-height:52px;border-radius:var(--r-m);
+  border:1px dashed var(--borda);background:var(--fundo);
+  color:var(--apagado);font-size:15px;font-weight:600;cursor:pointer;
+}
+.foto.ok{border-style:solid;border-color:var(--presente);color:var(--presente)}
+
+.detalhe-valor{
+  text-align:center;font-size:32px;font-weight:700;
+  letter-spacing:-.03em;font-variant-numeric:tabular-nums;padding:8px 0;
+}
+.detalhe-valor.ent{color:var(--presente)}
+.detalhe-valor.sai{color:var(--falta)}
+
 /* ─────────── aniversário ─────────── */
 .bolo{
   display:flex;gap:12px;align-items:flex-start;

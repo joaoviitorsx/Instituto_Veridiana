@@ -62,6 +62,7 @@ TELAS.gestao = function(){
     {ic:'qr', t:'QR das turmas', s:'gerar código para imprimir', a:'gQr'},
     {ic:'sino', t:'Precisam de atenção', s:'carregando…', a:'gRisco', id:'itRisco'},
     {ic:'calendario', t:'Histórico', s:'quem veio, por dia e por mês', a:'gHistorico'},
+    {ic:'carteira', t:'Caixa', s:'entradas, saídas e comprovantes', a:'gCaixa'},
     {ic:'medalha', t:'Certificados', s:'comprovante de horas para as alunas', a:'gCert'},
     {ic:'documento', t:'Relatório para edital', s:'beneficiários, aulas e frequência', a:'gRelatorio'},
     {ic:'tabela', t:'Planilha', s:'abrir e compartilhar a planilha', a:'gPlanilha'}
@@ -110,6 +111,7 @@ ACOES.gPlanilha  = function(){ ir('gPlanilha'); };
 ACOES.gRisco     = function(){ ir('gRisco'); };
 ACOES.gRelatorio = function(){ ir('gRelatorio'); };
 ACOES.gCert      = function(){ ir('gCert'); };
+ACOES.gCaixa     = function(){ ir('gCaixa'); };
 
 /* recarrega os contadores depois de qualquer escrita */
 function recontar(){

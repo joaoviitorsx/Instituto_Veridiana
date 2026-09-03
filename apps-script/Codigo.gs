@@ -64,7 +64,7 @@ const URL_ICONE = '';
 
 /* As partes entram nesta ordem. AppPartida chama iniciar() e por isso
    é a última. */
-const PARTES = ['AppNucleo', 'AppChamada', 'AppGestao', 'AppQr', 'AppPartida'];
+const PARTES = ['AppNucleo', 'AppChamada', 'AppGestao', 'AppCaixa', 'AppQr', 'AppPartida'];
 
 function doGet() {
   let html = arquivo('Index');

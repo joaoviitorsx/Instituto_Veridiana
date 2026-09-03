@@ -56,6 +56,32 @@ com o celular na mão, o olho acha as três faltas sem procurar.
 
 ## Além da chamada
 
+### Caixa
+
+<img src="assets/caixa.png" width="250" align="right" alt="Fluxo de caixa do mês">
+
+Entrada e saída do celular, entre uma aula e outra. Dois botões grandes,
+valor, categoria, salvar.
+
+Cada lançamento carrega uma **fonte**. Não é burocracia: o instituto vive
+de edital, e prestação de contas exige mostrar de qual bolso saiu cada
+real. Dinheiro de edital misturado com doação num pote só é o que faz a
+prestação ser recusada.
+
+Na saída dá para **fotografar a nota na hora**. A foto é reduzida no
+próprio celular antes de subir — 4 MB em 4G instável não chegam, e o
+comprovante é justamente o que não pode faltar.
+
+O resumo do período soma por categoria e por fonte, e avisa quantas
+saídas estão sem nota.
+
+<br clear="right">
+
+<p align="center">
+  <img src="assets/caixa-lancar.png" width="240" alt="Lançar uma saída">
+  <img src="assets/caixa-resumo.png" width="240" alt="Resumo para prestação de contas">
+</p>
+
 ### Certificado de participação
 
 <img src="assets/certificado-pdf.png" width="250" align="right" alt="Certificado gerado em PDF">
@@ -162,7 +188,7 @@ mínimo 44px.
 ## Estrutura
 
 ```
-apps-script/        cole estes 15 arquivos no editor do Apps Script
+apps-script/        cole estes 17 arquivos no editor do Apps Script
   Codigo.gs           constantes, doGet e montagem da página
   Util.gs             planilha, datas, cache e trava
   Chamada.gs          o fluxo do QR
@@ -171,11 +197,13 @@ apps-script/        cole estes 15 arquivos no editor do Apps Script
   Historico.gs        leitura do histórico por mês
   Impacto.gs          evasão, relatório de edital, aniversários
   Certificado.gs      certificado em PDF com carga horária
+  Caixa.gs            entradas, saídas, comprovantes e resumo
   Index.html          casca da página
   Estilo.html         todo o CSS
   AppNucleo.html      estado, ícones, ponte com o servidor, roteador
   AppChamada.html     telas da chamada
   AppGestao.html      telas da área da equipe
+  AppCaixa.html       telas do fluxo de caixa
   AppQr.html          encoder de QR
   AppPartida.html     lê a turma da URL e abre a primeira tela
 
@@ -223,15 +251,15 @@ PY
 
 ## 1. Colar no Apps Script
 
-São 15 arquivos. No editor, o botão **+** ao lado de "Arquivos" cria cada um.
+São 17 arquivos. No editor, o botão **+** ao lado de "Arquivos" cria cada um.
 
 **Arquivos de script** (`+` → **Script**). Digite o nome sem `.gs`:
 
-`Codigo` · `Util` · `Chamada` · `Gestao` · `Planilha` · `Historico` · `Impacto` · `Certificado`
+`Codigo` · `Util` · `Chamada` · `Gestao` · `Planilha` · `Historico` · `Impacto` · `Certificado` · `Caixa`
 
 **Arquivos de HTML** (`+` → **HTML**). Digite o nome sem `.html`:
 
-`Index` · `Estilo` · `AppNucleo` · `AppChamada` · `AppGestao` · `AppQr` · `AppPartida`
+`Index` · `Estilo` · `AppNucleo` · `AppChamada` · `AppGestao` · `AppCaixa` · `AppQr` · `AppPartida`
 
 Em cada um: `Ctrl+A`, `Delete`, cole o conteúdo do arquivo de mesmo nome
 da pasta `apps-script/`, `Ctrl+S`.
@@ -242,7 +270,7 @@ da pasta `apps-script/`, `Ctrl+S`.
 Depois: **Implantar → Gerenciar implantações → ✏️ → Versão: Nova
 versão → Implantar**. Sem isso o link continua servindo o código antigo.
 
-> O `Certificado.gs` usa o Drive para salvar o PDF. Na primeira vez que
+> `Certificado.gs` e `Caixa.gs` usam o Drive para salvar PDF e comprovante. Na primeira vez que
 > você gerar um certificado, o Google vai pedir autorização de novo —
 > é o escopo do Drive entrando. Autorize e siga.
 
@@ -359,6 +387,7 @@ cartaz, no tamanho A5.
 | `Professores` | Professor |
 | `Chamadas` | Registro, Data, Turma, Professor, Aluno, Status |
 | `Turmas` | Turma, Ativa (SIM/NAO), Minutos por aula |
+| `Caixa` | Registro, Data, Tipo, Valor, Categoria, Descrição, Fonte, Comprovante, Quem registrou |
 
 `Chamadas` e `Turmas` nascem sozinhas no primeiro uso.
 

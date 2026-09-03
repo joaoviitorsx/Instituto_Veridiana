@@ -1,0 +1,361 @@
+<script>
+/* Fluxo de caixa: lançar em 4 toques, do celular, entre uma aula e outra. */
+
+function reais(v){
+  var n = Number(v || 0);
+  return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+/* Reduz a foto ANTES de subir. Nota fiscal de 4 MB em 4G instável não
+   chega — e o comprovante é justamente o que não pode faltar. */
+function reduzirFoto(file, cb){
+  if (!file){ cb(''); return; }
+  var r = new FileReader();
+  r.onerror = function(){ cb(''); };
+  r.onload = function(){
+    var img = new Image();
+    img.onerror = function(){ cb(''); };
+    img.onload = function(){
+      var max = 1400;
+      var e = Math.min(1, max / Math.max(img.width, img.height));
+      var c = document.createElement('canvas');
+      c.width = Math.round(img.width * e);
+      c.height = Math.round(img.height * e);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      try { cb(c.toDataURL('image/jpeg', 0.75)); } catch(err){ cb(''); }
+    };
+    img.src = r.result;
+  };
+  r.readAsDataURL(file);
+}
+
+/* ══════════════ CAIXA: o mês ══════════════ */
+TELAS.gCaixa = function(){
+  return {
+    titulo:'Caixa', html:esqueleto(4),
+    barra:'<div class="duplo">' +
+      '<button type="button" class="bt-entrada" data-acao="lancar" data-tipo="Entrada">' +
+      ico('mais', 18) + ' Entrou</button>' +
+      '<button type="button" class="bt-saida" data-acao="lancar" data-tipo="Saída">' +
+      ico('menos', 18) + ' Saiu</button></div>',
+    depois:function(){
+      api('mesesCaixa', [S.pin], function(ms){
+        S.mesesCx = ms; S.mesCxIdx = 0;
+        carregarCaixa();
+      }, function(e){
+        el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+
+function carregarCaixa(){
+  var mes = S.mesesCx[S.mesCxIdx];
+  var alvo = el('palco').querySelector('.corpo');
+  alvo.innerHTML = passoCaixa(mes) + esqueleto(3);
+  api('listarCaixa', [S.pin, mes], function(r){
+    S.caixa = r;
+    var h = passoCaixa(mes);
+
+    h += '<div class="saldo"><span>em caixa</span><b>' + reais(r.acumulado) + '</b>' +
+         '<div class="saldo-linha">' +
+           '<div class="ent">' + reais(r.entrou) + '<small>entrou no mês</small></div>' +
+           '<div class="sai">' + reais(r.saiu) + '<small>saiu no mês</small></div>' +
+         '</div></div>';
+
+    if (!r.lancamentos.length){
+      alvo.innerHTML = h + estado('carteira','Nada lançado neste mês',
+        'Use os botões aqui embaixo assim que entrar ou sair dinheiro.');
+      return;
+    }
+
+    h += '<div class="secao">' + plural(r.lancamentos.length, 'lançamento', 'lançamentos') + '</div>';
+    var dia = '';
+    r.lancamentos.forEach(function(l, i){
+      if (l.data !== dia){
+        if (dia) h += '</ul>';
+        dia = l.data;
+        h += '<div class="dia">' + esc(dataExtenso(l.data)) + '</div><ul class="lista sem-avatar">';
+      }
+      var entrada = l.tipo === 'Entrada';
+      h += '<li class="li" data-acao="verLanc" data-i="' + i + '" role="button" tabindex="0">' +
+           '<span class="nome">' + esc(l.categoria) +
+             '<small>' + esc(l.descricao || l.fonte || (entrada ? 'entrada' : 'saída')) +
+             (l.comprovante ? ' · com nota' : (entrada ? '' : ' · sem nota')) + '</small></span>' +
+           '<span class="dinheiro ' + (entrada ? 'ent' : 'sai') + '">' +
+             (entrada ? '+' : '−') + ' ' + reais(l.valor) + '</span></li>';
+    });
+    h += '</ul>';
+    h += '<button type="button" class="botao-cheio" style="margin-top:20px;background:var(--fundo);' +
+         'color:var(--roxo)" data-acao="gCaixaResumo">' + ico('documento', 18) +
+         ' Resumo para prestação de contas</button>';
+    alvo.innerHTML = h;
+  }, function(e){
+    alvo.innerHTML = passoCaixa(mes) + estado('alerta','Não deu para carregar', textoErro(e));
+  });
+}
+
+function passoCaixa(mes){
+  var antes = S.mesCxIdx < S.mesesCx.length - 1, depois = S.mesCxIdx > 0;
+  return '<div class="passo">' +
+    '<button type="button" data-acao="cxAntes" aria-label="Mês anterior"' + (antes?'':' disabled') + '>' +
+      ico('esq', 22) + '</button><b>' + esc(mesExtenso(mes)) + '</b>' +
+    '<button type="button" data-acao="cxDepois" aria-label="Próximo mês"' + (depois?'':' disabled') + '>' +
+      ico('dir', 22) + '</button></div>';
+}
+ACOES.cxAntes  = function(){ if (S.mesCxIdx < S.mesesCx.length - 1){ S.mesCxIdx++; vibrar(); carregarCaixa(); } };
+ACOES.cxDepois = function(){ if (S.mesCxIdx > 0){ S.mesCxIdx--; vibrar(); carregarCaixa(); } };
+
+/* ══════════════ CAIXA: lançar ══════════════ */
+var fotoAtual = '';
+ACOES.lancar = function(b){
+  var tipo = b.getAttribute('data-tipo');
+  var entrada = tipo === 'Entrada';
+  var cats = (S.caixa && S.caixa.categorias) ? S.caixa.categorias[tipo] : [];
+  var fontes = (S.caixa && S.caixa.fontes) ? S.caixa.fontes : [];
+  fotoAtual = '';
+
+  var h = '<div style="padding:0 8px">';
+  h += '<div class="campo"><label for="cxValor">Valor</label>' +
+       '<input id="cxValor" type="text" inputmode="decimal" placeholder="0,00" ' +
+       'autocomplete="off"></div>';
+
+  h += '<div class="campo"><label>Categoria</label><div class="chips" id="cxCats">';
+  cats.forEach(function(c, i){
+    h += '<button type="button" class="chip' + (i===0?' on':'') + '" data-cat="' + esc(c) + '">' +
+         esc(c) + '</button>';
+  });
+  h += '</div></div>';
+
+  h += '<div class="campo"><label for="cxDesc">Do que se trata <i>(opcional)</i></label>' +
+       '<input id="cxDesc" type="text" autocomplete="off" placeholder="' +
+       (entrada ? 'doação da vizinha do bazar' : 'sapatilhas do infantil') + '"></div>';
+
+  h += '<div class="campo"><label for="cxFonte">Fonte <i>(opcional)</i></label>' +
+       '<input id="cxFonte" type="text" autocomplete="off" list="cxFontes" placeholder="' +
+       (entrada ? 'de onde veio' : 'que bolso pagou') + '">' +
+       '<datalist id="cxFontes">';
+  fontes.forEach(function(f){ h += '<option value="' + esc(f) + '">'; });
+  h += '</datalist>' +
+       '<small class="dica">Separa dinheiro de edital do resto. É isso que a prestação de contas cobra.</small></div>';
+
+  if (!entrada){
+    h += '<div class="campo"><label>Comprovante</label>' +
+         '<label class="foto" for="cxFoto" id="cxFotoRot">' + ico('camera', 20) +
+         ' <span>Fotografar a nota</span></label>' +
+         '<input id="cxFoto" type="file" accept="image/*" capture="environment" hidden>' +
+         '<small class="dica">Despesa sem nota não entra na prestação de contas.</small></div>';
+  }
+
+  h += '<div class="campo"><label for="cxData">Quando</label>' +
+       '<input id="cxData" type="date" value="' + hojeISO() + '"></div>';
+  h += '</div>';
+
+  abrirFolha(entrada ? 'Entrou dinheiro' : 'Saiu dinheiro',
+    h + '<div class="acoes"><button type="button" class="cancelar" data-t="0">Cancelar</button>' +
+    '<button type="button" class="confirmar" style="background:' +
+    (entrada ? 'var(--presente)' : 'var(--falta)') + '" data-t="1">Salvar</button></div>');
+
+  el('folhaCorpo').onclick = function(e){
+    var c = e.target.closest('[data-cat]');
+    if (c){
+      var todos = el('cxCats').children;
+      for (var i = 0; i < todos.length; i++) todos[i].classList.remove('on');
+      c.classList.add('on'); vibrar();
+      return;
+    }
+    var b2 = e.target.closest('[data-t]');
+    if (!b2) return;
+    if (b2.dataset.t === '1') salvarLanc(tipo); else fecharFolha();
+  };
+
+  var inFoto = el('cxFoto');
+  if (inFoto) inFoto.onchange = function(){
+    var rot = el('cxFotoRot');
+    rot.querySelector('span').textContent = 'Reduzindo a foto…';
+    reduzirFoto(this.files && this.files[0], function(d){
+      fotoAtual = d || '';
+      rot.querySelector('span').textContent = fotoAtual
+        ? 'Foto pronta — tocar para trocar'
+        : 'Não deu para ler a foto. Salve sem ela.';
+      if (fotoAtual) rot.classList.add('ok');
+    });
+  };
+  setTimeout(function(){ var i = el('cxValor'); if (i) i.focus(); }, 320);
+};
+
+function hojeISO(){
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') +
+         '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function salvarLanc(tipo){
+  var valor = (el('cxValor').value || '').trim();
+  if (!valor){ toast('Escreva o valor.', 'erro'); return; }
+  var sel = el('cxCats').querySelector('.chip.on');
+  var dados = {
+    tipo: tipo, valor: valor,
+    categoria: sel ? sel.getAttribute('data-cat') : 'Outro',
+    descricao: (el('cxDesc').value || '').trim(),
+    fonte: (el('cxFonte').value || '').trim(),
+    data: el('cxData').value || hojeISO(),
+    quem: S.professor || '',
+    foto: fotoAtual
+  };
+  fecharFolha();
+  toast('Salvando…');
+  api('lancarCaixa', [S.pin, dados], function(r){
+    fecharToast(); vibrar();
+    toast(tipo === 'Entrada' ? 'Entrada registrada' : 'Saída registrada' +
+      (r.pediuFoto && !r.comFoto ? ' — a foto não subiu' : ''));
+    fotoAtual = '';
+    S.mesCxIdx = 0;
+    api('mesesCaixa', [S.pin], function(ms){ S.mesesCx = ms; carregarCaixa(); }, carregarCaixa);
+  }, function(e){
+    fecharToast();
+    toast(textoErro(e), 'erro');
+  });
+}
+
+/* ══════════════ CAIXA: ver e apagar ══════════════ */
+ACOES.verLanc = function(b){
+  var l = S.caixa.lancamentos[+b.getAttribute('data-i')];
+  if (!l) return;
+  var entrada = l.tipo === 'Entrada';
+  var h = '<div style="padding:0 8px">';
+  h += '<div class="detalhe-valor ' + (entrada?'ent':'sai') + '">' +
+       (entrada?'+':'−') + ' ' + reais(l.valor) + '</div>';
+  h += '<ul class="lista sem-avatar" style="margin-top:16px">';
+  function linha(r, v){ return '<li class="li"><span class="nome">' + esc(r) +
+    '</span><span class="pct" style="font-weight:600;font-size:14px">' + esc(v) + '</span></li>'; }
+  h += linha('Categoria', l.categoria);
+  h += linha('Quando', dataExtenso(l.data));
+  if (l.descricao) h += linha('Descrição', l.descricao);
+  if (l.fonte) h += linha('Fonte', l.fonte);
+  if (l.quem) h += linha('Registrou', l.quem);
+  h += '</ul>';
+  if (l.comprovante){
+    h += '<a class="botao-cheio" style="margin-top:16px" href="' + esc(l.comprovante) +
+         '" target="_blank" rel="noopener">' + ico('abrir', 18) + ' Ver o comprovante</a>';
+  } else if (!entrada){
+    h += '<p class="dica" style="margin:16px 4px 0">Sem comprovante. Prestação de contas ' +
+         'costuma recusar despesa sem nota.</p>';
+  }
+  h += '<button type="button" class="botao-vazio" style="color:var(--falta);border-color:#EDC6CE" ' +
+       'data-acao="apagarLanc" data-l="' + l.linha + '" data-v="' + l.valor + '">' +
+       ico('desativar', 18) + ' Apagar lançamento</button>';
+  h += '</div>';
+  abrirFolha(entrada ? 'Entrada' : 'Saída', h);
+};
+
+ACOES.apagarLanc = function(b){
+  var linha = b.getAttribute('data-l'), valor = b.getAttribute('data-v');
+  fecharFolha();
+  setTimeout(function(){
+    confirmar('Apagar lançamento',
+      'Some da planilha e do saldo. Use só para corrigir digitação.',
+      'Apagar', function(){
+        api('apagarLancamento', [S.pin, linha, valor], function(){
+          vibrar(); toast('Lançamento apagado'); carregarCaixa();
+        }, function(e){ toast(textoErro(e), 'erro'); });
+      });
+  }, 80);
+};
+
+/* ══════════════ CAIXA: resumo do período ══════════════ */
+ACOES.gCaixaResumo = function(){ ir('gCaixaResumo'); };
+
+TELAS.gCaixaResumo = function(){
+  var fim = hojeISO(), ini = fim.slice(0,8) + '01';
+  return {
+    titulo:'Resumo do caixa',
+    html:'<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
+      'Totais por categoria e por fonte, para colar na prestação de contas.</p>' +
+      '<div class="duplo" style="margin-bottom:12px">' +
+      '<div class="campo" style="flex:1;margin:0"><label for="cxIni">De</label>' +
+      '<input id="cxIni" type="date" value="' + ini + '"></div>' +
+      '<div class="campo" style="flex:1;margin:0"><label for="cxFim">Até</label>' +
+      '<input id="cxFim" type="date" value="' + fim + '"></div></div>' +
+      '<button type="button" class="botao-cheio" data-acao="gerarCx">' +
+      ico('documento', 18) + ' Gerar resumo</button><div id="saidaCx"></div>',
+    depois:function(){ ACOES.gerarCx(); }
+  };
+};
+
+ACOES.gerarCx = function(){
+  el('saidaCx').innerHTML = '<div style="margin-top:20px">' + esqueleto(2) + '</div>';
+  api('resumoCaixa', [S.pin, el('cxIni').value, el('cxFim').value], function(r){
+    S.resCx = r;
+    var h = '<div class="secao">Resumo</div><div class="numeros">';
+    h += '<div style="background:var(--presente)"><b>' + reais(r.entrou).replace('R$ ','') +
+         '</b><span>entrou</span></div>';
+    h += '<div style="background:var(--falta)"><b>' + reais(r.saiu).replace('R$ ','') +
+         '</b><span>saiu</span></div>';
+    h += '<div><b>' + reais(r.saldo).replace('R$ ','') + '</b><span>saldo</span></div></div>';
+
+    function bloco(titulo, itens){
+      if (!itens.length) return '';
+      var s = '<div class="secao">' + titulo + '</div><ul class="lista sem-avatar">';
+      itens.forEach(function(x){
+        s += '<li class="li"><span class="nome">' + esc(x.nome) + '</span>' +
+             '<span class="pct" style="font-size:15px">' + reais(x.valor) + '</span></li>';
+      });
+      return s + '</ul>';
+    }
+    h += bloco('Entradas por categoria', r.entradas);
+    h += bloco('Saídas por categoria', r.saidas);
+
+    if (r.fontes.length){
+      h += '<div class="secao">Por fonte</div><ul class="lista sem-avatar">';
+      r.fontes.forEach(function(f){
+        h += '<li class="li"><span class="nome">' + esc(f.fonte) +
+             '<small>entrou ' + reais(f.entrou) + ' · saiu ' + reais(f.saiu) + '</small></span>' +
+             '<span class="pct" style="font-size:15px">' + reais(f.entrou - f.saiu) + '</span></li>';
+      });
+      h += '</ul>';
+    }
+
+    if (r.semComprovante){
+      h += '<div class="aviso" style="margin-top:16px">' + ico('alerta', 18) +
+           '<span>' + plural(r.semComprovante, 'saída está', 'saídas estão') +
+           ' sem comprovante. Prestação de contas costuma recusar despesa sem nota.</span></div>';
+    }
+    h += '<button type="button" class="botao-cheio" style="margin-top:20px" data-acao="copiarCx">' +
+         ico('copiar', 18) + ' Copiar para colar no relatório</button>';
+    el('saidaCx').innerHTML = '<div style="margin-top:4px">' + h + '</div>';
+  }, function(e){
+    el('saidaCx').innerHTML = '<div style="margin-top:20px">' +
+      estado('alerta','Não deu para gerar', textoErro(e)) + '</div>';
+  });
+};
+
+ACOES.copiarCx = function(){
+  var r = S.resCx;
+  if (!r) return;
+  var L = ['INSTITUTO VERIDIANA — Movimentação financeira',
+    'Período: ' + dataCurta(r.inicio) + '/' + r.inicio.slice(0,4) +
+      ' a ' + dataCurta(r.fim) + '/' + r.fim.slice(0,4), '',
+    'Entradas: ' + reais(r.entrou),
+    'Saídas:   ' + reais(r.saiu),
+    'Saldo:    ' + reais(r.saldo),
+    'Lançamentos: ' + r.lancamentos, ''];
+  if (r.entradas.length){
+    L.push('Entradas por categoria:');
+    r.entradas.forEach(function(x){ L.push('- ' + x.nome + ': ' + reais(x.valor)); });
+    L.push('');
+  }
+  if (r.saidas.length){
+    L.push('Saídas por categoria:');
+    r.saidas.forEach(function(x){ L.push('- ' + x.nome + ': ' + reais(x.valor)); });
+    L.push('');
+  }
+  if (r.fontes.length){
+    L.push('Por fonte:');
+    r.fontes.forEach(function(f){
+      L.push('- ' + f.fonte + ': entrou ' + reais(f.entrou) + ', saiu ' + reais(f.saiu));
+    });
+  }
+  copiar(L.join('\n'));
+};
+</script>
