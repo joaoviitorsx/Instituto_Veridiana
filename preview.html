@@ -144,7 +144,7 @@ main{padding:0 0 24px}
 .instrucao span{font-size:14px;color:var(--apagado)}
 .instrucao button{
   font-size:14px;font-weight:600;color:var(--roxo);
-  padding:8px 12px;margin:-8px -4px -8px 0;border-radius:var(--r-p);
+  min-height:44px;padding:0 12px;margin:0 -4px 0 0;border-radius:var(--r-p);
 }
 .instrucao button:active{background:var(--roxo-fraco)}
 
@@ -285,7 +285,8 @@ main{padding:0 0 24px}
 .toast[data-tipo="erro"]{background:#7E1828}
 .toast .acao{
   flex-shrink:0;font-size:15px;font-weight:700;color:#fff;
-  padding:8px 4px;margin:-8px 0;text-decoration:underline;
+  min-height:44px;min-width:44px;padding:0 8px;margin:-8px 0;
+  text-decoration:underline;
 }
 
 /* ─────────── esqueleto ─────────── */
@@ -600,60 +601,6 @@ main{padding:0 0 24px}
 .duplo .secundario{background:var(--papel);color:var(--roxo);border:1px solid var(--borda)}
 .duplo .secundario:active{background:var(--fundo)}
 
-/* ─────────── rodape de acao ─────────── */
-.rodape-acao{
-  position:fixed;left:0;right:0;bottom:0;z-index:25;
-  background:var(--fundo);border-top:1px solid var(--borda);
-  padding:12px 16px calc(12px + env(safe-area-inset-bottom));
-}
-.rodape-acao .dentro{max-width:620px;margin:0 auto}
-.rodape-acao button{
-  width:100%;min-height:52px;padding:16px;border-radius:var(--r-m);
-  font-size:17px;font-weight:700;color:#fff;background:var(--roxo);
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  transition:background 160ms var(--curva);
-}
-.rodape-acao button:active{background:var(--roxo-fundo)}
-
-/* imprimir: so o cartaz do QR, sem nada de interface */
-@media print{
-  .cab,.barra,.duplo,.folha,.veu,.toast{display:none !important}
-  body{background:#fff;padding:0}
-  .corpo{padding:0;max-width:none}
-  .folha-qr{border:none;box-shadow:none;padding:0}
-  .folha-qr svg{max-width:60vw}
-  .folha-qr .turma{font-size:24px}
-  @page{size:A5;margin:16mm}
-}
-
-/* ── responsivo ── */
-@media (max-width:359px){
-  .capa{padding:4px 16px 20px}
-  .capa h1{font-size:21px}
-  .capa .conta b{font-size:24px}
-  .corpo{padding:16px 12px 0}
-  .nome{font-size:16px}
-  .teclado button{min-height:56px;font-size:21px}
-}
-@media (min-width:640px){
-  .corpo{padding:24px 24px 0}
-  .capa{padding:4px 24px 24px}
-}
-/* celular deitado: a capa nao pode comer a tela toda */
-@media (orientation:landscape) and (max-height:520px){
-  .capa{padding:0 20px 16px}
-  .capa h1{font-size:21px}
-  .capa .conta b{font-size:24px}
-  .pin{padding-top:16px}
-  .teclado button{min-height:52px}
-  .folha{max-height:92vh}
-}
-/* dvh acompanha a barra de endereco do Chrome no Android */
-@supports (height:100dvh){
-  .fim{min-height:calc(100dvh - 56px)}
-  .folha{max-height:80dvh}
-}
-
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
   .fim .selo-ok svg path{stroke-dashoffset:0}
@@ -807,9 +754,12 @@ main{padding:0 0 24px}
     var s2 = String(v==null?'':v).replace(/[^0-9,.-]/g,'').trim();
     if (!s2) return NaN;
     var vi = s2.lastIndexOf(','), po = s2.lastIndexOf('.');
-    s2 = vi > po ? s2.replace(/\./g,'').replace(',','.') : s2.replace(/,/g,'');
+    if (vi !== -1 && po !== -1) s2 = vi > po ? s2.replace(/\./g,'').replace(',','.') : s2.replace(/,/g,'');
+    else if (vi !== -1) s2 = s2.replace(/\./g,'').replace(',','.');
+    else if (po !== -1) s2 = /^-?\d+(\.\d{3})+$/.test(s2) ? s2.replace(/\./g,'') : s2;
     return parseFloat(s2);
   }
+
   function fontesUsadas(){
     var v = {}; CAIXA.forEach(function(r){ if (r.fonte) v[r.fonte] = 1; });
     return Object.keys(v).sort(function(a,b){ return pt(a,b); });
@@ -895,6 +845,12 @@ main{padding:0 0 24px}
       if (!d.professor) throw new Error('Escolha quem está dando a aula.');
       if (!d.presencas || !d.presencas.length) throw new Error('Nenhum aluno na lista.');
       if (d.token && TOKENS[d.token]) return TOKENS[d.token];
+      var VALIDOS = ['Presente','Falta','Justificada'];
+      d.presencas.forEach(function(p){
+        if (VALIDOS.indexOf(p.status) === -1) throw new Error('Status inválido: '+p.status);
+      });
+      if (!d.forcar && CHAMADAS.some(function(c){ return c.data===hoje() && c.turma===d.turma; }))
+        throw new Error('DUPLICADA: já existe chamada de '+d.turma+' hoje.');
       CHAMADAS.push({ data:hoje(), turma:d.turma, professor:d.professor });
       d.presencas.forEach(function(p){
         REGISTROS.push({ data:hoje(), turma:d.turma, professor:d.professor,
@@ -940,6 +896,7 @@ main{padding:0 0 24px}
       t.nome = n;
       ALUNOS.forEach(function(a){ if (a.turma===atual) a.turma = n; });
       CHAMADAS.forEach(function(c){ if (c.turma===atual) c.turma = n; });
+      REGISTROS.forEach(function(r){ if (r.turma===atual) r.turma = n; });
       return {ok:true, nome:n};
     },
     arquivarTurma: function(pin, nome){
@@ -1012,7 +969,7 @@ main{padding:0 0 24px}
           var x = h[a.nome];
           return { nome:a.nome, turma:a.turma, ativo:a.ativo,
                    aulas: x ? x.aulas : 0, horas: x ? Math.round(x.minutos/60) : 0,
-                   desde: x ? x.primeira : '',
+                   desde: x ? x.primeira : '', homonimo:false,
                    responsavel:a.responsavel, telefone:a.telefone };
         }).sort(function(a,b){ return pt(a.nome,b.nome); });
     },
@@ -1290,7 +1247,7 @@ main{padding:0 0 24px}
 <div class="barra" id="barra" hidden><div class="dentro" id="barraDentro"></div></div>
 
 <div class="veu" id="veu" data-aberto="false"></div>
-<div class="folha" id="folha" data-aberto="false" role="dialog" aria-modal="true" aria-labelledby="folhaTitulo">
+<div class="folha" id="folha" data-aberto="false" hidden role="dialog" aria-modal="true" aria-labelledby="folhaTitulo">
   <div class="puxador" id="puxador"></div>
   <h2 id="folhaTitulo"></h2>
   <div class="rolo" id="folhaCorpo"></div>
@@ -1359,6 +1316,13 @@ function ico(n, t){
 
 /* ─── utilidades ─── */
 function el(id){ return document.getElementById(id); }
+
+/* A coluna Comprovante é texto livre na planilha. Quem tem acesso de
+   edição pode escrever javascript:... ali, e o link viraria execução de
+   código ao ser tocado. Só http(s) passa. */
+function urlSegura(u){
+  return /^https?:\/\//i.test(String(u || '')) ? String(u) : '';
+}
 function esc(t){
   return String(t == null ? '' : t).replace(/[&<>"']/g, function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
@@ -1407,8 +1371,13 @@ function plural(n, um, muitos){ return n + ' ' + (n === 1 ? um : muitos); }
 
 /* ─── ponte com o Apps Script, com prazo ─── */
 /* Sem prazo, um 4G que cai deixa o botao em "Salvando..." para sempre. */
-var MOCK = (typeof google === 'undefined' || !google.script);
 function api(fn, args, ok, erro){
+  /* Sem a ponte do Apps Script isto lançava ReferenceError dentro do
+     depois() e a tela ficava no esqueleto para sempre, sem mensagem. */
+  if (typeof google === 'undefined' || !google.script || !google.script.run){
+    if (erro) erro({ message: 'A conexão com a planilha não abriu. Recarregue a página.' });
+    return;
+  }
   var fim = false;
   var t = setTimeout(function(){
     if (fim) return; fim = true;
@@ -1454,6 +1423,12 @@ function fecharToast(){ el('toast').dataset.aberto = 'false'; }
 /* ─── bottom sheet reaproveitavel ─── */
 var folhaAoFechar = null;
 function abrirFolha(titulo, corpoHtml, aoFechar){
+  /* Zera os handlers da folha anterior. pedirTexto e pedirFicha armam
+     onkeydown; quem não rearma herdava o closure velho e o Enter
+     explodia num campo que não existe mais. */
+  el('folhaCorpo').onclick = null;
+  el('folhaCorpo').onkeydown = null;
+  el('folha').hidden = false;
   el('folhaTitulo').textContent = titulo;
   el('folhaCorpo').innerHTML = corpoHtml;
   el('folha').dataset.aberto = 'true';
@@ -1464,6 +1439,17 @@ function fecharFolha(){
   el('folha').dataset.aberto = 'false';
   el('veu').dataset.aberto = 'false';
   el('folha').style.transform = '';
+  /* Fechada só por transform, a folha continuava alcançável por Tab e
+     lida pelo leitor de tela — que ficava preso num diálogo que o
+     usuário acha que fechou. */
+  setTimeout(function(){
+    if (el('folha').dataset.aberto !== 'true'){
+      el('folhaCorpo').innerHTML = '';
+      el('folhaCorpo').onclick = null;
+      el('folhaCorpo').onkeydown = null;
+      el('folha').hidden = true;
+    }
+  }, 320);
   var f = folhaAoFechar; folhaAoFechar = null;
   if (f) f();
 }
@@ -1597,6 +1583,9 @@ function desenhar(){
   else { b.hidden = true; }
   medirBarra();
 
+  /* O toast vive fora do #palco e sobrevivia 6 s à navegação. "Desfazer"
+     e "Tentar de novo" rodavam sobre uma tela que não existe mais. */
+  fecharToast();
   window.scrollTo(0, 0);
   document.body.classList.remove('rolou');
   if (tela.depois) tela.depois();
@@ -1620,6 +1609,17 @@ document.addEventListener('click', function(e){
   if (!b) return;
   var f = ACOES[b.getAttribute('data-acao')];
   if (f) f(b, e);
+});
+
+/* li[role=button] não sintetiza clique no Enter/Espaço como <button>.
+   Sem isto, marcar falta e abrir aluno são inalcançáveis por teclado. */
+document.addEventListener('keydown', function(e){
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  var alvo = e.target;
+  if (!alvo || !alvo.getAttribute || alvo.getAttribute('role') !== 'button') return;
+  if (!alvo.hasAttribute('data-acao')) return;
+  e.preventDefault();
+  alvo.click();
 });
 
 window.addEventListener('scroll', function(){
@@ -1715,10 +1715,16 @@ TELAS.chamada = function(p){
 };
 
 function montarChamada(d){
+  /* Se o professor voltou ou trocou de turma enquanto a resposta vinha,
+     esta resposta é de outra tela: pintá-la deixaria a lista da turma A
+     sob o cabeçalho da turma B — e "Salvar" gravaria a errada. */
+  var atu = atual();
+  if (!atu || atu.t !== 'chamada' || atu.p.turma !== d.turma) return;
+
   S.turma = d.turma; S.data = d.data;
   S.professores = d.professores || [];
   S.professor = d.professorSugerido || '';
-  S.jaRegistrada = !!d.jaRegistrada;
+  S.jaRegistrada = !!d.jaRegistrada; S.forcar = false;
   S.token = sorteioToken();
   S.alunos = (d.alunos || []).map(function(n){ return {aluno:n, status:'Presente'}; });
 
@@ -1775,6 +1781,11 @@ function montarChamada(d){
   if (!S.professor && S.professores.length) setTimeout(escolherProf, 340);
 }
 
+function naChamada(){
+  var a = atual();
+  return !!a && a.t === 'chamada' && !!el('li0');
+}
+
 function pintar(i){
   var st = S.alunos[i].status, li = el('li' + i);
   li.dataset.st = st;
@@ -1798,6 +1809,7 @@ ACOES.todosPresentes = function(){
   if (!mudou) return;
   atualizarPlacar(); vibrar();
   toast('Todos marcados como presentes', 'ok', {rotulo:'Desfazer', fn:function(){
+    if (!naChamada()) return;
     S.alunos.forEach(function(a, i){ a.status = antes[i]; pintar(i); });
     atualizarPlacar(); vibrar();
   }});
@@ -1833,6 +1845,12 @@ ACOES.escolherProf = escolherProf;
 /* ─── salvar ─── */
 ACOES.salvar = function(){
   if (!S.professor){ toast('Escolha quem está dando a aula', 'erro'); escolherProf(); return; }
+  if (S.jaRegistrada && !S.forcar){
+    confirmar('Salvar de novo?',
+      'Esta turma já teve chamada salva hoje. Salvar de novo cria um segundo registro e conta em dobro nos relatórios.',
+      'Salvar assim mesmo', function(){ S.forcar = true; ACOES.salvar(); });
+    return;
+  }
   if (navigator.onLine === false){
     toast('Sem internet agora. Suas marcações continuam aqui.', 'erro',
           {rotulo:'Tentar', fn:enviarChamada});
@@ -1843,17 +1861,27 @@ ACOES.salvar = function(){
 
 function enviarChamada(){
   if (S.salvando) return;
+  if (!naChamada()) return;
   S.salvando = true;
   var b = el('btSalvar');
   if (b){ b.disabled = true; b.textContent = 'Salvando…'; }
   api('salvarChamada',
-    [{turma:S.turma, professor:S.professor, token:S.token, presencas:S.alunos}],
+    [{turma:S.turma, professor:S.professor, token:S.token,
+      presencas:S.alunos, forcar: !!S.forcar}],
     function(r){ S.salvando = false; vibrar(); ir('fim', {r:r}, true); },
-    function(){
+    function(e){
       /* Nada de re-render aqui: as marcacoes do professor continuam na tela. */
       S.salvando = false;
       var bb = el('btSalvar');
       if (bb){ bb.disabled = false; bb.textContent = 'Salvar chamada'; }
+      /* Se o servidor recusou por duplicidade, oferecer "tentar de novo"
+         seria empurrar o professor para o erro que acabamos de evitar. */
+      var msg = textoErro(e);
+      if (msg.indexOf('DUPLICADA') === 0){
+        S.jaRegistrada = true;
+        toast('Esta turma já tem chamada salva hoje.', 'erro');
+        return;
+      }
       toast('Não salvou. Confira a internet e tente de novo.', 'erro',
             {rotulo:'Tentar de novo', fn:enviarChamada});
     });
@@ -1929,7 +1957,8 @@ function validaPin(){
   });
 }
 document.addEventListener('keydown', function(e){
-  if (atual().t !== 'pin' || folhaAberta()) return;
+  var a = atual();
+  if (!a || a.t !== 'pin' || folhaAberta()) return;
   if (/^[0-9]$/.test(e.key)){ ACOES.pinDig({getAttribute:function(){ return e.key; }}); }
   else if (e.key === 'Backspace'){ ACOES.pinApaga(); }
 });
@@ -2241,7 +2270,7 @@ function carregarAlunos(){
   api('listarAlunos', [S.pin, '', true], function(as){
     S.todosAlunos = as; pintarAlunos();
   }, function(e){
-    el('listaAlunos').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+    if (el('listaAlunos')) el('listaAlunos').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
   });
 }
 function pintarAlunos(){
@@ -2422,13 +2451,21 @@ TELAS.gCert = function(){
 ACOES.certTurma = function(b){ ir('gCertTurma', {turma:b.getAttribute('data-t')}); };
 
 TELAS.gCertTurma = function(p){
+  /* Zera a lista da turma anterior. Sem isto, tocar "Gerar da turma
+     inteira" enquanto o esqueleto ainda estava na tela emitia os
+     certificados dos alunos da turma passada com o nome da nova. */
+  S.certAlunos = null;
   return {
     titulo:p.turma, html:esqueleto(5),
-    barra:'<button type="button" class="salvar" data-acao="certTodos" data-t="' + esc(p.turma) + '">' +
+    barra:'<button type="button" class="salvar" id="btCertTodos" disabled ' +
+          'data-acao="certTodos" data-t="' + esc(p.turma) + '">' +
           ico('medalha') + 'Gerar da turma inteira</button>',
     depois:function(){
       api('alunosParaCertificado', [S.pin, p.turma], function(as){
+        if (atual().t !== 'gCertTurma' || atual().p.turma !== p.turma) return;
         S.certAlunos = as;
+        S.certTurma = p.turma;
+        var bt = el('btCertTodos'); if (bt) bt.disabled = false;
         var com = as.filter(function(a){ return a.aulas > 0; });
         var alvo = el('palco').querySelector('.corpo');
         if (!com.length){
@@ -2463,6 +2500,7 @@ ACOES.certUm = function(b){
 };
 ACOES.certTodos = function(b){
   var turma = b.getAttribute('data-t');
+  if (S.certTurma !== turma){ toast('Espere a lista carregar.', 'erro'); return; }
   var com = (S.certAlunos || []).filter(function(a){ return a.aulas > 0; });
   if (!com.length){ toast('Ninguém da turma tem presença registrada ainda.', 'erro'); return; }
   confirmar('Gerar ' + com.length + ' certificados',
@@ -2476,7 +2514,9 @@ function emitir(nomes, turma, umNome){
   toast('Gerando… pode levar alguns segundos.');
   api('gerarCertificado', [S.pin, nomes, turma], function(r){
     fecharToast(); vibrar();
-    var ficha = umNome ? (S.certAlunos || []).filter(function(a){ return a.nome === umNome; })[0] : null;
+    var ficha = umNome ? (S.certAlunos || []).filter(function(a){
+      return a.nome === umNome && a.turma === turma;
+    })[0] : null;
     var h = '<p class="sub">' + esc(r.nome) + '</p><div style="padding:0 8px">';
     h += '<a class="botao-cheio" href="' + esc(r.url) + '" target="_blank" rel="noopener">' +
          ico('abrir', 18) + ' Abrir o PDF</a>';
@@ -2595,9 +2635,11 @@ TELAS.gRelatorio = function(){
   };
 };
 ACOES.gerarRel = function(){
+  if (!el('dtIni') || !el('saidaRel')) return;
   var de = el('dtIni').value, ate = el('dtFim').value;
   el('saidaRel').innerHTML = '<div style="margin-top:20px">' + esqueleto(2) + '</div>';
   api('relatorioPeriodo', [S.pin, de, ate], function(r){
+    if (!el('saidaRel')) return;
     S.rel = r;
     var h = '<div class="secao">Resumo</div><div class="numeros">';
     h += '<div><b>' + r.beneficiarios + '</b><span>beneficiários</span></div>';
@@ -2627,6 +2669,7 @@ ACOES.gerarRel = function(){
          ico('copiar', 18) + ' Copiar para colar no edital</button>';
     el('saidaRel').innerHTML = '<div style="margin-top:4px">' + h + '</div>';
   }, function(e){
+    if (!el('saidaRel')) return;
     el('saidaRel').innerHTML = '<div style="margin-top:20px">' +
       estado('alerta','Não deu para gerar', textoErro(e)) + '</div>';
   });
@@ -2843,11 +2886,16 @@ TELAS.gCaixa = function(){
   };
 };
 
+function noCaixa(){ var a = atual(); return !!a && a.t === 'gCaixa'; }
+
 function carregarCaixa(){
+  if (!noCaixa()) return;
   var mes = S.mesesCx[S.mesCxIdx];
   var alvo = el('palco').querySelector('.corpo');
+  if (!alvo) return;
   alvo.innerHTML = passoCaixa(mes) + esqueleto(3);
   api('listarCaixa', [S.pin, mes], function(r){
+    if (!noCaixa() || !el('palco').querySelector('.corpo')) return;
     S.caixa = r;
     var h = passoCaixa(mes);
 
@@ -2885,7 +2933,9 @@ function carregarCaixa(){
          ' Resumo para prestação de contas</button>';
     alvo.innerHTML = h;
   }, function(e){
-    alvo.innerHTML = passoCaixa(mes) + estado('alerta','Não deu para carregar', textoErro(e));
+    if (!noCaixa() || !el('palco').querySelector('.corpo')) return;
+    el('palco').querySelector('.corpo').innerHTML =
+      passoCaixa(mes) + estado('alerta','Não deu para carregar', textoErro(e));
   });
 }
 
@@ -2997,17 +3047,23 @@ function salvarLanc(tipo){
     quem: S.professor || '',
     foto: fotoAtual
   };
-  fecharFolha();
-  toast('Salvando…');
+  /* A folha fica aberta até o servidor confirmar. Fechá-la antes fazia
+     um 4G que cai apagar valor, descrição e a foto da nota que a Vera
+     acabou de tirar — e ela teria que fotografar de novo. */
+  var bt = el('folhaCorpo').querySelector('[data-t="1"]');
+  if (bt){ bt.disabled = true; bt.textContent = 'Salvando…'; }
+
   api('lancarCaixa', [S.pin, dados], function(r){
-    fecharToast(); vibrar();
-    toast(tipo === 'Entrada' ? 'Entrada registrada' : 'Saída registrada' +
-      (r.pediuFoto && !r.comFoto ? ' — a foto não subiu' : ''));
+    vibrar();
+    fecharFolha();
+    toast(tipo === 'Entrada'
+      ? 'Entrada registrada'
+      : ('Saída registrada' + (r.pediuFoto && !r.comFoto ? ' — a foto não subiu' : '')));
     fotoAtual = '';
     S.mesCxIdx = 0;
     api('mesesCaixa', [S.pin], function(ms){ S.mesesCx = ms; carregarCaixa(); }, carregarCaixa);
   }, function(e){
-    fecharToast();
+    if (bt){ bt.disabled = false; bt.textContent = 'Salvar'; }
     toast(textoErro(e), 'erro');
   });
 }
@@ -3029,8 +3085,8 @@ ACOES.verLanc = function(b){
   if (l.fonte) h += linha('Fonte', l.fonte);
   if (l.quem) h += linha('Registrou', l.quem);
   h += '</ul>';
-  if (l.comprovante){
-    h += '<a class="botao-cheio" style="margin-top:16px" href="' + esc(l.comprovante) +
+  if (urlSegura(l.comprovante)){
+    h += '<a class="botao-cheio" style="margin-top:16px" href="' + esc(urlSegura(l.comprovante)) +
          '" target="_blank" rel="noopener">' + ico('abrir', 18) + ' Ver o comprovante</a>';
   } else if (!entrada){
     h += '<p class="dica" style="margin:16px 4px 0">Sem comprovante. Prestação de contas ' +
@@ -3078,8 +3134,10 @@ TELAS.gCaixaResumo = function(){
 };
 
 ACOES.gerarCx = function(){
+  if (!el('saidaCx')) return;
   el('saidaCx').innerHTML = '<div style="margin-top:20px">' + esqueleto(2) + '</div>';
   api('resumoCaixa', [S.pin, el('cxIni').value, el('cxFim').value], function(r){
+    if (!el('saidaCx')) return;
     S.resCx = r;
     var h = '<div class="secao">Resumo</div><div class="numeros">';
     h += '<div style="background:var(--presente)"><b>' + reais(r.entrou).replace('R$ ','') +
@@ -3119,6 +3177,7 @@ ACOES.gerarCx = function(){
          ico('copiar', 18) + ' Copiar para colar no relatório</button>';
     el('saidaCx').innerHTML = '<div style="margin-top:4px">' + h + '</div>';
   }, function(e){
+    if (!el('saidaCx')) return;
     el('saidaCx').innerHTML = '<div style="margin-top:20px">' +
       estado('alerta','Não deu para gerar', textoErro(e)) + '</div>';
   });
@@ -3389,6 +3448,10 @@ function qrSvg(txt){
 /* Partida: lê a turma da URL e abre a primeira tela. Roda por último. */
 /* ══════════════ partida ══════════════ */
 function iniciar(){
+  /* getLocation pode levar até 4 s (ou nunca responder). Até aqui o
+     #palco ficava vazio: barra roxa e branco embaixo. */
+  el('palco').innerHTML = '<div class="corpo">' + esqueleto(5) + '</div>';
+
   function semParametro(){ S.viaQr = false; ir('turmas', {}, true); }
   try {
     if (google.script.url && google.script.url.getLocation){

@@ -144,9 +144,12 @@
     var s2 = String(v==null?'':v).replace(/[^0-9,.-]/g,'').trim();
     if (!s2) return NaN;
     var vi = s2.lastIndexOf(','), po = s2.lastIndexOf('.');
-    s2 = vi > po ? s2.replace(/\./g,'').replace(',','.') : s2.replace(/,/g,'');
+    if (vi !== -1 && po !== -1) s2 = vi > po ? s2.replace(/\./g,'').replace(',','.') : s2.replace(/,/g,'');
+    else if (vi !== -1) s2 = s2.replace(/\./g,'').replace(',','.');
+    else if (po !== -1) s2 = /^-?\d+(\.\d{3})+$/.test(s2) ? s2.replace(/\./g,'') : s2;
     return parseFloat(s2);
   }
+
   function fontesUsadas(){
     var v = {}; CAIXA.forEach(function(r){ if (r.fonte) v[r.fonte] = 1; });
     return Object.keys(v).sort(function(a,b){ return pt(a,b); });
@@ -232,6 +235,12 @@
       if (!d.professor) throw new Error('Escolha quem está dando a aula.');
       if (!d.presencas || !d.presencas.length) throw new Error('Nenhum aluno na lista.');
       if (d.token && TOKENS[d.token]) return TOKENS[d.token];
+      var VALIDOS = ['Presente','Falta','Justificada'];
+      d.presencas.forEach(function(p){
+        if (VALIDOS.indexOf(p.status) === -1) throw new Error('Status inválido: '+p.status);
+      });
+      if (!d.forcar && CHAMADAS.some(function(c){ return c.data===hoje() && c.turma===d.turma; }))
+        throw new Error('DUPLICADA: já existe chamada de '+d.turma+' hoje.');
       CHAMADAS.push({ data:hoje(), turma:d.turma, professor:d.professor });
       d.presencas.forEach(function(p){
         REGISTROS.push({ data:hoje(), turma:d.turma, professor:d.professor,
@@ -277,6 +286,7 @@
       t.nome = n;
       ALUNOS.forEach(function(a){ if (a.turma===atual) a.turma = n; });
       CHAMADAS.forEach(function(c){ if (c.turma===atual) c.turma = n; });
+      REGISTROS.forEach(function(r){ if (r.turma===atual) r.turma = n; });
       return {ok:true, nome:n};
     },
     arquivarTurma: function(pin, nome){
@@ -349,7 +359,7 @@
           var x = h[a.nome];
           return { nome:a.nome, turma:a.turma, ativo:a.ativo,
                    aulas: x ? x.aulas : 0, horas: x ? Math.round(x.minutos/60) : 0,
-                   desde: x ? x.primeira : '',
+                   desde: x ? x.primeira : '', homonimo:false,
                    responsavel:a.responsavel, telefone:a.telefone };
         }).sort(function(a,b){ return pt(a.nome,b.nome); });
     },

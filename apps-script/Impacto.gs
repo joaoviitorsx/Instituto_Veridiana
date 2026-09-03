@@ -126,13 +126,16 @@ function relatorioPeriodo(pin, inicio, fim) {
   const idades = {};
   lerAlunos_().forEach(function (a) { idades[a.nome] = idadeEm_(a.nascimento); });
 
-  const faixas = { 'Crianças (até 11)': 0, 'Adolescentes (12 a 17)': 0, 'Jovens (18 a 29)': 0, 'Sem data de nascimento': 0 };
+  const faixas = { 'Crianças (até 11)': 0, 'Adolescentes (12 a 17)': 0,
+                   'Jovens (18 a 29)': 0, 'Adultos (30 ou mais)': 0,
+                   'Sem data de nascimento': 0 };
   Object.keys(beneficiarios).forEach(function (nome) {
     const i = idades[nome];
     if (i === null || i === undefined) faixas['Sem data de nascimento']++;
     else if (i <= 11) faixas['Crianças (até 11)']++;
     else if (i <= 17) faixas['Adolescentes (12 a 17)']++;
-    else faixas['Jovens (18 a 29)']++;
+    else if (i <= 29) faixas['Jovens (18 a 29)']++;
+    else faixas['Adultos (30 ou mais)']++;
   });
 
   const turmas = Object.keys(porTurma).map(function (k) {

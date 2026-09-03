@@ -49,11 +49,16 @@ TELAS.gCaixa = function(){
   };
 };
 
+function noCaixa(){ var a = atual(); return !!a && a.t === 'gCaixa'; }
+
 function carregarCaixa(){
+  if (!noCaixa()) return;
   var mes = S.mesesCx[S.mesCxIdx];
   var alvo = el('palco').querySelector('.corpo');
+  if (!alvo) return;
   alvo.innerHTML = passoCaixa(mes) + esqueleto(3);
   api('listarCaixa', [S.pin, mes], function(r){
+    if (!noCaixa() || !el('palco').querySelector('.corpo')) return;
     S.caixa = r;
     var h = passoCaixa(mes);
 
@@ -91,7 +96,9 @@ function carregarCaixa(){
          ' Resumo para prestação de contas</button>';
     alvo.innerHTML = h;
   }, function(e){
-    alvo.innerHTML = passoCaixa(mes) + estado('alerta','Não deu para carregar', textoErro(e));
+    if (!noCaixa() || !el('palco').querySelector('.corpo')) return;
+    el('palco').querySelector('.corpo').innerHTML =
+      passoCaixa(mes) + estado('alerta','Não deu para carregar', textoErro(e));
   });
 }
 
@@ -203,17 +210,23 @@ function salvarLanc(tipo){
     quem: S.professor || '',
     foto: fotoAtual
   };
-  fecharFolha();
-  toast('Salvando…');
+  /* A folha fica aberta até o servidor confirmar. Fechá-la antes fazia
+     um 4G que cai apagar valor, descrição e a foto da nota que a Vera
+     acabou de tirar — e ela teria que fotografar de novo. */
+  var bt = el('folhaCorpo').querySelector('[data-t="1"]');
+  if (bt){ bt.disabled = true; bt.textContent = 'Salvando…'; }
+
   api('lancarCaixa', [S.pin, dados], function(r){
-    fecharToast(); vibrar();
-    toast(tipo === 'Entrada' ? 'Entrada registrada' : 'Saída registrada' +
-      (r.pediuFoto && !r.comFoto ? ' — a foto não subiu' : ''));
+    vibrar();
+    fecharFolha();
+    toast(tipo === 'Entrada'
+      ? 'Entrada registrada'
+      : ('Saída registrada' + (r.pediuFoto && !r.comFoto ? ' — a foto não subiu' : '')));
     fotoAtual = '';
     S.mesCxIdx = 0;
     api('mesesCaixa', [S.pin], function(ms){ S.mesesCx = ms; carregarCaixa(); }, carregarCaixa);
   }, function(e){
-    fecharToast();
+    if (bt){ bt.disabled = false; bt.textContent = 'Salvar'; }
     toast(textoErro(e), 'erro');
   });
 }
@@ -235,8 +248,8 @@ ACOES.verLanc = function(b){
   if (l.fonte) h += linha('Fonte', l.fonte);
   if (l.quem) h += linha('Registrou', l.quem);
   h += '</ul>';
-  if (l.comprovante){
-    h += '<a class="botao-cheio" style="margin-top:16px" href="' + esc(l.comprovante) +
+  if (urlSegura(l.comprovante)){
+    h += '<a class="botao-cheio" style="margin-top:16px" href="' + esc(urlSegura(l.comprovante)) +
          '" target="_blank" rel="noopener">' + ico('abrir', 18) + ' Ver o comprovante</a>';
   } else if (!entrada){
     h += '<p class="dica" style="margin:16px 4px 0">Sem comprovante. Prestação de contas ' +
@@ -284,8 +297,10 @@ TELAS.gCaixaResumo = function(){
 };
 
 ACOES.gerarCx = function(){
+  if (!el('saidaCx')) return;
   el('saidaCx').innerHTML = '<div style="margin-top:20px">' + esqueleto(2) + '</div>';
   api('resumoCaixa', [S.pin, el('cxIni').value, el('cxFim').value], function(r){
+    if (!el('saidaCx')) return;
     S.resCx = r;
     var h = '<div class="secao">Resumo</div><div class="numeros">';
     h += '<div style="background:var(--presente)"><b>' + reais(r.entrou).replace('R$ ','') +
@@ -325,6 +340,7 @@ ACOES.gerarCx = function(){
          ico('copiar', 18) + ' Copiar para colar no relatório</button>';
     el('saidaCx').innerHTML = '<div style="margin-top:4px">' + h + '</div>';
   }, function(e){
+    if (!el('saidaCx')) return;
     el('saidaCx').innerHTML = '<div style="margin-top:20px">' +
       estado('alerta','Não deu para gerar', textoErro(e)) + '</div>';
   });

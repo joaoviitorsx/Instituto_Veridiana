@@ -41,8 +41,20 @@ function valorNumero_(v) {
   let s = String(v == null ? '' : v).replace(/[^0-9,.-]/g, '').trim();
   if (!s) return NaN;
   const virgula = s.lastIndexOf(','), ponto = s.lastIndexOf('.');
-  if (virgula > ponto) s = s.replace(/\./g, '').replace(',', '.');   // 1.234,56
-  else s = s.replace(/,/g, '');                                      // 1,234.56
+
+  if (virgula !== -1 && ponto !== -1) {
+    // tem os dois: o último é o decimal
+    s = virgula > ponto ? s.replace(/\./g, '').replace(',', '.')
+                        : s.replace(/,/g, '');
+  } else if (virgula !== -1) {
+    s = s.replace(/\./g, '').replace(',', '.');          // 1234,56
+  } else if (ponto !== -1) {
+    /* Só ponto é ambíguo. "1.500" em português é mil e quinhentos, não
+       um e meio. Ponto seguido de exatamente 3 dígitos até o fim, com
+       dígito antes, é separador de milhar. Sem isto a Vera digita 1.500
+       e lança R$ 1,50 na prestação de contas. */
+    s = /^-?\d+(\.\d{3})+$/.test(s) ? s.replace(/\./g, '') : s;
+  }
   return parseFloat(s);
 }
 
@@ -57,7 +69,7 @@ function lerCaixa_() {
         registro: String(l[0] || ''),
         data: textoData(l[1]),
         tipo: String(l[2] || '').trim(),
-        valor: Number(l[3]) || 0,
+        valor: valorNumero_(l[3]) || 0,
         categoria: String(l[4] || '').trim(),
         descricao: String(l[5] || '').trim(),
         fonte: String(l[6] || '').trim(),

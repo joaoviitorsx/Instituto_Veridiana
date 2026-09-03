@@ -59,3 +59,15 @@ function comTrava(fn){
     return r;
   } finally { trava.releaseLock(); }
 }
+
+/**
+ * insertSheet() cria a aba com 1000 linhas e getRange() NÃO expande a
+ * grade — só appendRow expande. Sem isto, quando Chamadas passa de 1000
+ * linhas (umas 3 semanas de uso) o setValues lança "coordinates or
+ * dimensions of the range are invalid" e a chamada simplesmente não
+ * grava, sem jeito de o professor contornar.
+ */
+function garantirLinhas_(aba, precisa) {
+  const max = aba.getMaxRows();
+  if (precisa > max) aba.insertRowsAfter(max, precisa - max + 500);
+}

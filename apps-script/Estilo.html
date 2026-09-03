@@ -124,7 +124,7 @@ main{padding:0 0 24px}
 .instrucao span{font-size:14px;color:var(--apagado)}
 .instrucao button{
   font-size:14px;font-weight:600;color:var(--roxo);
-  padding:8px 12px;margin:-8px -4px -8px 0;border-radius:var(--r-p);
+  min-height:44px;padding:0 12px;margin:0 -4px 0 0;border-radius:var(--r-p);
 }
 .instrucao button:active{background:var(--roxo-fraco)}
 
@@ -265,7 +265,8 @@ main{padding:0 0 24px}
 .toast[data-tipo="erro"]{background:#7E1828}
 .toast .acao{
   flex-shrink:0;font-size:15px;font-weight:700;color:#fff;
-  padding:8px 4px;margin:-8px 0;text-decoration:underline;
+  min-height:44px;min-width:44px;padding:0 8px;margin:-8px 0;
+  text-decoration:underline;
 }
 
 /* ─────────── esqueleto ─────────── */
@@ -579,60 +580,6 @@ main{padding:0 0 24px}
 .duplo .principal:active{background:var(--roxo-fundo)}
 .duplo .secundario{background:var(--papel);color:var(--roxo);border:1px solid var(--borda)}
 .duplo .secundario:active{background:var(--fundo)}
-
-/* ─────────── rodape de acao ─────────── */
-.rodape-acao{
-  position:fixed;left:0;right:0;bottom:0;z-index:25;
-  background:var(--fundo);border-top:1px solid var(--borda);
-  padding:12px 16px calc(12px + env(safe-area-inset-bottom));
-}
-.rodape-acao .dentro{max-width:620px;margin:0 auto}
-.rodape-acao button{
-  width:100%;min-height:52px;padding:16px;border-radius:var(--r-m);
-  font-size:17px;font-weight:700;color:#fff;background:var(--roxo);
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  transition:background 160ms var(--curva);
-}
-.rodape-acao button:active{background:var(--roxo-fundo)}
-
-/* imprimir: so o cartaz do QR, sem nada de interface */
-@media print{
-  .cab,.barra,.duplo,.folha,.veu,.toast{display:none !important}
-  body{background:#fff;padding:0}
-  .corpo{padding:0;max-width:none}
-  .folha-qr{border:none;box-shadow:none;padding:0}
-  .folha-qr svg{max-width:60vw}
-  .folha-qr .turma{font-size:24px}
-  @page{size:A5;margin:16mm}
-}
-
-/* ── responsivo ── */
-@media (max-width:359px){
-  .capa{padding:4px 16px 20px}
-  .capa h1{font-size:21px}
-  .capa .conta b{font-size:24px}
-  .corpo{padding:16px 12px 0}
-  .nome{font-size:16px}
-  .teclado button{min-height:56px;font-size:21px}
-}
-@media (min-width:640px){
-  .corpo{padding:24px 24px 0}
-  .capa{padding:4px 24px 24px}
-}
-/* celular deitado: a capa nao pode comer a tela toda */
-@media (orientation:landscape) and (max-height:520px){
-  .capa{padding:0 20px 16px}
-  .capa h1{font-size:21px}
-  .capa .conta b{font-size:24px}
-  .pin{padding-top:16px}
-  .teclado button{min-height:52px}
-  .folha{max-height:92vh}
-}
-/* dvh acompanha a barra de endereco do Chrome no Android */
-@supports (height:100dvh){
-  .fim{min-height:calc(100dvh - 56px)}
-  .folha{max-height:80dvh}
-}
 
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}

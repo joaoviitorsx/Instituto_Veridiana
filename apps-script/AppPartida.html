@@ -2,6 +2,10 @@
 /* Partida: lê a turma da URL e abre a primeira tela. Roda por último. */
 /* ══════════════ partida ══════════════ */
 function iniciar(){
+  /* getLocation pode levar até 4 s (ou nunca responder). Até aqui o
+     #palco ficava vazio: barra roxa e branco embaixo. */
+  el('palco').innerHTML = '<div class="corpo">' + esqueleto(5) + '</div>';
+
   function semParametro(){ S.viaQr = false; ir('turmas', {}, true); }
   try {
     if (google.script.url && google.script.url.getLocation){

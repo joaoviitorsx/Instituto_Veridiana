@@ -47,7 +47,8 @@ function validaPin(){
   });
 }
 document.addEventListener('keydown', function(e){
-  if (atual().t !== 'pin' || folhaAberta()) return;
+  var a = atual();
+  if (!a || a.t !== 'pin' || folhaAberta()) return;
   if (/^[0-9]$/.test(e.key)){ ACOES.pinDig({getAttribute:function(){ return e.key; }}); }
   else if (e.key === 'Backspace'){ ACOES.pinApaga(); }
 });
@@ -359,7 +360,7 @@ function carregarAlunos(){
   api('listarAlunos', [S.pin, '', true], function(as){
     S.todosAlunos = as; pintarAlunos();
   }, function(e){
-    el('listaAlunos').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+    if (el('listaAlunos')) el('listaAlunos').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
   });
 }
 function pintarAlunos(){
@@ -540,13 +541,21 @@ TELAS.gCert = function(){
 ACOES.certTurma = function(b){ ir('gCertTurma', {turma:b.getAttribute('data-t')}); };
 
 TELAS.gCertTurma = function(p){
+  /* Zera a lista da turma anterior. Sem isto, tocar "Gerar da turma
+     inteira" enquanto o esqueleto ainda estava na tela emitia os
+     certificados dos alunos da turma passada com o nome da nova. */
+  S.certAlunos = null;
   return {
     titulo:p.turma, html:esqueleto(5),
-    barra:'<button type="button" class="salvar" data-acao="certTodos" data-t="' + esc(p.turma) + '">' +
+    barra:'<button type="button" class="salvar" id="btCertTodos" disabled ' +
+          'data-acao="certTodos" data-t="' + esc(p.turma) + '">' +
           ico('medalha') + 'Gerar da turma inteira</button>',
     depois:function(){
       api('alunosParaCertificado', [S.pin, p.turma], function(as){
+        if (atual().t !== 'gCertTurma' || atual().p.turma !== p.turma) return;
         S.certAlunos = as;
+        S.certTurma = p.turma;
+        var bt = el('btCertTodos'); if (bt) bt.disabled = false;
         var com = as.filter(function(a){ return a.aulas > 0; });
         var alvo = el('palco').querySelector('.corpo');
         if (!com.length){
@@ -581,6 +590,7 @@ ACOES.certUm = function(b){
 };
 ACOES.certTodos = function(b){
   var turma = b.getAttribute('data-t');
+  if (S.certTurma !== turma){ toast('Espere a lista carregar.', 'erro'); return; }
   var com = (S.certAlunos || []).filter(function(a){ return a.aulas > 0; });
   if (!com.length){ toast('Ninguém da turma tem presença registrada ainda.', 'erro'); return; }
   confirmar('Gerar ' + com.length + ' certificados',
@@ -594,7 +604,9 @@ function emitir(nomes, turma, umNome){
   toast('Gerando… pode levar alguns segundos.');
   api('gerarCertificado', [S.pin, nomes, turma], function(r){
     fecharToast(); vibrar();
-    var ficha = umNome ? (S.certAlunos || []).filter(function(a){ return a.nome === umNome; })[0] : null;
+    var ficha = umNome ? (S.certAlunos || []).filter(function(a){
+      return a.nome === umNome && a.turma === turma;
+    })[0] : null;
     var h = '<p class="sub">' + esc(r.nome) + '</p><div style="padding:0 8px">';
     h += '<a class="botao-cheio" href="' + esc(r.url) + '" target="_blank" rel="noopener">' +
          ico('abrir', 18) + ' Abrir o PDF</a>';
@@ -713,9 +725,11 @@ TELAS.gRelatorio = function(){
   };
 };
 ACOES.gerarRel = function(){
+  if (!el('dtIni') || !el('saidaRel')) return;
   var de = el('dtIni').value, ate = el('dtFim').value;
   el('saidaRel').innerHTML = '<div style="margin-top:20px">' + esqueleto(2) + '</div>';
   api('relatorioPeriodo', [S.pin, de, ate], function(r){
+    if (!el('saidaRel')) return;
     S.rel = r;
     var h = '<div class="secao">Resumo</div><div class="numeros">';
     h += '<div><b>' + r.beneficiarios + '</b><span>beneficiários</span></div>';
@@ -745,6 +759,7 @@ ACOES.gerarRel = function(){
          ico('copiar', 18) + ' Copiar para colar no edital</button>';
     el('saidaRel').innerHTML = '<div style="margin-top:4px">' + h + '</div>';
   }, function(e){
+    if (!el('saidaRel')) return;
     el('saidaRel').innerHTML = '<div style="margin-top:20px">' +
       estado('alerta','Não deu para gerar', textoErro(e)) + '</div>';
   });

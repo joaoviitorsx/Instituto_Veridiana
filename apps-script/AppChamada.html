@@ -54,10 +54,16 @@ TELAS.chamada = function(p){
 };
 
 function montarChamada(d){
+  /* Se o professor voltou ou trocou de turma enquanto a resposta vinha,
+     esta resposta é de outra tela: pintá-la deixaria a lista da turma A
+     sob o cabeçalho da turma B — e "Salvar" gravaria a errada. */
+  var atu = atual();
+  if (!atu || atu.t !== 'chamada' || atu.p.turma !== d.turma) return;
+
   S.turma = d.turma; S.data = d.data;
   S.professores = d.professores || [];
   S.professor = d.professorSugerido || '';
-  S.jaRegistrada = !!d.jaRegistrada;
+  S.jaRegistrada = !!d.jaRegistrada; S.forcar = false;
   S.token = sorteioToken();
   S.alunos = (d.alunos || []).map(function(n){ return {aluno:n, status:'Presente'}; });
 
@@ -114,6 +120,11 @@ function montarChamada(d){
   if (!S.professor && S.professores.length) setTimeout(escolherProf, 340);
 }
 
+function naChamada(){
+  var a = atual();
+  return !!a && a.t === 'chamada' && !!el('li0');
+}
+
 function pintar(i){
   var st = S.alunos[i].status, li = el('li' + i);
   li.dataset.st = st;
@@ -137,6 +148,7 @@ ACOES.todosPresentes = function(){
   if (!mudou) return;
   atualizarPlacar(); vibrar();
   toast('Todos marcados como presentes', 'ok', {rotulo:'Desfazer', fn:function(){
+    if (!naChamada()) return;
     S.alunos.forEach(function(a, i){ a.status = antes[i]; pintar(i); });
     atualizarPlacar(); vibrar();
   }});
@@ -172,6 +184,12 @@ ACOES.escolherProf = escolherProf;
 /* ─── salvar ─── */
 ACOES.salvar = function(){
   if (!S.professor){ toast('Escolha quem está dando a aula', 'erro'); escolherProf(); return; }
+  if (S.jaRegistrada && !S.forcar){
+    confirmar('Salvar de novo?',
+      'Esta turma já teve chamada salva hoje. Salvar de novo cria um segundo registro e conta em dobro nos relatórios.',
+      'Salvar assim mesmo', function(){ S.forcar = true; ACOES.salvar(); });
+    return;
+  }
   if (navigator.onLine === false){
     toast('Sem internet agora. Suas marcações continuam aqui.', 'erro',
           {rotulo:'Tentar', fn:enviarChamada});
@@ -182,17 +200,27 @@ ACOES.salvar = function(){
 
 function enviarChamada(){
   if (S.salvando) return;
+  if (!naChamada()) return;
   S.salvando = true;
   var b = el('btSalvar');
   if (b){ b.disabled = true; b.textContent = 'Salvando…'; }
   api('salvarChamada',
-    [{turma:S.turma, professor:S.professor, token:S.token, presencas:S.alunos}],
+    [{turma:S.turma, professor:S.professor, token:S.token,
+      presencas:S.alunos, forcar: !!S.forcar}],
     function(r){ S.salvando = false; vibrar(); ir('fim', {r:r}, true); },
-    function(){
+    function(e){
       /* Nada de re-render aqui: as marcacoes do professor continuam na tela. */
       S.salvando = false;
       var bb = el('btSalvar');
       if (bb){ bb.disabled = false; bb.textContent = 'Salvar chamada'; }
+      /* Se o servidor recusou por duplicidade, oferecer "tentar de novo"
+         seria empurrar o professor para o erro que acabamos de evitar. */
+      var msg = textoErro(e);
+      if (msg.indexOf('DUPLICADA') === 0){
+        S.jaRegistrada = true;
+        toast('Esta turma já tem chamada salva hoje.', 'erro');
+        return;
+      }
       toast('Não salvou. Confira a internet e tente de novo.', 'erro',
             {rotulo:'Tentar de novo', fn:enviarChamada});
     });

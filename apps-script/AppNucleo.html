@@ -57,6 +57,13 @@ function ico(n, t){
 
 /* ─── utilidades ─── */
 function el(id){ return document.getElementById(id); }
+
+/* A coluna Comprovante é texto livre na planilha. Quem tem acesso de
+   edição pode escrever javascript:... ali, e o link viraria execução de
+   código ao ser tocado. Só http(s) passa. */
+function urlSegura(u){
+  return /^https?:\/\//i.test(String(u || '')) ? String(u) : '';
+}
 function esc(t){
   return String(t == null ? '' : t).replace(/[&<>"']/g, function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
@@ -105,8 +112,13 @@ function plural(n, um, muitos){ return n + ' ' + (n === 1 ? um : muitos); }
 
 /* ─── ponte com o Apps Script, com prazo ─── */
 /* Sem prazo, um 4G que cai deixa o botao em "Salvando..." para sempre. */
-var MOCK = (typeof google === 'undefined' || !google.script);
 function api(fn, args, ok, erro){
+  /* Sem a ponte do Apps Script isto lançava ReferenceError dentro do
+     depois() e a tela ficava no esqueleto para sempre, sem mensagem. */
+  if (typeof google === 'undefined' || !google.script || !google.script.run){
+    if (erro) erro({ message: 'A conexão com a planilha não abriu. Recarregue a página.' });
+    return;
+  }
   var fim = false;
   var t = setTimeout(function(){
     if (fim) return; fim = true;
@@ -152,6 +164,12 @@ function fecharToast(){ el('toast').dataset.aberto = 'false'; }
 /* ─── bottom sheet reaproveitavel ─── */
 var folhaAoFechar = null;
 function abrirFolha(titulo, corpoHtml, aoFechar){
+  /* Zera os handlers da folha anterior. pedirTexto e pedirFicha armam
+     onkeydown; quem não rearma herdava o closure velho e o Enter
+     explodia num campo que não existe mais. */
+  el('folhaCorpo').onclick = null;
+  el('folhaCorpo').onkeydown = null;
+  el('folha').hidden = false;
   el('folhaTitulo').textContent = titulo;
   el('folhaCorpo').innerHTML = corpoHtml;
   el('folha').dataset.aberto = 'true';
@@ -162,6 +180,17 @@ function fecharFolha(){
   el('folha').dataset.aberto = 'false';
   el('veu').dataset.aberto = 'false';
   el('folha').style.transform = '';
+  /* Fechada só por transform, a folha continuava alcançável por Tab e
+     lida pelo leitor de tela — que ficava preso num diálogo que o
+     usuário acha que fechou. */
+  setTimeout(function(){
+    if (el('folha').dataset.aberto !== 'true'){
+      el('folhaCorpo').innerHTML = '';
+      el('folhaCorpo').onclick = null;
+      el('folhaCorpo').onkeydown = null;
+      el('folha').hidden = true;
+    }
+  }, 320);
   var f = folhaAoFechar; folhaAoFechar = null;
   if (f) f();
 }
@@ -295,6 +324,9 @@ function desenhar(){
   else { b.hidden = true; }
   medirBarra();
 
+  /* O toast vive fora do #palco e sobrevivia 6 s à navegação. "Desfazer"
+     e "Tentar de novo" rodavam sobre uma tela que não existe mais. */
+  fecharToast();
   window.scrollTo(0, 0);
   document.body.classList.remove('rolou');
   if (tela.depois) tela.depois();
@@ -318,6 +350,17 @@ document.addEventListener('click', function(e){
   if (!b) return;
   var f = ACOES[b.getAttribute('data-acao')];
   if (f) f(b, e);
+});
+
+/* li[role=button] não sintetiza clique no Enter/Espaço como <button>.
+   Sem isto, marcar falta e abrir aluno são inalcançáveis por teclado. */
+document.addEventListener('keydown', function(e){
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  var alvo = e.target;
+  if (!alvo || !alvo.getAttribute || alvo.getAttribute('role') !== 'button') return;
+  if (!alvo.hasAttribute('data-acao')) return;
+  e.preventDefault();
+  alvo.click();
 });
 
 window.addEventListener('scroll', function(){

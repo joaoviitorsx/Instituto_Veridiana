@@ -249,8 +249,13 @@ function adicionarAluno(pin, turma, nome, dados){
       return a.turma === t && chave(a.nome) === chave(n);
     });
     if (repetido) throw new Error('Esse aluno já está nessa turma.');
-    if (!turmasRegistradas().some(function (x){ return x.nome === t && x.ativa; }))
-      abaTurmas().appendRow([t, 'SIM']);
+    /* Reativa a linha existente em vez de criar outra. Sem isto, turma
+       arquivada e depois repovoada ficava duplicada em Turmas — e como
+       arquivar/renomear pegam o primeiro filter()[0], a turma nunca
+       mais conseguia ser arquivada. */
+    const jaTem = turmasRegistradas().filter(function (x){ return chave(x.nome) === chave(t); })[0];
+    if (!jaTem) abaTurmas().appendRow([t, 'SIM']);
+    else if (!jaTem.ativa) abaTurmas().getRange(jaTem.linha, 2).setValue('SIM');
     const aba = garantirColunasAlunos_();
     aba.appendRow([t, n, 'SIM',
       dataValida_(d.nascimento), String(d.responsavel || '').trim(), soDigitos_(d.telefone)]);

@@ -128,6 +128,11 @@ function salvarChamada(dados) {
   if (!dados || !dados.turma) throw new Error('Turma não informada.');
   if (!dados.professor) throw new Error('Escolha quem está dando a aula.');
   if (!dados.presencas || !dados.presencas.length) throw new Error('Nenhum aluno na lista.');
+  const VALIDOS = ['Presente', 'Falta', 'Justificada'];
+  dados.presencas.forEach(function (p) {
+    if (VALIDOS.indexOf(p.status) === -1)
+      throw new Error('Status inválido: ' + p.status);
+  });
 
   const cache = CacheService.getScriptCache();
   const chave = 'tk_' + String(dados.token || '');
@@ -147,13 +152,23 @@ function salvarChamada(dados) {
     }
 
     const data = hoje();
+
+    /* O token cobre repetição da MESMA sessão. Não cobre a professora
+       reabrir o app às 16h e salvar de novo a aula das 15h: token novo,
+       turma inteira duplicada. O cliente confirma antes e manda forcar. */
+    if (!dados.forcar && chamadaJaExiste(dados.turma, data)) {
+      throw new Error('DUPLICADA: já existe chamada de ' + dados.turma + ' hoje.');
+    }
+
     const registro = new Date();
     const linhas = dados.presencas.map(function (p) {
       return [registro, data, dados.turma, dados.professor, p.aluno, p.status];
     });
 
     const aba = abaChamadas();
-    aba.getRange(aba.getLastRow() + 1, 1, linhas.length, 6).setValues(linhas);
+    const primeira = aba.getLastRow() + 1;
+    garantirLinhas_(aba, primeira + linhas.length - 1);
+    aba.getRange(primeira, 1, linhas.length, 6).setValues(linhas);
 
     const presentes = dados.presencas.filter(function (p) {
       return p.status === 'Presente';

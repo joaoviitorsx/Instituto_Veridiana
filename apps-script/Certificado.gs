@@ -32,7 +32,13 @@ function mesAno_(iso) {
   return MESES_EXT[Number(p[1]) - 1] + ' de ' + p[0];
 }
 
-/** Todo o histórico, uma leitura só, indexado por aluno. */
+/**
+ * Todo o histórico, indexado por TURMA + aluno.
+ *
+ * Indexar só pelo nome juntava duas "Maria Silva" de turmas diferentes
+ * numa pessoa só — e o certificado saía com o dobro das horas e o nome
+ * das duas turmas. Documento oficial com dado inventado.
+ */
 function historicoCompleto_() {
   const aba = abaChamadas();
   const ultima = aba.getLastRow();
@@ -51,8 +57,9 @@ function historicoCompleto_() {
     const status = String(l[4] || '').trim();
     if (!data || !turma || !aluno) return;
 
-    if (!por[aluno]) por[aluno] = { primeira: data, ultima: data, turmas: {}, aulas: 0, minutos: 0 };
-    const h = por[aluno];
+    const k = turma + '|' + aluno;
+    if (!por[k]) por[k] = { primeira: data, ultima: data, turmas: {}, aulas: 0, minutos: 0 };
+    const h = por[k];
     if (data < h.primeira) h.primeira = data;
     if (data > h.ultima) h.ultima = data;
     h.turmas[turma] = 1;
@@ -62,6 +69,42 @@ function historicoCompleto_() {
     }
   });
   return por;
+}
+
+/**
+ * Junta o histórico de um aluno.
+ *
+ * A mesma pessoa pode ter passado por várias turmas ao longo dos anos, e
+ * o certificado deve somar tudo. Mas o nome é a única identidade que
+ * existe: se ele aparece em mais de uma turma AO MESMO TEMPO na aba
+ * Alunos, não dá para saber se é uma pessoa em duas turmas ou duas
+ * pessoas homônimas. Nesse caso conta só a turma pedida, que é o palpite
+ * seguro — errar para menos, nunca inventar hora.
+ */
+function historicoDe_(hist, nome, turma, ambiguo) {
+  const junto = { primeira: '', ultima: '', turmas: {}, aulas: 0, minutos: 0 };
+  Object.keys(hist).forEach(function (k) {
+    const p = k.indexOf('|');
+    if (k.slice(p + 1) !== nome) return;
+    if (ambiguo && k.slice(0, p) !== turma) return;
+    const h = hist[k];
+    if (!junto.primeira || h.primeira < junto.primeira) junto.primeira = h.primeira;
+    if (h.ultima > junto.ultima) junto.ultima = h.ultima;
+    Object.keys(h.turmas).forEach(function (t) { junto.turmas[t] = 1; });
+    junto.aulas += h.aulas;
+    junto.minutos += h.minutos;
+  });
+  return junto.aulas || junto.primeira ? junto : null;
+}
+
+/** Nomes que estão em mais de uma turma ativa ao mesmo tempo. */
+function nomesAmbiguos_() {
+  const vistos = {}, ambiguos = {};
+  lerAlunos_().forEach(function (a) {
+    if (!vistos[a.nome]) vistos[a.nome] = a.turma;
+    else if (vistos[a.nome] !== a.turma) ambiguos[a.nome] = true;
+  });
+  return ambiguos;
 }
 
 function listaTurmas_(mapa) {
@@ -75,15 +118,17 @@ function listaTurmas_(mapa) {
 function alunosParaCertificado(pin, turma) {
   exigirPin(pin);
   const hist = historicoCompleto_();
+  const ambiguos = nomesAmbiguos_();
   return lerAlunos_()
     .filter(function (a) { return !turma || a.turma === turma; })
     .map(function (a) {
-      const h = hist[a.nome];
+      const h = historicoDe_(hist, a.nome, a.turma, !!ambiguos[a.nome]);
       return {
         nome: a.nome, turma: a.turma, ativo: a.ativo,
         aulas: h ? h.aulas : 0,
         horas: h ? Math.round(h.minutos / 60) : 0,
         desde: h ? h.primeira : '',
+        homonimo: !!ambiguos[a.nome],
         responsavel: a.responsavel, telefone: a.telefone
       };
     })
@@ -107,16 +152,18 @@ function gerarCertificado(pin, nomes, turma) {
   if (lista.length > 60) throw new Error('Máximo de 60 certificados por vez.');
 
   const hist = historicoCompleto_();
+  const ambiguos = nomesAmbiguos_();
   const hoje_ = hoje();
-  const paginas = [], feitos = [];
+  const paginas = [], feitos = [], dados = {};
 
   lista.forEach(function (nome) {
-    const h = hist[nome];
+    const h = historicoDe_(hist, nome, turma, !!ambiguos[nome]);
     if (!h || !h.aulas) return;   // sem presença registrada, não certifica
+    dados[nome] = h;
     feitos.push(nome);
   });
   feitos.forEach(function (nome, i) {
-    paginas.push(paginaCertificado_(nome, hist[nome], i < feitos.length - 1, hoje_));
+    paginas.push(paginaCertificado_(nome, dados[nome], i < feitos.length - 1, hoje_));
   });
 
   if (!paginas.length)
