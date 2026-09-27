@@ -17,7 +17,7 @@ TELAS.pin = function(){
       'margin:0 auto 16px;display:grid;place-items:center;background:var(--roxo-fraco);color:var(--roxo)">' +
       ico('cadeado', 26) + '</div>' +
       '<h2>Área da equipe</h2>' +
-      '<p>Digite o código de 4 números para cuidar de turmas, alunos e professores.</p>' +
+      '<p>Digite o código de 4 números da equipe.</p>' +
       '<div class="pontos" id="pontos" role="status" aria-label="Código, 0 de 4 números">' +
       '<i></i><i></i><i></i><i></i></div>' +
       '<div class="teclado">' + teclas + '</div></div>'
@@ -37,8 +37,16 @@ ACOES.pinDig = function(b){
 ACOES.pinApaga = function(){ pinBuf = pinBuf.slice(0, -1); vibrar(); pontos(); };
 function validaPin(){
   var tentativa = pinBuf;
+  /* Quem veio de um botão da tela inicial (Caixa, Novo evento...) cai
+     direto lá. O PIN sai da pilha: voltar não mostra o teclado de novo. */
+  var destino = (atual() && atual().p) || {};
   api('entrarNaGestao', [tentativa], function(g){
-    S.pin = tentativa; S.gest = g; trocar('gestao');
+    S.pin = tentativa; S.gest = g;
+    if (!atual() || atual().t !== 'pin') return;
+    /* Ação na própria tela (mudar situação de um evento, ajustar
+       quantidade): volta para onde estava, que agora já tem o código. */
+    if (destino.voltar){ voltar(); toast('Código certo. Pode tocar de novo.'); return; }
+    trocar(destino.para || 'gestao', destino.paraP || {});
   }, function(e){
     var n = el('pontos');
     if (n){ n.classList.add('errou'); setTimeout(function(){ n.classList.remove('errou'); }, 360); }
@@ -60,7 +68,7 @@ TELAS.gestao = function(){
     {ic:'prancheta', t:'Turmas', s:plural(g.turmas || 0, 'turma ativa', 'turmas ativas'), a:'gTurmas'},
     {ic:'grupo', t:'Alunos', s:(g.alunosAtivos || 0) + ' ativos, ' + (g.alunosInativos || 0) + ' inativos', a:'gAlunos'},
     {ic:'pessoa', t:'Professores', s:plural(g.professores || 0, 'na equipe', 'na equipe'), a:'gProfs'},
-    {ic:'qr', t:'QR das turmas', s:'gerar código para imprimir', a:'gQr'},
+    {ic:'qr', t:'QR e links', s:'QR das turmas e link de cada professor', a:'gQr'},
     {ic:'sino', t:'Precisam de atenção', s:'carregando…', a:'gRisco', id:'itRisco'},
     {ic:'calendario', t:'Histórico', s:'quem veio, por dia e por mês', a:'gHistorico'},
     {ic:'carteira', t:'Caixa', s:'entradas, saídas e comprovantes', a:'gCaixa'},
@@ -128,29 +136,6 @@ function escrever(fn, args, msgOk, depois){
   }, function(e){
     toast(textoErro(e), 'erro');
   });
-}
-
-/* pedir um nome sem usar prompt() */
-function pedirTexto(titulo, rotulo, valor, rotuloBotao, fn){
-  abrirFolha(titulo,
-    '<div style="padding:0 8px"><div class="campo"><label for="campoTxt">' + esc(rotulo) + '</label>' +
-    '<input id="campoTxt" type="text" autocomplete="off" autocapitalize="words" ' +
-    'spellcheck="false" value="' + esc(valor || '') + '"></div></div>' +
-    '<div class="acoes"><button type="button" class="cancelar" data-t="0">Cancelar</button>' +
-    '<button type="button" class="confirmar" style="background:var(--roxo)" data-t="1">' +
-    esc(rotuloBotao) + '</button></div>');
-  function enviar(){
-    var v = (el('campoTxt').value || '').trim();
-    if (v.length < 2){ toast('Escreva pelo menos 2 letras.', 'erro'); return; }
-    fecharFolha(); setTimeout(function(){ fn(v); }, 60);
-  }
-  el('folhaCorpo').onclick = function(e){
-    var b = e.target.closest('[data-t]');
-    if (!b) return;
-    if (b.dataset.t === '1') enviar(); else fecharFolha();
-  };
-  el('folhaCorpo').onkeydown = function(e){ if (e.key === 'Enter'){ e.preventDefault(); enviar(); } };
-  setTimeout(function(){ var i = el('campoTxt'); if (i){ i.focus(); i.select(); } }, 320);
 }
 
 /* ══════════════ GESTÃO: turmas ══════════════ */
@@ -434,45 +419,102 @@ ACOES.acoesProf = function(b){
     }}]);
 };
 
-/* ══════════════ GESTÃO: QR das turmas ══════════════ */
+/* ══════════════ GESTÃO: QR das turmas e link por professor ══════════════ */
+/* Duas abas. "Turmas" é o QR da parede. "Professores" é o link pessoal
+   (?prof=Nome) que cada um salva na tela inicial do celular: a saudação
+   usa o nome e a chamada já vem com o professor escolhido. */
 TELAS.gQr = function(){
+  var aba = S.qrAba || 'turmas';
   return {
-    titulo:'QR das turmas', html:esqueleto(4),
+    titulo:'QR e links',
+    html:'<div class="filtro" role="tablist">' +
+      '<button type="button" role="tab" data-acao="qrAba" data-f="turmas" aria-selected="' + (aba === 'turmas') + '">QR das turmas</button>' +
+      '<button type="button" role="tab" data-acao="qrAba" data-f="profs" aria-selected="' + (aba === 'profs') + '">Link por professor</button>' +
+      '</div><div id="qrLista">' + esqueleto(4) + '</div>',
     depois:function(){
+      function falhou(e){ if (el('qrLista')) el('qrLista').innerHTML = estado('alerta','Não deu para carregar', textoErro(e)); }
       api('obterUrlApp', [S.pin], function(url){
         S.urlApp = url || '';
+        if (!el('qrLista')) return;
         if (!S.urlApp){
-          el('palco').querySelector('.corpo').innerHTML = estado('alerta','Falta o endereço do app',
+          el('qrLista').innerHTML = estado('alerta','Falta o endereço do app',
             'Publique o app e abra esta tela de novo. Se continuar assim, use "Configurar endereço do app" no menu Veridiana da planilha, uma vez só.');
           return;
         }
-        api('listarTurmasCompleto', [S.pin], function(ts){
-          var alvo = el('palco').querySelector('.corpo');
-          if (!ts.length){
-            alvo.innerHTML = estado('prancheta','Nenhuma turma ainda','Crie uma turma para gerar o QR dela.');
-            return;
-          }
-          var h = '<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
-                  'Escolha a turma para gerar o código de colar na parede.</p><ul class="cartoes">';
-          ts.forEach(function(t){
-            h += '<li><button type="button" class="item" data-acao="verQr" data-t="' + esc(t.nome) + '">' +
-                 '<span class="txt">' + esc(t.nome) + '</span>' +
-                 '<span class="seta">' + ico('qr', 20) + '</span></button></li>';
-          });
-          alvo.innerHTML = h + '</ul>';
-        }, function(e){
-          el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
-        });
-      }, function(e){
-        el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
-      });
+        if (aba === 'profs') listarLinksProf(falhou); else listarQrTurmas(falhou);
+      }, falhou);
     }
   };
 };
+ACOES.qrAba = function(b){ S.qrAba = b.getAttribute('data-f'); vibrar(); trocar('gQr'); };
+
+function listarQrTurmas(falhou){
+  api('listarTurmasCompleto', [S.pin], function(ts){
+    var alvo = el('qrLista');
+    if (!alvo) return;
+    if (!ts.length){
+      alvo.innerHTML = estado('prancheta','Nenhuma turma ainda','Crie uma turma para gerar o QR dela.');
+      return;
+    }
+    var h = '<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
+            'Escolha a turma para gerar o código de colar na parede.</p><ul class="cartoes">';
+    ts.forEach(function(t){
+      h += '<li><button type="button" class="item" data-acao="verQr" data-t="' + esc(t.nome) + '">' +
+           '<span class="txt">' + esc(t.nome) + '</span>' +
+           '<span class="seta">' + ico('qr', 20) + '</span></button></li>';
+    });
+    alvo.innerHTML = h + '</ul>';
+  }, falhou);
+}
+
+function listarLinksProf(falhou){
+  api('listarProfessores', [S.pin], function(ps){
+    var alvo = el('qrLista');
+    if (!alvo) return;
+    if (!ps.length){
+      alvo.innerHTML = estado('pessoa','Ninguém na equipe ainda','Cadastre os professores em Gestão → Professores.');
+      return;
+    }
+    var h = '<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
+            'Cada professor recebe um link com o próprio nome. Salvo na tela inicial do celular, ' +
+            'a chamada já abre com ele escolhido.</p><ul class="lista">';
+    ps.forEach(function(n){
+      h += '<li class="li" data-acao="verLinkProf" data-n="' + esc(n) + '" role="button" tabindex="0">' +
+           '<span class="ini">' + esc(iniciais(n)) + '</span>' +
+           '<span class="nome">' + esc(n) + '</span>' +
+           '<span class="marca">' + ico('partilha', 18) + '</span></li>';
+    });
+    alvo.innerHTML = h + '</ul>';
+  }, falhou);
+}
+ACOES.verLinkProf = function(b){ ir('gLinkProf', {prof:b.getAttribute('data-n')}); };
+
+function comParametro(url, nome, valor){
+  return url + (url.indexOf('?') === -1 ? '?' : '&') + nome + '=' + encodeURIComponent(valor);
+}
+
+TELAS.gLinkProf = function(p){
+  var url = comParametro(S.urlApp, 'prof', p.prof);
+  var nome = primeiroNome(p.prof);
+  var texto = 'Oi, ' + nome + '! Este é o seu link da chamada do Instituto Veridiana. ' +
+    'Abra no celular e adicione à tela inicial: a chamada já vai abrir com o seu nome. ' + url;
+  var h = '<div class="folha-qr">' +
+    '<p class="turma">' + esc(p.prof) + '</p>' + qrSvg(url) +
+    '<p class="marca">link pessoal da chamada</p></div>';
+  h += '<a class="botao-zap" style="margin-top:0" href="https://wa.me/?text=' + encodeURIComponent(texto) +
+       '" target="_blank" rel="noopener">' + ico('conversa', 18) + ' Enviar no WhatsApp</a>';
+  h += '<button type="button" class="botao-cheio" style="margin-top:8px;background:var(--papel);' +
+       'color:var(--roxo);border:1px solid var(--borda)" data-acao="copiarLink" data-u="' + esc(url) + '">' +
+       ico('copiar', 18) + ' Copiar link</button>';
+  h += '<p class="dica" style="margin:16px 4px 0">No iPhone, abra no Safari e use Compartilhar → ' +
+       'Adicionar à Tela de Início. No Android, menu ⋮ → Adicionar à tela inicial.</p>';
+  return { titulo:p.prof, html:h };
+};
+
 ACOES.verQr = function(b){ ir('gQrTurma', {turma:b.getAttribute('data-t')}); };
 
 TELAS.gQrTurma = function(p){
-  var url = S.urlApp + (S.urlApp.indexOf('?') === -1 ? '?' : '&') + 'turma=' + encodeURIComponent(p.turma);
+  var url = comParametro(S.urlApp, 'turma', p.turma);
   var podeCompartilhar = !!navigator.share;
   var h = '<div class="folha-qr" id="paraImprimir">' +
     '<p class="turma">' + esc(p.turma) + '</p>' + qrSvg(url) +
@@ -493,24 +535,6 @@ ACOES.partilhar = function(b){
       .catch(function(){ /* cancelou ou o iframe bloqueou: silencio */ });
   } catch(e){ copiar(url); }
 };
-ACOES.copiarLink = function(b){ copiar(b.getAttribute('data-u')); };
-function copiar(txt){
-  function ok(){ vibrar(); toast('Link copiado'); }
-  if (navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(txt).then(ok, function(){ copiaAntiga(txt, ok); });
-  } else copiaAntiga(txt, ok);
-}
-function copiaAntiga(txt, ok){
-  var a = document.createElement('textarea');
-  a.value = txt; a.setAttribute('readonly','');
-  a.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
-  document.body.appendChild(a); a.focus(); a.select();
-  var deu = false;
-  try { deu = document.execCommand('copy'); } catch(e){}
-  document.body.removeChild(a);
-  if (deu) ok(); else toast('Não deu para copiar sozinho. Segure o dedo no link.', 'erro');
-}
-
 /* ══════════════ GESTÃO: certificados ══════════════ */
 /* O documento que a aluna leva embora. Vale para currículo de Jovem
    Aprendiz, atividade complementar na escola e comprovação de vínculo. */

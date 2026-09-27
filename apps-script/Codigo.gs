@@ -6,8 +6,10 @@
  *   Alunos      -> A: Turma | B: Aluno | C: Ativo (SIM/NAO)
  *   Professores -> A: Professor
  *   Chamadas    -> A: Registro | B: Data | C: Turma | D: Professor | E: Aluno | F: Status
+ *   Agenda      -> ver Agenda.gs
+ *   Materiais   -> ver Materiais.gs
  *
- * A aba Chamadas é criada automaticamente no primeiro uso.
+ * Chamadas, Agenda e Materiais são criadas automaticamente no primeiro uso.
  *
  * O QUE MUDOU E POR QUÊ
  *
@@ -62,9 +64,35 @@ const TTL_CACHE = 300;      // 5 min de cache das listas
  */
 const URL_ICONE = '';
 
-/* As partes entram nesta ordem. AppPartida chama iniciar() e por isso
-   é a última. */
-const PARTES = ['AppNucleo', 'AppChamada', 'AppGestao', 'AppCaixa', 'AppQr', 'AppPartida'];
+/* O que vem na página logo de saída. AppPartida chama iniciar() e por
+   isso é a última.
+
+   Só entra aqui o que a chamada e a tela inicial usam. O resto chega
+   sob demanda por modulo(), na primeira vez que alguém abre a seção.
+   Motivo: a página inteira já passava de 120 KB antes de agenda e
+   materiais, e quem paga esse peso é o professor no 4G que escaneou o
+   QR para fazer a chamada — a única tela que ele vai abrir. */
+const PARTES = ['AppNucleo', 'AppInicio', 'AppChamada', 'AppPartida'];
+
+/* Seções carregadas sob demanda. A chave é o nome que o cliente pede.
+   AppQr vai junto da gestão porque só a gestão desenha QR. */
+const MODULOS = {
+  gestao:    ['AppGestao', 'AppCaixa', 'AppQr'],
+  agenda:    ['AppAgenda'],
+  materiais: ['AppMateriais']
+};
+
+/**
+ * Entrega o HTML de uma seção. O cliente executa os <script> e o
+ * <style> que vierem. O modPronto no fim avisa que a seção está de pé;
+ * se faltar (arquivo com erro de sintaxe), o cliente diz em português.
+ */
+function modulo(nome) {
+  const partes = MODULOS[nome];
+  if (!partes) throw new Error('Parte do app desconhecida: ' + nome);
+  return partes.map(arquivo).join('\n') +
+    '\n<script>modPronto(' + JSON.stringify(nome) + ');</script>';
+}
 
 function doGet() {
   let html = arquivo('Index');
@@ -116,7 +144,8 @@ function conferirCasca(html) {
  * realmente recebe de cada arquivo.
  */
 function diagnostico() {
-  const nomes = ['Index', 'Estilo', 'AppNucleo', 'AppChamada', 'AppGestao', 'AppQr', 'AppPartida'];
+  const nomes = ['Index', 'Estilo'].concat(PARTES,
+    Object.keys(MODULOS).reduce(function (t, k) { return t.concat(MODULOS[k]); }, []));
   nomes.forEach(function (n) {
     try {
       Logger.log(n + ': ' + arquivo(n).length + ' caracteres');

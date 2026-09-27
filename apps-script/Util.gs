@@ -22,6 +22,17 @@ function doCache(chave, prazo, calcular) {
   return v;
 }
 
+/* Versão só do resumo da tela inicial. Chamada salva muda a "próxima
+   aula", mas não pode derrubar o cache do elenco das turmas, que a
+   próxima chamada vai precisar. Escrita da gestão derruba os dois,
+   porque versaoDados() também entra na chave. */
+function versaoResumo_() {
+  return CacheService.getScriptCache().get('verIni') || '0';
+}
+function tocarResumo_() {
+  try { CacheService.getScriptCache().put('verIni', Utilities.getUuid().slice(0, 8), 21600); } catch (e) {}
+}
+
 function planilha() {
   return SpreadsheetApp.getActiveSpreadsheet();
 }

@@ -1,0 +1,111 @@
+<script>
+/* Tela inicial. Só aparece quando o app abre SEM ?turma=: o QR da parede
+   continua caindo direto na lista de chamada, sem nenhuma tela no meio. */
+
+/* A bailarina do ícone, vetorizada. Inline para não depender de imagem
+   de fora: servidor de imagem que cai não pode deixar a casa sem cara. */
+var LOGO = '<svg class="logo" viewBox="15 35 450 450" aria-hidden="true" focusable="false">' +
+  '<g transform="translate(0,512) scale(.1,-.1)" fill="currentColor"><path d="M3455 4721 c-50 -8 -57 -35 -21 -77 25 -29 25 -29 3 -52 -20 -21 -20 -26 -8 -70 34 -119 50 -225 39 -246 -6 -12 -48 -59 -92 -106 -45 -47 -116 -137 -159 -200 -176 -261 -389 -510 -436 -510 -13 0 -36 9 -51 20 -87 62 -195 71 -407 34 -29 -5 -41 1 -110 61 -122 104 -548 337 -640 349 -130 17 -282 -26 -360 -102 -48 -46 -49 -72 -2 -72 34 0 34 1 12 -44 -28 -59 17 -87 75 -47 15 10 47 22 72 25 25 4 74 23 109 42 111 61 117 59 297 -92 34 -28 90 -68 125 -89 110 -64 190 -126 187 -143 -2 -9 -29 -31 -61 -49 -210 -123 -430 -493 -478 -803 -18 -116 -14 -435 5 -490 20 -56 20 -101 1 -164 -12 -39 -14 -90 -8 -275 6 -226 6 -226 -37 -336 -76 -196 -73 -186 -56 -203 13 -13 16 -13 20 -1 22 63 40 108 76 199 43 105 43 105 37 336 -5 184 -3 241 8 285 19 69 19 106 0 160 -26 72 -30 263 -11 434 20 170 40 242 103 369 113 226 219 359 359 452 130 85 127 99 -46 211 -67 43 -176 122 -243 176 -147 117 -174 123 -287 62 -44 -23 -78 -35 -107 -35 -30 0 -50 -7 -71 -25 -44 -36 -48 -15 -7 33 45 52 47 77 5 69 -49 -10 -35 12 25 39 32 15 91 30 143 36 111 14 147 3 367 -115 83 -44 171 -91 197 -105 45 -24 93 -59 223 -161 56 -44 56 -44 108 -27 72 24 195 32 254 16 54 -14 133 -56 133 -70 0 -16 -43 -40 -107 -60 -161 -50 -210 -110 -222 -275 -5 -65 -9 -79 -21 -75 -41 13 -167 3 -199 -15 -60 -35 -60 -44 -8 -145 39 -75 47 -101 47 -144 0 -67 -41 -136 -98 -165 -112 -57 -150 -127 -159 -295 -7 -139 6 -189 80 -306 30 -47 69 -116 86 -153 18 -37 46 -84 64 -105 55 -63 58 -68 92 -189 18 -65 51 -174 73 -243 52 -161 59 -198 77 -416 21 -249 59 -429 101 -473 23 -25 28 13 9 62 -37 92 -60 214 -75 402 -16 209 -31 308 -56 380 -23 62 -101 326 -118 397 -3 14 -27 50 -52 80 -26 29 -62 87 -82 128 -19 41 -53 101 -74 133 -81 119 -91 155 -86 286 7 156 38 224 122 268 138 72 171 194 95 351 -46 96 -46 104 9 120 63 19 105 14 189 -21 123 -53 162 -61 258 -53 95 8 109 -2 43 -29 -56 -22 -86 -51 -98 -94 -7 -24 -22 -44 -45 -59 -67 -43 -90 -105 -60 -162 22 -42 197 -164 272 -189 156 -52 293 -7 378 125 22 35 42 54 61 58 48 12 54 23 48 80 -3 28 -1 76 4 106 15 78 4 120 -38 147 -81 52 -116 83 -202 175 -90 98 -90 98 -70 125 36 51 70 128 83 188 25 116 74 194 248 395 99 113 137 171 176 265 16 39 53 108 82 154 53 85 53 85 53 173 0 139 -69 371 -111 374 -8 1 -32 -1 -54 -5z m80 -118 c9 -32 19 -65 21 -73 11 -30 34 -176 34 -211 0 -26 -12 -52 -42 -95 -23 -32 -65 -110 -94 -172 -64 -135 -84 -165 -204 -302 -146 -168 -205 -266 -231 -380 -18 -85 -63 -166 -166 -306 -67 -91 -120 -117 -233 -118 -144 -2 -193 51 -166 177 27 123 53 153 171 192 44 14 103 42 131 61 79 53 238 224 349 374 103 138 110 149 186 260 24 36 83 106 131 157 102 106 102 107 69 273 -17 82 -18 97 -5 111 8 9 14 36 14 62 0 64 16 59 35 -10z m-487 -1604 c53 -56 121 -117 151 -136 54 -35 54 -35 46 -111 -5 -42 -8 -94 -8 -115 1 -32 -4 -41 -31 -59 -17 -11 -48 -46 -68 -78 -94 -145 -279 -158 -457 -32 -167 118 -168 126 -33 242 12 11 22 30 22 42 0 31 27 68 48 68 37 0 122 59 122 85 0 15 -6 25 -14 25 -28 0 -27 20 2 45 16 13 44 47 63 74 19 28 40 51 47 51 7 0 56 -46 110 -101z"/></g></svg>';
+
+function saudacao(){
+  var h = new Date().getHours();
+  return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+}
+
+/* Linhas de apoio chegam do servidor. Sem dado, a linha fica vazia —
+   zero e traço fazem a tela parecer quebrada, não viva. */
+var BLOCOS = [
+  {a:'iChamada',   ic:'prancheta',  t:'Chamada',      id:'apTurmas'},
+  {a:'iAgenda',    ic:'calendario', t:'Agenda',       id:'apAgenda'},
+  {a:'iCaixa',     ic:'carteira',   t:'Caixa',        id:'apCaixa', pin:true},
+  {a:'iMateriais', ic:'pacote',     t:'Materiais',    id:'apMateriais'},
+  {a:'iCert',      ic:'medalha',    t:'Certificados', pin:true},
+  {a:'iGestao',    ic:'engrenagem', t:'Gestão',       pin:true, sub:'turmas, alunos, equipe'}
+];
+
+TELAS.inicio = function(){
+  var nome = primeiroNome(S.prof);
+  var dia = dataExtenso(hojeISO());
+  var h = '<div id="destaque" class="destaque carregando" aria-hidden="true"><div class="osso"></div></div>';
+  h += '<ul class="blocos">';
+  BLOCOS.forEach(function(b){
+    h += '<li><button type="button" class="bloco" data-acao="' + b.a + '">' +
+         '<span class="bl-ic">' + ico(b.ic, 22) + '</span>' +
+         (b.pin ? '<span class="bl-pin" aria-label="pede o código">' + ico('cadeado', 14) + '</span>' : '') +
+         '<b>' + esc(b.t) + '</b>' +
+         '<small' + (b.id ? ' id="' + b.id + '"' : '') + '>' + esc(b.sub || '') + '</small>' +
+         '</button></li>';
+  });
+  h += '</ul><p class="rodape">' + esc('Instituto Veridiana · versão ' + VERSAO) + '</p>';
+  return {
+    titulo:'Início',
+    capa:'<div class="capa capa-inicio"><div class="topo">' + LOGO +
+         '<div style="flex:1;min-width:0"><h1>' + esc(saudacao() + (nome ? ', ' + nome : '')) + '</h1>' +
+         '<p class="data">' + esc(dia.charAt(0).toUpperCase() + dia.slice(1)) + '</p></div></div></div>',
+    html:h,
+    depois:function(){
+      api('resumoInicial', [S.prof], pintarInicio, function(){
+        var d = el('destaque'); if (d) d.remove();
+      });
+    }
+  };
+};
+
+function pintarInicio(r){
+  if (!atual() || atual().t !== 'inicio') return;
+  function linha(id, txt){ var n = el(id); if (n && txt) n.textContent = txt; }
+  if (r.turmas) linha('apTurmas', plural(r.turmas, 'turma', 'turmas'));
+  if (r.proximo) linha('apAgenda', 'próximo: ' + r.proximo.titulo + ', ' + dataCurta(r.proximo.data));
+  if (r.saldo !== null && r.saldo !== undefined) linha('apCaixa', reais(r.saldo) + ' em caixa');
+  if (r.materiais) linha('apMateriais', plural(r.materiais, 'item', 'itens'));
+  S.destaque = r.destaque || null;
+  pintarDestaque(r.destaque);
+  /* Tela já pintada: agora sim vale baixar o resto em segundo plano,
+     para Agenda e Materiais abrirem sem espera. Via QR isto nunca roda. */
+  setTimeout(function(){
+    carregarModulo('agenda', function(){
+      carregarModulo('materiais', function(){ carregarModulo('gestao'); });
+    });
+  }, 400);
+}
+
+/* O atalho mais usado do sistema: a aula que deve estar começando, ou o
+   evento de hoje. Um toque e está na chamada. */
+function pintarDestaque(d){
+  var box = el('destaque');
+  if (!box) return;
+  if (!d){ box.remove(); return; }
+  var rotulo, titulo, sub, icone;
+  if (d.tipo === 'aula'){
+    rotulo = d.agora ? 'Aula agora' : 'Próxima aula';
+    titulo = d.turma;
+    sub = (d.hora ? 'costuma começar às ' + d.hora : 'costuma ter aula hoje') + ' · abrir chamada';
+    icone = 'relogio';
+  } else {
+    rotulo = d.hoje ? 'Hoje na agenda' : 'Próximo na agenda';
+    titulo = d.titulo;
+    sub = (d.hoje ? '' : dataExtenso(d.data) + ' · ') + d.tipoEvento;
+    icone = 'calendario';
+  }
+  box.className = 'destaque';
+  box.removeAttribute('aria-hidden');
+  box.innerHTML = '<button type="button" data-acao="iDestaque">' +
+    '<span class="de-ic">' + ico(icone, 22) + '</span>' +
+    '<span class="txt"><small>' + esc(rotulo) + '</small><b>' + esc(titulo) + '</b>' +
+    '<span>' + esc(sub) + '</span></span>' +
+    '<span class="seta">' + ico('dir') + '</span></button>';
+}
+
+ACOES.iDestaque = function(){
+  var d = S.destaque;
+  if (!d) return;
+  if (d.tipo === 'aula') ir('chamada', {turma:d.turma});
+  else ir('agenda', {mes:d.data.slice(0, 7)});
+};
+ACOES.iChamada   = function(){ ir('turmas'); };
+ACOES.iAgenda    = function(){ ir('agenda', {}); };
+ACOES.iMateriais = function(){ ir('mtLista', {}); };
+ACOES.iCaixa     = function(){ comPin('gCaixa'); };
+ACOES.iCert      = function(){ comPin('gCert'); };
+ACOES.iGestao    = function(){ comPin('gestao'); };
+</script>

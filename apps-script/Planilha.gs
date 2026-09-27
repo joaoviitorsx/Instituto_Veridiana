@@ -33,7 +33,7 @@ function configurarPin(){
   const p = r.getResponseText().trim();
   if (!/^[0-9]{4}$/.test(p)){ ui.alert('Precisa ser exatamente 4 números.'); return; }
   definirPin(p);
-  ui.alert('Pronto. Use ' + p + ' na engrenagem do app.');
+  ui.alert('Pronto. Use ' + p + ' no botão Gestão da tela inicial do app.');
 }
 
 /* Se você já tem um onOpen, junte estas linhas ao seu em vez de
@@ -71,8 +71,23 @@ const ABAS_PADRAO = [
   { nome: 'Turmas',      cab: ['Turma', 'Ativa', 'Minutos por aula'],                        larg: [230, 70, 140] },
   { nome: 'Caixa',       cab: ['Registro','Data','Tipo','Valor','Categoria','Descrição','Fonte','Comprovante','Quem registrou'],
                                                                                         larg: [140, 90, 80, 100, 140, 220, 150, 130, 150] },
-  { nome: 'Chamadas',    cab: ['Registro','Data','Turma','Professor','Aluno','Status'],       larg: [150, 100, 190, 200, 250, 120] }
+  { nome: 'Chamadas',    cab: ['Registro','Data','Turma','Professor','Aluno','Status'],       larg: [150, 100, 190, 200, 250, 120] },
+  /* Literal de propósito: constante de outro .gs no topo do arquivo quebra
+     o script inteiro se esse arquivo vier antes na lista do editor. */
+  { nome: 'Agenda',      cab: ['ID','Data','DataFim','Titulo','Tipo','Turmas','Local','Status','Observacao'],
+                                                                                        larg: [100, 100, 100, 260, 150, 220, 180, 110, 260] },
+  { nome: 'Materiais',   cab: ['ID','Item','Categoria','Finalidade','Quantidade','Estado','Local','Observacao','Ativo'],
+                                                                                        larg: [100, 240, 160, 110, 100, 130, 160, 240, 70] }
 ];
+
+/* Menu suspenso numa coluna. Aceita o que já estiver fora da lista
+   (setAllowInvalid true): quem digitou "Festival" na mão não perde o dado,
+   só ganha o aviso vermelho da célula. */
+function listaNaColuna_(aba, col, valores) {
+  if (!aba) return;
+  aba.getRange(2, col, Math.max(aba.getMaxRows() - 1, 1), 1).setDataValidation(
+    SpreadsheetApp.newDataValidation().requireValueInList(valores, true).setAllowInvalid(true).build());
+}
 
 /**
  * Deixa a planilha com uma cara só: cabeçalho roxo congelado, larguras
@@ -89,6 +104,8 @@ function arrumarPlanilha(pin) {
     abaChamadas();   // garante que existem antes de formatar
     abaTurmas();
     abaCaixa();
+    abaAgenda();
+    abaMateriais();
 
     ABAS_PADRAO.forEach(function (def) { formatarAba_(ss, def); });
 
@@ -127,6 +144,15 @@ function arrumarPlanilha(pin) {
       cx.getRange(2, 2, cx.getMaxRows() - 1, 1).setNumberFormat('@');
       cx.getRange(2, 4, cx.getMaxRows() - 1, 1).setNumberFormat('R$ #,##0.00');
     }
+
+    const ag = ss.getSheetByName(ABA_AGENDA);
+    if (ag && ag.getMaxRows() > 1) ag.getRange(2, 2, ag.getMaxRows() - 1, 2).setNumberFormat('@');
+    listaNaColuna_(ag, 5, TIPOS_EVENTO);
+    listaNaColuna_(ag, 8, STATUS_EVENTO);
+    const mt = ss.getSheetByName(ABA_MATERIAIS);
+    listaNaColuna_(mt, 4, FINALIDADES);
+    listaNaColuna_(mt, 6, ESTADOS);
+    listaNaColuna_(mt, 9, ['SIM', 'NAO']);
 
     montarPainel_(ss);
     invalidarCache();

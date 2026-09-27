@@ -3,7 +3,7 @@
 /* ══════════════ TELA: escolher turma ══════════════ */
 TELAS.turmas = function(){
   return {
-    titulo:'Chamada', gestao:!S.viaQr,
+    titulo:'Chamada',
     capa:'<div class="capa"><div class="topo"><div style="flex:1;min-width:0">' +
          '<h1>Chamada</h1><p class="data">Qual turma está entrando agora?</p>' +
          '</div></div></div>',
@@ -13,7 +13,7 @@ TELAS.turmas = function(){
         if (!turmas.length){
           el('palco').querySelector('.corpo').innerHTML =
             estado('grupo','Nenhuma turma ainda',
-                   'Toque na engrenagem lá em cima para criar a primeira turma e cadastrar os alunos.');
+                   'Volte para o início e entre em Gestão para criar a primeira turma e cadastrar os alunos.');
           return;
         }
         var h = '<ul class="cartoes">';
@@ -62,7 +62,9 @@ function montarChamada(d){
 
   S.turma = d.turma; S.data = d.data;
   S.professores = d.professores || [];
-  S.professor = d.professorSugerido || '';
+  /* Quem abriu pelo próprio link (?prof=) já vem escolhido. O cartão
+     continua tocável: professora substituta troca num toque. */
+  S.professor = profDoLink(S.professores) || d.professorSugerido || '';
   S.jaRegistrada = !!d.jaRegistrada; S.forcar = false;
   S.token = sorteioToken();
   S.alunos = (d.alunos || []).map(function(n){ return {aluno:n, status:'Presente'}; });
@@ -72,7 +74,7 @@ function montarChamada(d){
   if (!S.alunos.length){
     el('palco').querySelector('.corpo').innerHTML =
       estado('grupo','Turma sem alunos',
-             'Ninguém ativo em ' + d.turma + '. Toque na engrenagem na tela inicial para cadastrar.');
+             'Ninguém ativo em ' + d.turma + '. Na tela inicial, entre em Gestão para cadastrar.');
     el('capaN').textContent = '0'; el('capaR').textContent = 'sem alunos';
     return;
   }
@@ -118,6 +120,16 @@ function montarChamada(d){
   /* Sem sugestao de professor a folha abre sozinha: e a primeira pergunta
      da aula, e assim o fluxo inteiro fecha em cinco toques. */
   if (!S.professor && S.professores.length) setTimeout(escolherProf, 340);
+}
+
+/* O nome do link só vale se estiver na equipe, com a grafia da planilha.
+   Link com nome digitado errado não pode criar um professor fantasma
+   nos relatórios: nesse caso vale a sugestão de sempre. */
+function profDoLink(lista){
+  var k = semAcento(S.prof);
+  if (!k) return '';
+  for (var i = 0; i < lista.length; i++) if (semAcento(lista[i]) === k) return lista[i];
+  return '';
 }
 
 function naChamada(){
@@ -242,7 +254,8 @@ TELAS.fim = function(p){
   };
 };
 ACOES.outraChamada = function(){
-  if (S.viaQr) ir('chamada', {turma:S.turma}, true);
-  else ir('turmas', {}, true);
+  if (S.viaQr){ ir('chamada', {turma:S.turma}, true); return; }
+  S.pilha = [{t:'inicio', p:{}}];
+  ir('turmas');
 };
 </script>

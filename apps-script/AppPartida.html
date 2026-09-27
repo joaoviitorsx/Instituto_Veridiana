@@ -1,12 +1,14 @@
 <script>
-/* Partida: lê a turma da URL e abre a primeira tela. Roda por último. */
+/* Partida: lê turma e professor da URL e abre a primeira tela. Roda por último. */
 /* ══════════════ partida ══════════════ */
 function iniciar(){
   /* getLocation pode levar até 4 s (ou nunca responder). Até aqui o
      #palco ficava vazio: barra roxa e branco embaixo. */
   el('palco').innerHTML = '<div class="corpo">' + esqueleto(5) + '</div>';
 
-  function semParametro(){ S.viaQr = false; ir('turmas', {}, true); }
+  /* Sem ?turma= a pessoa abriu o app pelo atalho, não pelo QR da
+     parede: é aí, e só aí, que aparece a tela inicial. */
+  function semParametro(){ S.viaQr = false; ir('inicio', {}, true); }
   try {
     if (google.script.url && google.script.url.getLocation){
       var respondeu = false;
@@ -14,7 +16,12 @@ function iniciar(){
       google.script.url.getLocation(function(loc){
         if (respondeu) return;
         respondeu = true; clearTimeout(prazo);
-        var t = (loc && loc.parameter && loc.parameter.turma) ? String(loc.parameter.turma) : '';
+        var q = (loc && loc.parameter) || {};
+        /* ?prof= vem do atalho que cada professor salva no celular. Sem
+           login e sem cookie (o iframe do Apps Script não guarda nada),
+           é o jeito de o app saber quem está com ele na mão. */
+        S.prof = q.prof ? String(q.prof).trim().replace(/\s+/g, ' ').slice(0, 80) : '';
+        var t = q.turma ? String(q.turma) : '';
         if (t){ S.viaQr = true; ir('chamada', {turma:t}, true); }
         else semParametro();
       });

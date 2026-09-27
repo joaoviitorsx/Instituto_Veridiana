@@ -5,8 +5,10 @@
    Um arquivo. Sem dependencia. Sem build.
    ══════════════════════════════════════════════════════════════ */
 
+var VERSAO = '2.0';
+
 var S = {
-  turmaInicial:'', pilha:[], viaQr:false,
+  turmaInicial:'', pilha:[], viaQr:false, prof:'',
   turma:'', data:'', alunos:[], professores:[], professor:'', jaRegistrada:false,
   token:'', salvando:false,
   pin:'', gest:null, filtro:'ativos', busca:''
@@ -47,7 +49,15 @@ var P = {
   tabela:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/>',
   abrir:'<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h6"/>',
   varinha:'<path d="m3 21 9-9"/><path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8 19 13M17.8 6.2 19 5M12.2 6.2 11 5"/>',
-  prancheta:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/>'
+  prancheta:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/>',
+  pacote:'<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12M7.5 4.3l9 5.1"/>',
+  relogio:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  impressora:'<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+  etiqueta:'<path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z"/><path d="M7.5 7.5h.01"/>',
+  chave:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/>',
+  local:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+  lixo:'<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>',
+  filtro:'<path d="M22 3H2l8 9.5V19l4 2v-8.5z"/>'
 };
 function ico(n, t){
   return '<svg width="'+(t||20)+'" height="'+(t||20)+'" viewBox="0 0 24 24" fill="none" '+
@@ -109,10 +119,38 @@ function semAcento(s){
   return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
 }
 function plural(n, um, muitos){ return n + ' ' + (n === 1 ? um : muitos); }
+function primeiroNome(n){ return String(n || '').trim().split(/\s+/)[0] || ''; }
+function hojeISO(){
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') +
+         '-' + String(d.getDate()).padStart(2,'0');
+}
+function reais(v){
+  var n = Number(v || 0);
+  return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function copiar(txt){
+  function ok(){ vibrar(); toast('Link copiado'); }
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(ok, function(){ copiaAntiga(txt, ok); });
+  } else copiaAntiga(txt, ok);
+}
+function copiaAntiga(txt, ok){
+  var a = document.createElement('textarea');
+  a.value = txt; a.setAttribute('readonly','');
+  a.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+  document.body.appendChild(a); a.focus(); a.select();
+  var deu = false;
+  try { deu = document.execCommand('copy'); } catch(e){}
+  document.body.removeChild(a);
+  if (deu) ok(); else toast('Não deu para copiar sozinho. Segure o dedo no link.', 'erro');
+}
 
 /* ─── ponte com o Apps Script, com prazo ─── */
-/* Sem prazo, um 4G que cai deixa o botao em "Salvando..." para sempre. */
-function api(fn, args, ok, erro){
+/* Sem prazo, um 4G que cai deixa o botao em "Salvando..." para sempre.
+   Gerar PDF passa o prazo maior: o Drive leva seus segundos. */
+function api(fn, args, ok, erro, prazo){
   /* Sem a ponte do Apps Script isto lançava ReferenceError dentro do
      depois() e a tela ficava no esqueleto para sempre, sem mensagem. */
   if (typeof google === 'undefined' || !google.script || !google.script.run){
@@ -122,8 +160,8 @@ function api(fn, args, ok, erro){
   var fim = false;
   var t = setTimeout(function(){
     if (fim) return; fim = true;
-    erro({ message:'A internet demorou demais para responder.' });
-  }, 25000);
+    if (erro) erro({ message:'A internet demorou demais para responder.' });
+  }, prazo || 25000);
   function pronto(f){ return function(v){ if (fim) return; fim = true; clearTimeout(t); f(v); }; }
   var r = google.script.run
     .withSuccessHandler(pronto(ok))
@@ -252,6 +290,29 @@ function pedirFicha(titulo, campos, rotuloBotao, fn){
   setTimeout(function(){ var i = el('f_' + campos[0].id); if (i){ i.focus(); i.select(); } }, 320);
 }
 
+/* pedir um texto sem usar prompt() */
+function pedirTexto(titulo, rotulo, valor, rotuloBotao, fn){
+  abrirFolha(titulo,
+    '<div style="padding:0 8px"><div class="campo"><label for="campoTxt">' + esc(rotulo) + '</label>' +
+    '<input id="campoTxt" type="text" autocomplete="off" autocapitalize="words" ' +
+    'spellcheck="false" value="' + esc(valor || '') + '"></div></div>' +
+    '<div class="acoes"><button type="button" class="cancelar" data-t="0">Cancelar</button>' +
+    '<button type="button" class="confirmar" style="background:var(--roxo)" data-t="1">' +
+    esc(rotuloBotao) + '</button></div>');
+  function enviar(){
+    var v = (el('campoTxt').value || '').trim();
+    if (v.length < 2){ toast('Escreva pelo menos 2 letras.', 'erro'); return; }
+    fecharFolha(); setTimeout(function(){ fn(v); }, 60);
+  }
+  el('folhaCorpo').onclick = function(e){
+    var b = e.target.closest('[data-t]');
+    if (!b) return;
+    if (b.dataset.t === '1') enviar(); else fecharFolha();
+  };
+  el('folhaCorpo').onkeydown = function(e){ if (e.key === 'Enter'){ e.preventDefault(); enviar(); } };
+  setTimeout(function(){ var i = el('campoTxt'); if (i){ i.focus(); i.select(); } }, 320);
+}
+
 /* confirmacao de acao destrutiva */
 function confirmar(titulo, texto, rotulo, fn){
   abrirFolha(titulo,
@@ -305,8 +366,78 @@ function ir(t, p, raiz){ if (raiz) S.pilha = []; S.pilha.push({t:t, p:p||{}}); d
 function trocar(t, p){ S.pilha[S.pilha.length-1] = {t:t, p:p||{}}; desenhar(); }
 function voltar(){ if (S.pilha.length > 1){ S.pilha.pop(); desenhar(); } }
 
+/* ─── módulos sob demanda ───
+   A página só traz de saída o que a chamada e a tela inicial usam.
+   Gestão, caixa, agenda e materiais chegam na primeira vez que alguém
+   entra neles. O professor que escaneia o QR não baixa nada disso:
+   a chamada, que é o que abre 20 vezes por dia, não paga pelo resto. */
+var MODS = {};   /* nome -> true quando pronto, ou fila de espera */
+function modPronto(nome){
+  var fila = MODS[nome];
+  MODS[nome] = true;
+  if (fila && fila.forEach) fila.forEach(function(f){ f.ok(); });
+}
+function modDaTela(t){
+  return /^ag/.test(t) ? 'agenda' : /^mt/.test(t) ? 'materiais' : 'gestao';
+}
+function carregarModulo(nome, ok, erro){
+  ok = ok || function(){}; erro = erro || function(){};
+  if (MODS[nome] === true){ ok(); return; }
+  var jaPediu = !!MODS[nome];
+  if (!jaPediu) MODS[nome] = [];
+  MODS[nome].push({ok:ok, erro:erro});
+  if (jaPediu) return;
+  api('modulo', [nome], function(html){
+    var fila = MODS[nome];
+    /* innerHTML não executa <script>; cada bloco vira um elemento novo. */
+    var re = /<(script|style)[^>]*>([\s\S]*?)<\/\1>/gi, m;
+    while ((m = re.exec(html))){
+      var n = document.createElement(m[1].toLowerCase());
+      n.textContent = m[2];
+      (m[1].toLowerCase() === 'style' ? document.head : document.body).appendChild(n);
+    }
+    if (MODS[nome] !== true){
+      delete MODS[nome];
+      fila.forEach(function(f){ f.erro({message:'Parte do app não carregou. Recarregue a página.'}); });
+    }
+  }, function(e){
+    var fila = MODS[nome];
+    delete MODS[nome];
+    if (fila && fila.forEach) fila.forEach(function(f){ f.erro(e); });
+  }, 40000);
+}
+
+/* Escrita pede o código. Se ainda não foi digitado nesta visita, passa
+   pela tela do PIN e cai direto onde a pessoa queria ir. */
+function comPin(tela, p){
+  if (S.pin) ir(tela, p);
+  else ir('pin', {para:tela, paraP:p || {}});
+}
+/* Para ação que acontece na própria tela: pede o código e volta. */
+function pedirPin(){ ir('pin', {voltar:true}); }
+ACOES.copiarLink = function(b){ copiar(b.getAttribute('data-u')); };
+
 function desenhar(){
-  var a = atual(), tela = TELAS[a.t](a.p);
+  var a = atual();
+  if (!TELAS[a.t]){
+    el('cabTitulo').textContent = '';
+    el('btVoltar').hidden = S.pilha.length < 2;
+    el('btVoltar').innerHTML = ico('esq', 24);
+    el('btGestao').hidden = true;
+    el('cabPlacar').hidden = true;
+    document.body.classList.add('semcapa');
+    el('palco').innerHTML = '<div class="corpo">' + esqueleto(4) + '</div>';
+    el('barra').hidden = true; medirBarra();
+    carregarModulo(modDaTela(a.t), function(){
+      if (atual() === a) desenhar();
+    }, function(e){
+      if (atual() !== a) return;
+      el('palco').innerHTML = '<div class="corpo">' +
+        estado('alerta', 'Não deu para abrir', textoErro(e)) + '</div>';
+    });
+    return;
+  }
+  var tela = TELAS[a.t](a.p);
 
   el('cabTitulo').textContent = tela.titulo || '';
   el('btVoltar').hidden = S.pilha.length < 2 && !tela.voltar;

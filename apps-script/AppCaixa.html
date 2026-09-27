@@ -1,11 +1,6 @@
 <script>
 /* Fluxo de caixa: lançar em 4 toques, do celular, entre uma aula e outra. */
 
-function reais(v){
-  var n = Number(v || 0);
-  return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
-}
-
 /* Reduz a foto ANTES de subir. Nota fiscal de 4 MB em 4G instável não
    chega — e o comprovante é justamente o que não pode faltar. */
 function reduzirFoto(file, cb){
@@ -191,12 +186,6 @@ ACOES.lancar = function(b){
   setTimeout(function(){ var i = el('cxValor'); if (i) i.focus(); }, 320);
 };
 
-function hojeISO(){
-  var d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') +
-         '-' + String(d.getDate()).padStart(2,'0');
-}
-
 function salvarLanc(tipo){
   var valor = (el('cxValor').value || '').trim();
   if (!valor){ toast('Escreva o valor.', 'erro'); return; }
@@ -207,7 +196,7 @@ function salvarLanc(tipo){
     descricao: (el('cxDesc').value || '').trim(),
     fonte: (el('cxFonte').value || '').trim(),
     data: el('cxData').value || hojeISO(),
-    quem: S.professor || '',
+    quem: S.professor || S.prof || '',
     foto: fotoAtual
   };
   /* A folha fica aberta até o servidor confirmar. Fechá-la antes fazia

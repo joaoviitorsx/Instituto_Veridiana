@@ -6,7 +6,8 @@
    Ativa apenas quando window.google não existe.
 
    Abra assim:
-     preview.html                      -> tela de escolher turma
+     preview.html                      -> tela inicial
+     preview.html?prof=Vera%20Lúcia%20Sampaio -> atalho pessoal do professor
      preview.html?turma=Jazz%20Juvenil -> como se viesse do QR
      preview.html?dev=1                -> painel de rede e falhas
    Código da gestão no mock: 1234
@@ -155,6 +156,109 @@
     return Object.keys(v).sort(function(a,b){ return pt(a,b); });
   }
 
+  /* ─── agenda ─── */
+  var TIPOS_EV = ['Apresentação','Competição','Data comemorativa','Bazar','Ensaio geral','Reunião','Mídia','Outro'];
+  var STATUS_EV = ['Planejado','Confirmado','Realizado','Cancelado'];
+  var COR_TIPO = { 'Apresentação':'#4A1D6E','Competição':'#A34A12','Data comemorativa':'#AF2338',
+    'Bazar':'#16704A','Ensaio geral':'#1D5FA8','Reunião':'#56505E','Mídia':'#8A6314','Outro':'#6B5E78' };
+  var DATAS_FIXAS = [{ dia:'04-29', titulo:'Dia Internacional da Dança', tipo:'Data comemorativa' }];
+  var seqEv = 0;
+  function ev(data, titulo, tipo, o){
+    o = o || {};
+    return { id:'E' + (++seqEv), data:data, dataFim:o.fim || '', titulo:titulo, tipo:tipo,
+             turmas:o.turmas || [], local:o.local || '', status:o.status || 'Confirmado', obs:o.obs || '' };
+  }
+  var AGENDA = [
+    ev('2026-04-29','Dia Internacional da Dança','Data comemorativa',{status:'Realizado'}),
+    ev('2026-08-22','Bazar de agosto','Bazar',{status:'Realizado', local:'Pátio do instituto'}),
+    ev('2026-09-30','Gravação de vídeo para o Instagram','Mídia',{turmas:['Jazz Juvenil','Danças Urbanas']}),
+    ev('2026-10-03','Reunião com as famílias','Reunião',{local:'Sala de dança'}),
+    ev('2026-10-10','Bazar de primavera','Bazar',{local:'Pátio do instituto', status:'Planejado'}),
+    ev('2026-10-17','Festival de Dança de Fortaleza','Competição',{fim:'2026-10-19', turmas:['Contemporâneo Avançado','Jazz Juvenil'], local:'Theatro José de Alencar'}),
+    ev('2026-11-28','Ensaio geral do espetáculo','Ensaio geral',{status:'Planejado'}),
+    ev('2026-12-05','Espetáculo de fim de ano','Apresentação',{local:'Teatro do bairro', status:'Planejado'})
+  ];
+  function evFim(e){ return e.dataFim || e.data; }
+  function porData(a, b){ return a.data === b.data ? pt(a.titulo, b.titulo) : (a.data < b.data ? -1 : 1); }
+  function normEv(d, b){
+    b = b || {};
+    function pg(k){ return d[k] !== undefined ? d[k] : b[k]; }
+    var titulo = String(pg('titulo') || '').trim();
+    if (titulo.length < 2) throw new Error('Escreva o nome do evento.');
+    var data = String(pg('data') || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) throw new Error('Escolha a data do evento.');
+    var fim = String(pg('dataFim') || '');
+    if (fim === data) fim = '';
+    if (fim && fim < data) throw new Error('O evento termina antes de começar. Confira as datas.');
+    var tipo = pg('tipo');
+    return { titulo:titulo, data:data, dataFim:fim, tipo: TIPOS_EV.indexOf(tipo) !== -1 ? tipo : 'Outro',
+      turmas: pg('turmas') || [], local: String(pg('local') || ''), obs: String(pg('obs') || ''),
+      status: STATUS_EV.indexOf(pg('status')) !== -1 ? pg('status') : 'Planejado' };
+  }
+  function turmasAtivas(){ return TURMAS.filter(function(t){ return t.ativa; }).map(function(t){ return t.nome; }).sort(pt); }
+
+  /* ─── materiais ─── */
+  var FINALIDADES = ['Instituto','Bazar','Espetáculo','Ambos'];
+  var ESTADOS = ['Novo','Bom','Usado','Precisa reparo','Inservível'];
+  var SUG_CAT = ['Som e áudio','Figurino','Material de aula','Móveis','Limpeza','Bazar','Cenário'];
+  var SUG_LOC = ['Sala de dança','Depósito','Recepção','Armário 1'];
+  var seqMt = 0;
+  function mt(item, cat, fin, q, est, loc, obs){
+    return { id:'M' + (++seqMt), item:item, categoria:cat, finalidade:fin, quantidade:q,
+             estado:est, local:loc, obs:obs || '', ativo:true };
+  }
+  var MATERIAIS = [
+    mt('Caixa de som JBL','Som e áudio','Instituto',1,'Bom','Sala de dança'),
+    mt('Microfone sem fio','Som e áudio','Espetáculo',2,'Precisa reparo','Armário 1','um dos dois chia'),
+    mt('Extensão elétrica 10 m','Som e áudio','Instituto',3,'Usado','Depósito'),
+    mt('Collant preto infantil','Figurino','Espetáculo',24,'Bom','Armário 1'),
+    mt('Saia de tule rosa','Figurino','Espetáculo',18,'Usado','Armário 1'),
+    mt('Figurino do espetáculo 2024','Figurino','Bazar',11,'Usado','Depósito','peças avulsas para vender'),
+    mt('Sapatilha meia-ponta (vários tamanhos)','Figurino','Instituto',30,'Bom','Armário 1'),
+    mt('Colchonete','Material de aula','Instituto',15,'Bom','Sala de dança'),
+    mt('Barra portátil','Material de aula','Instituto',2,'Precisa reparo','Sala de dança','pé solto'),
+    mt('Bambolê','Material de aula','Instituto',12,'Bom','Depósito'),
+    mt('Fita de ginástica','Material de aula','Instituto',20,'Novo','Armário 1'),
+    mt('Cadeira de plástico','Móveis','Ambos',40,'Bom','Depósito'),
+    mt('Mesa dobrável','Móveis','Ambos',4,'Bom','Depósito'),
+    mt('Arara de roupas','Móveis','Bazar',2,'Bom','Depósito'),
+    mt('Espelho de parede','Móveis','Instituto',3,'Bom','Sala de dança'),
+    mt('Vassoura','Limpeza','Instituto',3,'Usado','Recepção'),
+    mt('Rodo','Limpeza','Instituto',2,'Usado','Recepção'),
+    mt('Roupas doadas (sacos)','Bazar','Bazar',9,'Bom','Depósito'),
+    mt('Calçados doados (pares)','Bazar','Bazar',27,'Bom','Depósito'),
+    mt('Brinquedos doados','Bazar','Bazar',14,'Usado','Depósito'),
+    mt('Painel de TNT estrelado','Cenário','Espetáculo',1,'Bom','Depósito'),
+    mt('Refletor de LED','Cenário','Espetáculo',4,'Precisa reparo','Depósito','dois não acendem')
+  ];
+  function lerMt(){ return MATERIAIS.filter(function(m){ return m.ativo; }); }
+  function distintos(campo){
+    var v = {}, fora = [];
+    MATERIAIS.forEach(function(m){ var x = m[campo]; if (x && !v[chave(x)]){ v[chave(x)] = 1; fora.push(x); } });
+    return fora.sort(pt);
+  }
+  function comSug(usadas, sug){
+    var tem = {}; usadas.forEach(function(u){ tem[chave(u)] = 1; });
+    return { usadas:usadas, sugestoes: usadas.length >= 3 ? [] : sug.filter(function(s){ return !tem[chave(s)]; }) };
+  }
+  function normMt(d, b){
+    b = b || {};
+    function pg(k){ return d[k] !== undefined ? d[k] : b[k]; }
+    var item = String(pg('item') || '').trim();
+    if (item.length < 2) throw new Error('Escreva o nome do item.');
+    var q = Number(pg('quantidade'));
+    if (!(q >= 0) || Math.floor(q) !== q) throw new Error('A quantidade precisa ser um número inteiro.');
+    return { item:item, categoria:String(pg('categoria') || '') || 'Sem categoria',
+      finalidade: FINALIDADES.indexOf(pg('finalidade')) !== -1 ? pg('finalidade') : 'Instituto',
+      quantidade:q, estado: ESTADOS.indexOf(pg('estado')) !== -1 ? pg('estado') : 'Bom',
+      local:String(pg('local') || ''), obs:String(pg('obs') || '') };
+  }
+  function acharMt(id){
+    var m = MATERIAIS.filter(function(x){ return x.id === id; })[0];
+    if (!m) throw new Error('Esse item não existe mais. Alguém pode ter mexido na planilha.');
+    return m;
+  }
+
   var TOKENS = {};
   var PIN = '1234';
   var URL_APP = 'https://script.google.com/macros/s/AKfycbwEXEMPLO0000000000000000000000000000/exec';
@@ -209,6 +313,117 @@
 
   /* ─── as funções que existem no Codigo.gs ─── */
   var API = {
+    /* Só usado pelo preview --lazy: devolve o módulo embutido. */
+    modulo: function(nome){
+      if (!window.__MODULOS || !window.__MODULOS[nome]) throw new Error('Parte do app desconhecida: ' + nome);
+      return window.__MODULOS[nome];
+    },
+    resumoInicial: function(prof){
+      var h = hoje(), saldo = 0;
+      CAIXA.forEach(function(r){ if (r.data.slice(0,7) <= h.slice(0,7)) saldo += r.tipo === 'Entrada' ? r.valor : -r.valor; });
+      var prox = AGENDA.filter(function(e){ return e.status !== 'Cancelado' && evFim(e) >= h; }).sort(porData);
+      var dia = new Date().getDay(), feitas = {}, cand = {};
+      CHAMADAS.forEach(function(c){
+        if (c.data === h){ feitas[c.turma] = 1; return; }
+        var p = c.data.split('-');
+        if (new Date(+p[0], +p[1]-1, +p[2]).getDay() === dia) cand[c.turma] = c.professor;
+      });
+      var k = chave(prof), turmas = Object.keys(cand).filter(function(t){ return !feitas[t]; });
+      var minhas = turmas.filter(function(t){ return chave(cand[t]) === k; });
+      if (k && minhas.length) turmas = minhas;
+      var destaque = null;
+      var deHoje = prox.filter(function(e){ return e.data <= h; })[0];
+      if (deHoje) destaque = {tipo:'evento', hoje:true, titulo:deHoje.titulo, data:deHoje.data, tipoEvento:deHoje.tipo};
+      else if (turmas.length) destaque = {tipo:'aula', turma:turmas.sort(pt)[0], hora:'15h', agora:new Date().getHours() === 15};
+      else if (prox[0]) destaque = {tipo:'evento', hoje:false, titulo:prox[0].titulo, data:prox[0].data, tipoEvento:prox[0].tipo};
+      return { turmas: API.listarTurmas().length,
+               proximo: prox[0] ? {titulo:prox[0].titulo, data:prox[0].data} : null,
+               saldo: Math.round(saldo * 100) / 100, materiais: lerMt().length, destaque: destaque };
+    },
+    listarAgenda: function(ano, mes){
+      var mm = String(mes).padStart(2,'0'), ini = ano + '-' + mm + '-01', fim = ano + '-' + mm + '-31';
+      return { ano:+ano, mes:+mes, hoje:hoje(), tipos:TIPOS_EV, status:STATUS_EV, cores:COR_TIPO, turmas:turmasAtivas(),
+        eventos: AGENDA.filter(function(e){ return e.data <= fim && evFim(e) >= ini; }).sort(porData) };
+    },
+    listarAgendaAno: function(ano){
+      var meses = [], total = 0;
+      for (var m = 1; m <= 12; m++) meses.push({mes:m, total:0, tipos:{}});
+      AGENDA.forEach(function(e){
+        if (e.status === 'Cancelado' || e.data > ano + '-12-31' || evFim(e) < ano + '-01-01') return;
+        total++;
+        var de = e.data < ano + '-01-01' ? 1 : +e.data.slice(5,7), ate = evFim(e) > ano + '-12-31' ? 12 : +evFim(e).slice(5,7);
+        for (var x = de; x <= ate; x++){ meses[x-1].total++; meses[x-1].tipos[e.tipo] = (meses[x-1].tipos[e.tipo] || 0) + 1; }
+      });
+      return { ano:+ano, hoje:hoje(), meses:meses, total:total, cores:COR_TIPO, tipos:TIPOS_EV };
+    },
+    criarEvento: function(pin, d){
+      exigirPin(pin); var e = normEv(d || {}); e.id = 'E' + (++seqEv); AGENDA.push(e);
+      return { ok:true, id:e.id, data:e.data };
+    },
+    editarEvento: function(pin, id, d){
+      exigirPin(pin);
+      var e = AGENDA.filter(function(x){ return x.id === id; })[0];
+      if (!e) throw new Error('Esse evento não existe mais. Alguém pode ter apagado na planilha.');
+      var n = normEv(d || {}, e); Object.keys(n).forEach(function(k){ e[k] = n[k]; });
+      return { ok:true, id:id, data:e.data };
+    },
+    excluirEvento: function(pin, id){
+      exigirPin(pin);
+      var i = AGENDA.findIndex(function(x){ return x.id === id; });
+      if (i === -1) throw new Error('Esse evento não existe mais.');
+      AGENDA.splice(i, 1); return { ok:true };
+    },
+    datasFixas: function(ano){
+      return { ano:+ano, cores:COR_TIPO, datas: DATAS_FIXAS.map(function(df){
+        var data = ano + '-' + df.dia;
+        return { dia:df.dia, data:data, titulo:df.titulo, tipo:df.tipo,
+          jaTem: AGENDA.some(function(e){ return e.data === data && chave(e.titulo) === chave(df.titulo); }) };
+      }) };
+    },
+    precarregarDatas: function(pin, ano, lista){
+      exigirPin(pin);
+      var criados = 0, ja = 0;
+      DATAS_FIXAS.forEach(function(df){
+        if ((lista || []).indexOf(df.dia) === -1) return;
+        var data = ano + '-' + df.dia;
+        if (AGENDA.some(function(e){ return e.data === data && chave(e.titulo) === chave(df.titulo); })){ ja++; return; }
+        API.criarEvento(pin, {titulo:df.titulo, data:data, tipo:df.tipo, status:'Confirmado'}); criados++;
+      });
+      if (!criados && !ja) throw new Error('Marque pelo menos uma data.');
+      return { ok:true, criados:criados, jaTinha:ja };
+    },
+    gerarCalendarioPdf: function(pin, ano){
+      exigirPin(pin);
+      return { ok:true, url:'https://drive.google.com/file/d/1EXEMPLO_CALENDARIO_000/view',
+        baixar:'https://drive.google.com/uc?export=download&id=1EXEMPLO_CALENDARIO_000',
+        nome:'Calendário ' + ano + ' — Instituto Veridiana.pdf', publico:true, paginas:4,
+        eventos: API.listarAgendaAno(ano).total };
+    },
+    listarMateriais: function(){
+      return { itens: lerMt().slice().sort(function(a, b){ return pt(a.categoria, b.categoria) || pt(a.item, b.item); }),
+        categorias: comSug(distintos('categoria'), SUG_CAT), locais: comSug(distintos('local'), SUG_LOC),
+        finalidades:FINALIDADES, estados:ESTADOS };
+    },
+    listarCategorias: function(){ return comSug(distintos('categoria'), SUG_CAT); },
+    listarLocais: function(){ return comSug(distintos('local'), SUG_LOC); },
+    criarMaterial: function(pin, d){
+      exigirPin(pin); var m = normMt(d || {}); m.id = 'M' + (++seqMt); m.ativo = true; MATERIAIS.push(m);
+      return { ok:true, id:m.id };
+    },
+    editarMaterial: function(pin, id, d){
+      exigirPin(pin); var m = acharMt(id), n = normMt(d || {}, m);
+      Object.keys(n).forEach(function(k){ m[k] = n[k]; }); return { ok:true, id:id };
+    },
+    ajustarQuantidade: function(pin, id, delta){
+      exigirPin(pin); var m = acharMt(id); m.quantidade = Math.max(0, m.quantidade + Number(delta));
+      return { ok:true, quantidade:m.quantidade };
+    },
+    inativarMaterial: function(pin, id){ exigirPin(pin); acharMt(id).ativo = false; return { ok:true }; },
+    renomearNaLista: function(pin, campo, de, para){
+      exigirPin(pin); var n = 0;
+      MATERIAIS.forEach(function(m){ if (m[campo] === de){ m[campo] = para; n++; } });
+      return { ok:true, mudou:n };
+    },
     listarTurmas: function(){
       var comAluno = {};
       ALUNOS.forEach(function(a){ if (a.ativo) comAluno[a.turma] = 1; });

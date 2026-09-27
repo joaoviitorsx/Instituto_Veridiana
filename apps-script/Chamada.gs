@@ -189,6 +189,7 @@ function salvarChamada(dados) {
     };
 
     if (dados.token) cache.put(chave, JSON.stringify(resposta), TTL_TOKEN);
+    tocarResumo_();   // a "próxima aula" da tela inicial já não é esta
     return resposta;
   } finally {
     trava.releaseLock();

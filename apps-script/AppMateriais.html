@@ -1,0 +1,553 @@
+<style>
+/* ─────────── materiais ─────────── */
+.mt-atalhos{display:flex;gap:8px;overflow-x:auto;margin:0 -16px 16px;padding:0 16px 2px;scrollbar-width:none}
+.mt-atalhos::-webkit-scrollbar{display:none}
+.mt-atalhos button{
+  flex:0 0 auto;min-height:44px;padding:0 16px;border-radius:999px;
+  display:flex;align-items:center;gap:8px;white-space:nowrap;
+  font-size:14px;font-weight:700;color:var(--roxo);
+  background:var(--papel);border:1px solid var(--borda);
+}
+.mt-atalhos button[aria-pressed="true"]{background:var(--roxo);border-color:var(--roxo);color:#fff}
+.mt-atalhos b{font-variant-numeric:tabular-nums}
+.mt-filtros{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.mt-filtros button{
+  min-height:48px;padding:6px 8px;border-radius:var(--r-p);text-align:left;
+  background:var(--papel);border:1px solid var(--borda);
+  font-size:12px;font-weight:600;color:var(--apagado);line-height:1.2;overflow:hidden;
+}
+.mt-filtros button b{display:block;font-size:14px;color:var(--tinta);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.mt-filtros button.on{border:2px solid var(--roxo);padding:5px 7px}
+.mt-filtros button.on b{color:var(--roxo)}
+.mt-limpar{display:block;margin:-4px 0 12px auto;min-height:44px;padding:0 4px;
+  font-size:14px;font-weight:600;color:var(--roxo)}
+.grupo-mt{margin-bottom:4px}
+.recolhe .conta-g{margin-left:auto;font-variant-numeric:tabular-nums}
+.qtd-li{flex-shrink:0;min-width:44px;text-align:right;font-size:17px;font-weight:700;
+  font-variant-numeric:tabular-nums}
+.selo-estado{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;
+  background:var(--justif-fraco);color:#6B4E12;margin-left:4px}
+.selo-estado.ruim{background:var(--falta-fraco);color:var(--falta)}
+
+.escolha{
+  width:100%;min-height:52px;padding:12px 16px;display:flex;align-items:center;gap:8px;text-align:left;
+  font-size:16px;background:var(--papel);border:1px solid var(--borda);border-radius:var(--r-m);
+}
+.escolha span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.escolha[data-vazio="true"] span{color:var(--apagado)}
+.escolha svg{color:var(--apagado);flex-shrink:0}
+
+.qtd{display:flex;align-items:center;gap:8px}
+.qtd button{
+  width:52px;height:52px;flex:0 0 52px;border-radius:var(--r-m);
+  display:grid;place-items:center;color:var(--roxo);
+  background:var(--papel);border:1px solid var(--borda);
+}
+.qtd button:active{background:var(--roxo-fraco)}
+.qtd input{flex:1;text-align:center;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.ficha-mt{text-align:center;padding:8px 0 4px}
+.ficha-mt h2{font-size:22px;margin:0;letter-spacing:-.02em;overflow-wrap:anywhere}
+.ficha-mt p{margin:4px 0 0;color:var(--apagado);font-size:14px}
+.qtd.grande{justify-content:center;margin:20px 0 8px}
+.qtd.grande button{width:64px;height:64px;flex-basis:64px}
+.qtd.grande output{min-width:96px;text-align:center;font-size:40px;font-weight:700;
+  letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+.qtd-rot{text-align:center;font-size:13px;color:var(--apagado);margin:0 0 16px}
+.folha .grupo-rot{font-size:13px;font-weight:600;color:var(--apagado);margin:12px 12px 4px}
+</style>
+<script>
+/* Materiais: estrutura fixa, categorias livres. Cadastro rápido é a
+   única métrica que importa aqui: cadastro lento não acontece. */
+
+/* "Ambos" é instituto e bazar: aparece no filtro de cada um. */
+function bateFinalidade(item, f){
+  if (!f) return true;
+  if (f === 'Instituto' || f === 'Bazar') return item.finalidade === f || item.finalidade === 'Ambos';
+  return item.finalidade === f;
+}
+function ehBazar(i){ return i.finalidade === 'Bazar' || i.finalidade === 'Ambos'; }
+function mtItem(id){ return ((S.mt && S.mt.itens) || []).filter(function(i){ return i.id === id; })[0]; }
+
+function carregarMt(fn, falhou){
+  api('listarMateriais', [{}], function(r){ S.mt = r; fn(r); }, falhou || function(e){ toast(textoErro(e), 'erro'); });
+}
+
+/* ══════════════ MATERIAIS: lista ══════════════ */
+TELAS.mtLista = function(){
+  if (!S.mtFiltro) S.mtFiltro = {categoria:'', finalidade:'', estado:'', busca:''};
+  if (!S.mtFechados) S.mtFechados = {};
+  return {
+    titulo:'Materiais',
+    html:'<div id="mtAtalhos"></div>' +
+      '<div class="busca">' + ico('lupa') +
+      '<input id="mtBusca" type="search" placeholder="Procurar item" autocomplete="off" aria-label="Procurar item" ' +
+      'value="' + esc(S.mtFiltro.busca) + '"></div>' +
+      '<div class="mt-filtros" id="mtFiltros"></div>' +
+      '<div id="mtLista">' + esqueleto(5) + '</div>',
+    barra:'<button type="button" class="salvar" data-acao="mtNovo">' + ico('mais') + 'Novo item</button>',
+    depois:function(){
+      el('mtBusca').addEventListener('input', function(){ S.mtFiltro.busca = this.value; pintarMt(); });
+      if (S.mt) pintarMt();
+      carregarMt(function(){ if (atual().t === 'mtLista') pintarMt(); }, function(e){
+        if (el('mtLista') && !S.mt) el('mtLista').innerHTML = estado('alerta', 'Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+
+function pintarMt(){
+  if (!el('mtLista') || !S.mt) return;
+  var F = S.mtFiltro, todos = S.mt.itens;
+  var nBazar = todos.filter(ehBazar).length;
+  var nReparo = todos.filter(function(i){ return i.estado === 'Precisa reparo'; }).length;
+
+  /* Os dois atalhos com valor operacional: o que vai para o bazar e o
+     que precisa de conserto. Com número, sem precisar abrir filtro. */
+  el('mtAtalhos').innerHTML = '<div class="mt-atalhos">' +
+    '<button type="button" data-acao="mtAtalho" data-a="bazar" aria-pressed="' + (F.finalidade === 'Bazar') + '">' +
+      ico('etiqueta', 18) + 'Para o bazar <b>' + nBazar + '</b></button>' +
+    '<button type="button" data-acao="mtAtalho" data-a="reparo" aria-pressed="' + (F.estado === 'Precisa reparo') + '">' +
+      ico('chave', 18) + 'Precisa reparo <b>' + nReparo + '</b></button>' +
+    '<button type="button" data-acao="mtResumo">' + ico('tabela', 18) + 'Resumo</button></div>';
+
+  function filtroBt(campo, rotulo, vazio){
+    var v = F[campo];
+    return '<button type="button" data-acao="mtFiltro" data-c="' + campo + '"' + (v ? ' class="on"' : '') + '>' +
+      esc(rotulo) + '<b>' + esc(v || vazio) + '</b></button>';
+  }
+  el('mtFiltros').innerHTML = filtroBt('categoria', 'Categoria', 'Todas') +
+    filtroBt('finalidade', 'Finalidade', 'Todas') + filtroBt('estado', 'Estado', 'Todos');
+
+  var b = semAcento(F.busca);
+  var lista = todos.filter(function(i){
+    if (F.categoria && i.categoria !== F.categoria) return false;
+    if (!bateFinalidade(i, F.finalidade)) return false;
+    if (F.estado && i.estado !== F.estado) return false;
+    return !b || semAcento(i.item).indexOf(b) !== -1 || semAcento(i.local).indexOf(b) !== -1;
+  });
+  var algumFiltro = F.categoria || F.finalidade || F.estado || F.busca;
+  var h = algumFiltro ? '<button type="button" class="mt-limpar" data-acao="mtLimpar">Limpar filtros</button>' : '';
+
+  if (!todos.length){
+    el('mtLista').innerHTML = estado('pacote', 'Nenhum item ainda',
+      'Toque em "Novo item" aqui embaixo. Nome, quantidade e onde fica já bastam.');
+    return;
+  }
+  if (!lista.length){
+    el('mtLista').innerHTML = h + estado('lupa', 'Nada com esse filtro', 'Troque o filtro ou limpe a busca.');
+    return;
+  }
+  var grupos = {}, ordem = [];
+  lista.forEach(function(i){
+    if (!grupos[i.categoria]){ grupos[i.categoria] = []; ordem.push(i.categoria); }
+    grupos[i.categoria].push(i);
+  });
+  ordem.forEach(function(cat, gi){
+    var aberto = !S.mtFechados[cat];
+    h += '<div class="grupo-mt"><button type="button" class="recolhe" data-acao="mtGrupo" data-g="' + esc(cat) +
+         '" aria-expanded="' + aberto + '" aria-controls="mtG' + gi + '">' +
+         '<span class="seta">' + ico('dir', 18) + '</span>' + esc(cat) +
+         '<span class="conta-g">' + grupos[cat].length + '</span></button>' +
+         '<ul class="lista sem-avatar" id="mtG' + gi + '"' + (aberto ? '' : ' hidden') + '>';
+    grupos[cat].forEach(function(i){
+      var ruim = i.estado === 'Precisa reparo' || i.estado === 'Inservível';
+      h += '<li class="li" data-acao="mtAbrir" data-id="' + esc(i.id) + '" role="button" tabindex="0">' +
+           '<span class="nome">' + esc(i.item) +
+           (ruim ? '<span class="selo-estado ruim">' + esc(i.estado) + '</span>' : '') +
+           '<small>' + esc([i.local || 'sem local', ehBazar(i) ? 'bazar' : ''].filter(Boolean).join(' · ')) + '</small></span>' +
+           '<span class="qtd-li" aria-label="' + plural(i.quantidade, 'unidade', 'unidades') + '">' + i.quantidade + '</span></li>';
+    });
+    h += '</ul></div>';
+  });
+  el('mtLista').innerHTML = h;
+}
+
+ACOES.mtGrupo = function(b){
+  var g = b.getAttribute('data-g');
+  var aberto = b.getAttribute('aria-expanded') === 'true';
+  S.mtFechados[g] = aberto;
+  b.setAttribute('aria-expanded', aberto ? 'false' : 'true');
+  el(b.getAttribute('aria-controls')).hidden = aberto;
+};
+ACOES.mtAtalho = function(b){
+  var a = b.getAttribute('data-a'), F = S.mtFiltro;
+  if (a === 'bazar') F.finalidade = F.finalidade === 'Bazar' ? '' : 'Bazar';
+  else F.estado = F.estado === 'Precisa reparo' ? '' : 'Precisa reparo';
+  vibrar(); pintarMt();
+};
+ACOES.mtLimpar = function(){
+  S.mtFiltro = {categoria:'', finalidade:'', estado:'', busca:''};
+  if (el('mtBusca')) el('mtBusca').value = '';
+  vibrar(); pintarMt();
+};
+ACOES.mtFiltro = function(b){
+  var c = b.getAttribute('data-c'), F = S.mtFiltro;
+  var valores = c === 'categoria' ? distintosCliente('categoria')
+              : c === 'finalidade' ? S.mt.finalidades : S.mt.estados;
+  var titulo = c === 'categoria' ? 'Categoria' : c === 'finalidade' ? 'Finalidade' : 'Estado';
+  var ops = [{txt:c === 'estado' ? 'Todos' : 'Todas', marcado:!F[c], fn:function(){ F[c] = ''; pintarMt(); }}];
+  valores.forEach(function(v){
+    ops.push({txt:v, sub:c === 'finalidade' && v === 'Ambos' ? 'instituto e bazar' : '',
+              marcado:F[c] === v, fn:function(){ F[c] = v; pintarMt(); }});
+  });
+  folhaOpcoes(titulo, ops);
+};
+function distintosCliente(campo){
+  var v = {};
+  (S.mt.itens || []).forEach(function(i){ if (i[campo]) v[i[campo]] = 1; });
+  return Object.keys(v).sort(function(a, b){ return a.localeCompare(b, 'pt-BR'); });
+}
+ACOES.mtAbrir = function(b){ ir('mtItem', {id:b.getAttribute('data-id')}); };
+ACOES.mtNovo = function(){ comPin('mtNovo', {}); };
+ACOES.mtResumo = function(){ ir('mtResumo'); };
+
+/* ══════════════ MATERIAIS: novo / editar ══════════════ */
+TELAS.mtNovo = function(p){
+  return {
+    titulo: p.id ? 'Editar item' : 'Novo item',
+    html:esqueleto(4),
+    barra:'<button type="button" class="salvar" id="btMtSalvar" data-acao="mtSalvar" disabled>Salvar item</button>',
+    depois:function(){
+      if (S.mt) montarFormMt(p);
+      else carregarMt(function(){ montarFormMt(p); });
+    }
+  };
+};
+
+function montarFormMt(p){
+  var a = atual();
+  if (!a || a.t !== 'mtNovo' || a.p !== p) return;
+  var ult = S.mtUltimo || {};
+  var it = p.id ? mtItem(p.id) : null;
+  if (p.id && !it){
+    el('palco').querySelector('.corpo').innerHTML = estado('alerta', 'Item não encontrado', 'Volte e abra de novo.');
+    return;
+  }
+  /* Cadastro em série (ela arrumando o depósito): categoria, local e
+     finalidade repetem os do último item salvo. */
+  var f = it ? JSON.parse(JSON.stringify(it)) : {
+    item:'', quantidade:1, categoria:ult.categoria || '', local:ult.local || '',
+    estado:'Bom', finalidade:ult.finalidade || 'Instituto', obs:''
+  };
+  if (f.categoria === 'Sem categoria') f.categoria = '';
+  S.mtForm = f;
+
+  var h = '<div class="campo"><label for="mtNome">Nome do item</label>' +
+    '<input id="mtNome" type="text" autocomplete="off" autocapitalize="sentences" maxlength="120" ' +
+    'placeholder="Ventilador de coluna" value="' + esc(f.item) + '"></div>';
+  h += '<div class="campo"><label for="mtQtd">Quantidade</label><div class="qtd">' +
+    '<button type="button" data-q="-1" aria-label="Menos um">' + ico('menos', 22) + '</button>' +
+    '<input id="mtQtd" type="number" inputmode="numeric" min="0" step="1" value="' + f.quantidade + '">' +
+    '<button type="button" data-q="1" aria-label="Mais um">' + ico('mais', 22) + '</button></div></div>';
+  h += '<div class="campo"><label>Categoria</label>' +
+    '<button type="button" class="escolha" id="mtCat" data-lista="categoria" data-vazio="' + !f.categoria + '">' +
+    '<span>' + esc(f.categoria || 'Escolher ou criar') + '</span>' + ico('dir', 18) + '</button></div>';
+  h += '<div class="campo"><label>Onde fica</label>' +
+    '<button type="button" class="escolha" id="mtLocal" data-lista="local" data-vazio="' + !f.local + '">' +
+    '<span>' + esc(f.local || 'Escolher ou criar') + '</span>' + ico('dir', 18) + '</button></div>';
+  h += '<div class="campo"><label>Estado</label><div class="chips" id="mtEstado">';
+  S.mt.estados.forEach(function(e){
+    h += '<button type="button" class="chip' + (f.estado === e ? ' on' : '') + '" data-est="' + esc(e) + '">' + esc(e) + '</button>';
+  });
+  h += '</div></div>';
+  h += '<div class="campo"><label>Para que serve</label><div class="chips" id="mtFin">';
+  S.mt.finalidades.forEach(function(x){
+    h += '<button type="button" class="chip' + (f.finalidade === x ? ' on' : '') + '" data-fin="' + esc(x) + '">' +
+         esc(x === 'Ambos' ? 'Ambos (instituto e bazar)' : x) + '</button>';
+  });
+  h += '</div></div>';
+  h += '<div class="campo"><label for="mtObs">Observação <i>(opcional)</i></label>' +
+    '<input id="mtObs" type="text" autocomplete="off" maxlength="500" value="' + esc(f.obs) + '"></div>';
+
+  var corpo = el('palco').querySelector('.corpo');
+  corpo.innerHTML = h;
+  el('btMtSalvar').disabled = false;
+  corpo.onclick = function(e){
+    var q = e.target.closest('[data-q]');
+    if (q){
+      var n = Math.max(0, (parseInt(el('mtQtd').value, 10) || 0) + +q.getAttribute('data-q'));
+      el('mtQtd').value = n; vibrar(); return;
+    }
+    var l = e.target.closest('[data-lista]');
+    if (l){ escolherNaLista(l.getAttribute('data-lista')); return; }
+    var es = e.target.closest('[data-est]');
+    if (es){ marcarUm('mtEstado', es); f.estado = es.getAttribute('data-est'); return; }
+    var fi = e.target.closest('[data-fin]');
+    if (fi){ marcarUm('mtFin', fi); f.finalidade = fi.getAttribute('data-fin'); }
+  };
+  if (!p.id) setTimeout(function(){ var i = el('mtNome'); if (i) i.focus(); }, 200);
+}
+
+function marcarUm(id, alvo){
+  el(id).querySelectorAll('.chip').forEach(function(c){ c.classList.toggle('on', c === alvo); });
+  vibrar();
+}
+
+/* Categoria e local: o que já existe, sugestões enquanto a lista é
+   curta, e "criar" no fim. É aqui que mora a liberdade que ela pediu. */
+function escolherNaLista(campo){
+  var f = S.mtForm;
+  var L = campo === 'categoria' ? S.mt.categorias : S.mt.locais;
+  var nome = campo === 'categoria' ? 'categoria' : 'local';
+  var html = '<ul>';
+  var ops = [];
+  function linha(v){
+    ops.push(v);
+    html += '<li><button type="button" class="opc" data-v="' + (ops.length - 1) + '" aria-selected="' + (f[campo] === v) + '">' +
+            ico(campo === 'categoria' ? 'etiqueta' : 'local') + '<span>' + esc(v) + '</span>' +
+            '<span class="cv">' + ico('cheque') + '</span></button></li>';
+  }
+  L.usadas.forEach(linha);
+  html += '</ul>';
+  if (L.sugestoes.length){
+    html += '<p class="grupo-rot">Sugestões</p><ul>';
+    L.sugestoes.forEach(linha);
+    html += '</ul>';
+  }
+  html += '<ul><li><button type="button" class="opc" data-v="novo" style="color:var(--roxo)">' + ico('mais') +
+          '<span>Criar ' + (campo === 'categoria' ? 'categoria' : 'local') + '</span></button></li>';
+  if (f[campo]) html += '<li><button type="button" class="opc" data-v="nada">' + ico('menos') +
+          '<span>Deixar sem ' + nome + '</span></button></li>';
+  html += '</ul>';
+  abrirFolha(campo === 'categoria' ? 'Categoria' : 'Onde fica', html);
+  el('folhaCorpo').onclick = function(e){
+    var b = e.target.closest('[data-v]');
+    if (!b) return;
+    var v = b.getAttribute('data-v');
+    fecharFolha();
+    if (v === 'novo'){
+      setTimeout(function(){
+        pedirTexto(campo === 'categoria' ? 'Nova categoria' : 'Novo local',
+          campo === 'categoria' ? 'Nome da categoria' : 'Nome do lugar', '', 'Usar', function(txt){
+            /* Mesma coisa com outra grafia vira a existente: "som e audio"
+               não pode nascer como categoria nova ao lado de "Som e áudio". */
+            var igual = L.usadas.concat(L.sugestoes).filter(function(x){ return semAcento(x) === semAcento(txt); })[0];
+            aplicarEscolha(campo, igual || txt);
+          });
+      }, 60);
+      return;
+    }
+    aplicarEscolha(campo, v === 'nada' ? '' : ops[+v]);
+  };
+}
+function aplicarEscolha(campo, v){
+  S.mtForm[campo] = v;
+  var b = el(campo === 'categoria' ? 'mtCat' : 'mtLocal');
+  if (!b) return;
+  b.dataset.vazio = v ? 'false' : 'true';
+  b.querySelector('span').textContent = v || 'Escolher ou criar';
+  vibrar();
+}
+
+ACOES.mtSalvar = function(){
+  var p = atual().p, f = S.mtForm;
+  if (!el('mtNome')) return;
+  var dados = {
+    item: el('mtNome').value.trim(),
+    quantidade: parseInt(el('mtQtd').value, 10),
+    categoria: f.categoria, local: f.local,
+    estado: f.estado, finalidade: f.finalidade,
+    obs: el('mtObs').value.trim()
+  };
+  if (dados.item.length < 2){ toast('Escreva o nome do item.', 'erro'); el('mtNome').focus(); return; }
+  if (!(dados.quantidade >= 0)){ toast('Escreva a quantidade.', 'erro'); el('mtQtd').focus(); return; }
+  var bt = el('btMtSalvar');
+  bt.disabled = true; bt.textContent = 'Salvando…';
+  api(p.id ? 'editarMaterial' : 'criarMaterial', p.id ? [S.pin, p.id, dados] : [S.pin, dados], function(){
+    vibrar();
+    S.mtUltimo = {categoria:dados.categoria, local:dados.local, finalidade:dados.finalidade};
+    toast(p.id ? 'Item salvo' : dados.item + ' cadastrado');
+    carregarMt(function(){
+      if (atual() && atual().t === 'mtNovo'){ voltar(); }
+    });
+  }, function(e){
+    var b2 = el('btMtSalvar');
+    if (b2){ b2.disabled = false; b2.textContent = 'Salvar item'; }
+    toast(textoErro(e), 'erro');
+  });
+};
+
+/* ══════════════ MATERIAIS: ficha do item ══════════════ */
+TELAS.mtItem = function(p){
+  var it = mtItem(p.id);
+  if (!it) return { titulo:'Item', html:estado('alerta', 'Item não encontrado', 'Volte para a lista e abra de novo.') };
+  var linhas = [
+    ['etiqueta', 'Categoria', it.categoria],
+    ['local', 'Onde fica', it.local || 'sem local'],
+    ['cheque', 'Estado', it.estado],
+    ['pacote', 'Para que serve', it.finalidade === 'Ambos' ? 'Instituto e bazar' : it.finalidade]
+  ];
+  if (it.obs) linhas.push(['documento', 'Observação', it.obs]);
+  var h = '<div class="ficha-mt"><h2>' + esc(it.item) + '</h2></div>' +
+    '<div class="qtd grande">' +
+      '<button type="button" data-acao="mtMais" data-n="-1" aria-label="Menos um">' + ico('menos', 26) + '</button>' +
+      '<output id="mtQ" aria-live="polite">' + it.quantidade + '</output>' +
+      '<button type="button" data-acao="mtMais" data-n="1" aria-label="Mais um">' + ico('mais', 26) + '</button></div>' +
+    '<p class="qtd-rot" id="mtQrot">' + (it.quantidade === 1 ? 'unidade' : 'unidades') + '</p>' +
+    '<ul class="lista sem-avatar">';
+  linhas.forEach(function(l){
+    h += '<li class="li"><span class="nome"><small style="margin:0 0 2px">' + esc(l[1]) + '</small>' + esc(l[2]) + '</span></li>';
+  });
+  h += '</ul>';
+  if (it.estado !== 'Inservível'){
+    h += '<button type="button" class="botao-vazio" data-acao="mtInservivel">' + ico('alerta', 18) +
+         ' Marcar como inservível</button>';
+  }
+  h += '<button type="button" class="botao-vazio" style="color:var(--falta);border-color:#EDC6CE" data-acao="mtDescartar">' +
+       ico('lixo', 18) + ' Tirar da lista</button>';
+  return {
+    titulo:it.item, html:h,
+    barra:'<button type="button" class="salvar" data-acao="mtEditar">' + ico('renomear') + 'Editar</button>'
+  };
+};
+
+/* Mais e menos respondem na hora e mandam um ajuste só depois que o
+   dedo para: cinco toques seguidos são uma escrita, não cinco. */
+var mtAjuste = {id:'', delta:0, t:0};
+ACOES.mtMais = function(b){
+  if (!S.pin){ pedirPin(); return; }
+  var id = atual().p.id, it = mtItem(id);
+  if (!it) return;
+  var n = +b.getAttribute('data-n');
+  if (it.quantidade + n < 0) return;
+  if (mtAjuste.id && mtAjuste.id !== id) enviarAjuste();
+  it.quantidade += n;
+  mtAjuste.id = id; mtAjuste.delta += n;
+  pintarQtd(it.quantidade);
+  vibrar();
+  clearTimeout(mtAjuste.t);
+  mtAjuste.t = setTimeout(enviarAjuste, 800);
+};
+function pintarQtd(q){
+  el('mtQ').textContent = q;
+  el('mtQrot').textContent = q === 1 ? 'unidade' : 'unidades';
+}
+function enviarAjuste(){
+  clearTimeout(mtAjuste.t);
+  var id = mtAjuste.id, d = mtAjuste.delta;
+  mtAjuste = {id:'', delta:0, t:0};
+  if (!id || !d) return;
+  api('ajustarQuantidade', [S.pin, id, d], function(r){
+    var it = mtItem(id);
+    if (it) it.quantidade = r.quantidade;
+    var a = atual();
+    if (a && a.t === 'mtItem' && a.p.id === id && el('mtQ') && mtAjuste.id !== id) pintarQtd(r.quantidade);
+  }, function(e){
+    var it = mtItem(id);
+    if (it) it.quantidade = Math.max(0, it.quantidade - d);
+    var a = atual();
+    if (a && a.t === 'mtItem' && a.p.id === id && el('mtQ') && it) pintarQtd(it.quantidade);
+    toast('A quantidade não foi salva. ' + textoErro(e), 'erro');
+  });
+}
+ACOES.mtEditar = function(){ enviarAjuste(); comPin('mtNovo', {id:atual().p.id}); };
+ACOES.mtInservivel = function(){
+  if (!S.pin){ pedirPin(); return; }
+  var id = atual().p.id, it = mtItem(id);
+  confirmar('Marcar como inservível', it.item + ' continua na lista, marcado como sem uso. Se foi para o lixo, use "Tirar da lista".',
+    'Marcar', function(){
+      api('editarMaterial', [S.pin, id, {estado:'Inservível'}], function(){
+        vibrar(); toast(it.item + ' marcado como inservível');
+        carregarMt(function(){ if (atual().t === 'mtItem') desenhar(); });
+      }, function(e){ toast(textoErro(e), 'erro'); });
+    });
+};
+ACOES.mtDescartar = function(){
+  if (!S.pin){ pedirPin(); return; }
+  var id = atual().p.id, it = mtItem(id);
+  confirmar('Tirar da lista', it.item + ' sai da lista de materiais. A linha continua guardada na planilha.',
+    'Tirar da lista', function(){
+      api('inativarMaterial', [S.pin, id], function(){
+        vibrar(); toast(it.item + ' saiu da lista');
+        carregarMt(function(){ if (atual().t === 'mtItem') voltar(); });
+      }, function(e){ toast(textoErro(e), 'erro'); });
+    });
+};
+
+/* ══════════════ MATERIAIS: resumo ══════════════ */
+TELAS.mtResumo = function(){
+  return {
+    titulo:'Resumo dos materiais', html:esqueleto(4),
+    depois:function(){
+      if (S.mt) pintarResumoMt();
+      carregarMt(function(){ if (atual().t === 'mtResumo') pintarResumoMt(); });
+    }
+  };
+};
+function pintarResumoMt(){
+  var corpo = el('palco').querySelector('.corpo');
+  var itens = S.mt.itens;
+  if (!itens.length){
+    corpo.innerHTML = estado('pacote', 'Nenhum item ainda', 'Cadastre os materiais pela lista.');
+    return;
+  }
+  var unidades = 0, porCat = {};
+  itens.forEach(function(i){
+    unidades += i.quantidade;
+    var c = porCat[i.categoria] || (porCat[i.categoria] = {itens:0, un:0});
+    c.itens++; c.un += i.quantidade;
+  });
+  var cats = Object.keys(porCat).sort(function(a, b){ return a.localeCompare(b, 'pt-BR'); });
+  var h = '<div class="numeros">' +
+    '<div><b>' + itens.length + '</b><span>' + (itens.length === 1 ? 'item' : 'itens') + '</span></div>' +
+    '<div><b>' + unidades + '</b><span>unidades</span></div>' +
+    '<div><b>' + cats.length + '</b><span>' + (cats.length === 1 ? 'categoria' : 'categorias') + '</span></div></div>';
+
+  function listaItens(titulo, lista, vazio){
+    var s = '<div class="secao">' + esc(titulo) + '</div>';
+    if (!lista.length) return s + '<p class="dica" style="margin:0 4px">' + esc(vazio) + '</p>';
+    s += '<ul class="lista sem-avatar">';
+    lista.forEach(function(i){
+      s += '<li class="li" data-acao="mtAbrir" data-id="' + esc(i.id) + '" role="button" tabindex="0">' +
+           '<span class="nome">' + esc(i.item) + '<small>' + esc(i.local || 'sem local') + '</small></span>' +
+           '<span class="qtd-li">' + i.quantidade + '</span></li>';
+    });
+    return s + '</ul>';
+  }
+  h += listaItens('Para o bazar', itens.filter(ehBazar), 'Nenhum item marcado para o bazar.');
+  h += listaItens('Precisam de reparo', itens.filter(function(i){ return i.estado === 'Precisa reparo'; }),
+                  'Nada quebrado. Ótimo.');
+
+  function grupos(titulo, campo, mapa, nomes){
+    var s = '<div class="secao">' + titulo + '</div><ul class="lista sem-avatar">';
+    nomes.forEach(function(c){
+      s += '<li class="li" data-acao="mtListaResumo" data-campo="' + campo + '" data-c="' + esc(c) + '" role="button" tabindex="0">' +
+           '<span class="nome">' + esc(c) + '<small>' + plural(mapa[c].un, 'unidade', 'unidades') + '</small></span>' +
+           '<span class="qtd-li">' + mapa[c].itens + '</span></li>';
+    });
+    return s + '</ul>';
+  }
+  var porLocal = {};
+  itens.forEach(function(i){
+    var k = i.local || 'Sem local';
+    var c = porLocal[k] || (porLocal[k] = {itens:0, un:0});
+    c.itens++; c.un += i.quantidade;
+  });
+  h += grupos('Por categoria', 'categoria', porCat, cats);
+  h += grupos('Por local', 'local', porLocal,
+              Object.keys(porLocal).sort(function(a, b){ return a.localeCompare(b, 'pt-BR'); }));
+  h += '<p class="dica" style="margin:0 4px">Toque numa categoria ou num local para ver os itens ou mudar o nome.</p>';
+  corpo.innerHTML = h;
+}
+ACOES.mtListaResumo = function(b){
+  var c = b.getAttribute('data-c'), campo = b.getAttribute('data-campo');
+  var vazio = c === 'Sem categoria' || c === 'Sem local';
+  var ops = [{txt:'Ver os itens', icone:'lupa', fn:function(){
+    S.mtFiltro = {categoria:'', finalidade:'', estado:'', busca:''};
+    if (campo === 'categoria') S.mtFiltro.categoria = c;
+    else S.mtFiltro.busca = vazio ? '' : c;
+    voltar();
+  }}];
+  if (!vazio) ops.push({txt:'Mudar o nome', sub:'muda em todos os itens de uma vez', icone:'renomear', fn:function(){
+    if (!S.pin){ pedirPin(); return; }
+    pedirTexto('Mudar o nome', campo === 'categoria' ? 'Novo nome da categoria' : 'Novo nome do local', c, 'Mudar', function(novo){
+      api('renomearNaLista', [S.pin, campo, c, novo], function(r){
+        vibrar(); toast(plural(r.mudou, 'item mudou', 'itens mudaram') + ' para ' + novo);
+        carregarMt(function(){ if (atual().t === 'mtResumo') pintarResumoMt(); });
+      }, function(e){ toast(textoErro(e), 'erro'); });
+    });
+  }});
+  folhaOpcoes(c, ops);
+};
+</script>

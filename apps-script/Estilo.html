@@ -581,6 +581,56 @@ main{padding:0 0 24px}
 .duplo .secundario{background:var(--papel);color:var(--roxo);border:1px solid var(--borda)}
 .duplo .secundario:active{background:var(--fundo)}
 
+/* ─────────── tela inicial ─────────── */
+.capa-inicio .topo{align-items:center}
+.capa-inicio .logo{
+  width:52px;height:52px;flex:0 0 52px;border-radius:16px;
+  background:#fff;color:var(--roxo);padding:3px;
+}
+.destaque{margin-bottom:16px}
+.destaque.carregando .osso{height:84px;border-radius:var(--r-m)}
+.destaque button{
+  width:100%;display:flex;align-items:center;gap:12px;text-align:left;
+  padding:16px;min-height:84px;
+  background:var(--papel);border:1px solid var(--borda);border-left:4px solid var(--roxo);
+  border-radius:var(--r-m);box-shadow:var(--sombra);
+  transition:background 160ms var(--curva);
+}
+.destaque button:active{background:var(--fundo)}
+.destaque .de-ic{
+  width:44px;height:44px;flex:0 0 44px;border-radius:50%;
+  display:grid;place-items:center;background:var(--roxo);color:#fff;
+}
+.destaque .txt{flex:1;min-width:0}
+.destaque small{display:block;font-size:12px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--roxo)}
+.destaque b{display:block;font-size:18px;font-weight:700;letter-spacing:-.015em;
+  line-height:1.25;margin-top:2px;overflow-wrap:anywhere}
+.destaque .txt span{display:block;font-size:14px;color:var(--apagado);margin-top:2px}
+.destaque .seta{color:var(--apagado);flex-shrink:0}
+
+.blocos{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.bloco{
+  position:relative;width:100%;height:100%;min-height:120px;
+  display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+  padding:16px;text-align:left;
+  background:var(--papel);border:1px solid var(--borda);
+  border-radius:var(--r-m);box-shadow:var(--sombra);
+  transition:background 160ms var(--curva);
+}
+.bloco:active{background:var(--fundo)}
+.bl-ic{
+  width:44px;height:44px;border-radius:50%;margin-bottom:8px;
+  display:grid;place-items:center;background:var(--roxo-fraco);color:var(--roxo);
+}
+.bl-pin{position:absolute;top:16px;right:16px;color:var(--apagado)}
+.bloco b{font-size:17px;font-weight:700;letter-spacing:-.015em;line-height:1.2}
+/* A linha de apoio reserva a altura desde o começo: o número chega
+   depois e a grade não pula debaixo do dedo. */
+.bloco small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  min-height:1.45em;font-size:13px;line-height:1.45;color:var(--apagado)}
+.rodape{margin:32px 0 8px;text-align:center;font-size:12px;color:var(--apagado)}
+
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
   .fim .selo-ok svg path{stroke-dashoffset:0}

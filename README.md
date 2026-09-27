@@ -54,6 +54,46 @@ com o celular na mão, o olho acha as três faltas sem procurar.
 
 ---
 
+## A entrada
+
+O QR da parede continua abrindo **direto** na lista de chamada, sem
+nenhuma tela no meio. A tela inicial só aparece para quem abre o app
+sem `?turma=`: saudação, a data, um cartão com a aula que deve estar
+começando (ou o evento de hoje) e a grade de seções, cada uma com um
+número de verdade — "6 turmas", "R$ 1.288,20 em caixa", "127 itens".
+
+A "próxima aula" não depende de grade de horário cadastrada: sai da hora
+em que cada turma costuma ter a chamada salva, no mesmo dia da semana,
+nas últimas 5 semanas.
+
+**Link por professor.** O iframe do Apps Script não guarda nada entre
+uma visita e outra, então o app sabe quem é a pessoa pelo endereço:
+`.../exec?prof=Vera%20Lúcia`. A saudação usa o primeiro nome e a chamada
+já vem com a professora escolhida — de 5 para 4 toques. Em **Gestão →
+QR e links → Link por professor** cada um recebe o seu pelo WhatsApp.
+
+## Agenda anual
+
+A coordenação monta o planejamento do ano, **imprime um calendário** e
+escreve nele à mão. A agenda não compete com o papel: alimenta o papel.
+Lista por mês, visão do ano com a contagem de cada mês, datas fixas para
+pré-carregar em janeiro, e o **calendário em PDF, A4 deitado**, uma
+página por trimestre, com espaço em branco em cada dia para escrever.
+
+Só o Dia Internacional da Dança está nas datas fixas. As demais esperam
+confirmação da coordenação (`DATAS_FIXAS` em `Agenda.gs`) — lista
+genérica de internet vira ruído que ela teria que limpar.
+
+## Materiais
+
+Estrutura fixa, categorias livres. Os campos são sempre os mesmos;
+categoria e local ela cria digitando, no próprio cadastro. Atalhos com
+número no topo: **para o bazar** e **precisa reparo**. Mais e menos na
+ficha do item. Item descartado nunca é apagado.
+
+Fora da v1, de propósito: histórico de quem pegou, foto, código de barras
+e valor patrimonial. Cadastro lento não acontece.
+
 ## Além da chamada
 
 ### Caixa
@@ -188,9 +228,10 @@ mínimo 44px.
 ## Estrutura
 
 ```
-apps-script/        cole estes 17 arquivos no editor do Apps Script
-  Codigo.gs           constantes, doGet e montagem da página
+apps-script/        cole estes 23 arquivos no editor do Apps Script
+  Codigo.gs           constantes, doGet, montagem da página e módulos
   Util.gs             planilha, datas, cache e trava
+  Inicio.gs           números da tela inicial e "próxima aula"
   Chamada.gs          o fluxo do QR
   Gestao.gs           PIN, turmas, alunos, professores
   Planilha.gs         link, padronização, Painel e menu
@@ -198,16 +239,22 @@ apps-script/        cole estes 17 arquivos no editor do Apps Script
   Impacto.gs          evasão, relatório de edital, aniversários
   Certificado.gs      certificado em PDF com carga horária
   Caixa.gs            entradas, saídas, comprovantes e resumo
+  Agenda.gs           agenda anual e calendário em PDF
+  Materiais.gs        lista de materiais
   Index.html          casca da página
-  Estilo.html         todo o CSS
-  AppNucleo.html      estado, ícones, ponte com o servidor, roteador
+  Estilo.html         CSS da casca, da entrada, da chamada e da gestão
+  AppNucleo.html      estado, ícones, ponte, roteador, módulos sob demanda
+  AppInicio.html      tela inicial
   AppChamada.html     telas da chamada
-  AppGestao.html      telas da área da equipe
-  AppCaixa.html       telas do fluxo de caixa
-  AppQr.html          encoder de QR
-  AppPartida.html     lê a turma da URL e abre a primeira tela
+  AppPartida.html     lê turma e professor da URL e abre a primeira tela
+  AppGestao.html      telas da área da equipe          (sob demanda)
+  AppCaixa.html       telas do fluxo de caixa          (sob demanda)
+  AppQr.html          encoder de QR                    (sob demanda)
+  AppAgenda.html      telas da agenda, com o CSS dela  (sob demanda)
+  AppMateriais.html   telas de materiais, com o CSS    (sob demanda)
 
 mock.js             mock do google.script.run, só para o navegador
+gerar-preview.py    monta o preview.html
 preview.html        abre no navegador, funciona sem servidor
 assets/             telas do app
 icones/             ícone do atalho na tela inicial
@@ -217,6 +264,12 @@ O `doGet` encaixa o CSS antes de `</head>` e os scripts antes de
 `</body>`. Não usa template do Apps Script, então nenhum arquivo pode
 conter a sequência de scriptlet.
 
+**Peso.** A página que o `doGet` entrega leva só entrada e chamada:
+73 KB (22 KB compactada), contra 126 KB de antes, quando tudo vinha junto.
+Gestão, caixa, agenda e materiais chegam por `modulo()` na primeira vez
+que alguém abre a seção — e a tela inicial já os baixa em segundo plano.
+Quem escaneia o QR nunca baixa nenhum deles.
+
 ---
 
 ## Rodar sem instalar nada
@@ -224,7 +277,8 @@ conter a sequência de scriptlet.
 Abra o **`preview.html`** no navegador. Ele já vem montado, com um mock do
 `google.script.run` que só liga quando `window.google` não existe.
 
-- `preview.html` — escolher turma
+- `preview.html` — tela inicial
+- `preview.html?prof=Vera%20Lúcia%20Sampaio` — atalho pessoal da professora
 - `preview.html?turma=Jazz%20Juvenil` — como se viesse do QR da parede
 - `preview.html?dev=1` — painel para simular 4G ruim e queda de rede
 - Código da gestão no preview: **1234**
@@ -232,34 +286,25 @@ Abra o **`preview.html`** no navegador. Ele já vem montado, com um mock do
 Para regerar o `preview.html` depois de mexer em `apps-script/`:
 
 ```bash
-python3 - <<'PY'
-import os
-B, P = 'apps-script', ['AppNucleo','AppChamada','AppGestao','AppQr','AppPartida']
-ler = lambda n: open(os.path.join(B, n + '.html'), encoding='utf-8').read()
-def antes(a, tag, c):
-    i = a.rindex(tag); return a[:i] + c + '\n' + a[i:]
-h = antes(ler('Index'), '</head>', ler('Estilo'))
-h = antes(h, '</body>', '\n'.join(ler(n) for n in P))
-i = h.index('</head>')
-h = h[:i] + '<script>\n' + open('mock.js', encoding='utf-8').read() + '\n</script>\n' + h[i:]
-open('preview.html', 'w', encoding='utf-8').write(h)
-print('preview.html gerado')
-PY
+python3 gerar-preview.py
 ```
+
+`python3 gerar-preview.py --lazy teste.html` monta uma versão em que os
+módulos chegam pelo mock, para testar o carregamento sob demanda.
 
 ---
 
 ## 1. Colar no Apps Script
 
-São 17 arquivos. No editor, o botão **+** ao lado de "Arquivos" cria cada um.
+São 23 arquivos. No editor, o botão **+** ao lado de "Arquivos" cria cada um.
 
 **Arquivos de script** (`+` → **Script**). Digite o nome sem `.gs`:
 
-`Codigo` · `Util` · `Chamada` · `Gestao` · `Planilha` · `Historico` · `Impacto` · `Certificado` · `Caixa`
+`Codigo` · `Util` · `Inicio` · `Chamada` · `Gestao` · `Planilha` · `Historico` · `Impacto` · `Certificado` · `Caixa` · `Agenda` · `Materiais`
 
 **Arquivos de HTML** (`+` → **HTML**). Digite o nome sem `.html`:
 
-`Index` · `Estilo` · `AppNucleo` · `AppChamada` · `AppGestao` · `AppCaixa` · `AppQr` · `AppPartida`
+`Index` · `Estilo` · `AppNucleo` · `AppInicio` · `AppChamada` · `AppPartida` · `AppGestao` · `AppCaixa` · `AppQr` · `AppAgenda` · `AppMateriais`
 
 Em cada um: `Ctrl+A`, `Delete`, cole o conteúdo do arquivo de mesmo nome
 da pasta `apps-script/`, `Ctrl+S`.
@@ -273,6 +318,11 @@ versão → Implantar**. Sem isso o link continua servindo o código antigo.
 > `Certificado.gs` e `Caixa.gs` usam o Drive para salvar PDF e comprovante. Na primeira vez que
 > você gerar um certificado, o Google vai pedir autorização de novo —
 > é o escopo do Drive entrando. Autorize e siga.
+>
+> O calendário para imprimir (`Agenda.gs`) monta a página num Google
+> Docs temporário, porque o conversor de HTML do certificado não sabe
+> fazer folha deitada. Na primeira vez o Google pede autorização para
+> **Documentos**. O Docs temporário vai para a lixeira logo depois.
 
 Na primeira vez, em **Implantar → Nova implantação → Tipo: App da Web**:
 
@@ -286,7 +336,7 @@ acesso de edição à planilha.
 
 ## 2. Criar o código da gestão (o "PIN")
 
-**Não existe senha padrão.** Enquanto você não criar uma, a engrenagem
+**Não existe senha padrão.** Enquanto você não criar uma, o botão Gestão
 responde *"Ainda não existe código"* — é isso que você viu.
 
 O `1234` só vale no `preview.html`, nunca no app publicado.
@@ -363,9 +413,11 @@ O atalho abre em tela cheia, sem barra de endereço.
 > `.../Instituto_Veridiana/?turma=Jazz%20Juvenil` — o `?turma=` é
 > repassado para dentro.
 
-## 4. QR de cada turma
+## 4. QR de cada turma e link de cada professor
 
-Engrenagem → **QR das turmas** → escolha a turma.
+Tela inicial → **Gestão** → **QR e links**. Aba **QR das turmas**: escolha
+a turma. Aba **Link por professor**: escolha a pessoa e mande pelo
+WhatsApp; ela abre e adiciona à tela inicial do celular.
 
 O endereço do app é descoberto sozinho. Se aparecer o aviso de que falta o
 endereço, use **Veridiana → Configurar endereço do app** e cole o link que
@@ -388,8 +440,15 @@ cartaz, no tamanho A5.
 | `Chamadas` | Registro, Data, Turma, Professor, Aluno, Status |
 | `Turmas` | Turma, Ativa (SIM/NAO), Minutos por aula |
 | `Caixa` | Registro, Data, Tipo, Valor, Categoria, Descrição, Fonte, Comprovante, Quem registrou |
+| `Agenda` | ID, Data, DataFim, Titulo, Tipo, Turmas, Local, Status, Observacao |
+| `Materiais` | ID, Item, Categoria, Finalidade, Quantidade, Estado, Local, Observacao, Ativo |
 
-`Chamadas` e `Turmas` nascem sozinhas no primeiro uso.
+`Chamadas`, `Turmas`, `Agenda` e `Materiais` nascem sozinhas no primeiro uso.
+Linha digitada direto na planilha, sem ID, ganha um na primeira leitura.
+
+> **Saldo na tela inicial.** A tela inicial abre sem código, e mostra o
+> saldo do caixa. Se a coordenação preferir que o número fique só dentro
+> do Caixa, troque `MOSTRAR_SALDO_NA_ENTRADA` para `false` em `Inicio.gs`.
 
 `Turmas` foi acrescentada porque turma criada sem nenhum aluno não tinha
 onde existir nas três abas originais, e "arquivar turma" precisa guardar
