@@ -206,7 +206,31 @@ function formatarAba_(ss, def) {
  * Painel com Tabela Dinâmica de verdade, do jeito que o Planilhas
  * entende. Fica sempre vivo: recalcula sozinho quando chega chamada
  * nova, sem fórmula escrita na mão e sem depender do idioma do arquivo.
+ *
+ * Cada tabela olha só para uma janela: o mês atual por turma e os
+ * últimos 14 dias por dia. Sem janela, "por dia" ganhava uma linha por
+ * dia × turma para sempre (mais de mil em um ano, que ninguém lê e que
+ * pesam para abrir a planilha). O histórico inteiro, por mês, está no
+ * app: Gestão → Histórico e Relatório para edital.
  */
+const DIAS_PAINEL = 14;
+
+/* Filtro da própria dinâmica, por fórmula (sintaxe americana, com
+   vírgula: é a que o Apps Script usa, seja qual for o idioma da
+   planilha). Continua se atualizando
+   sozinho com a data de hoje. TEXT(Data) funciona com a data guardada
+   como texto (o normal) e com linha antiga guardada como data. Se o
+   Planilhas recusar o filtro, a tabela fica sem ele — o Painel não
+   pode derrubar o "Arrumar e padronizar". */
+function janelaPainel_(pivo, formula) {
+  try {
+    pivo.addFilter(2, SpreadsheetApp.newFilterCriteria().whenFormulaSatisfied(formula).build());
+    return true;
+  } catch (e) {
+    Logger.log('Painel sem janela: ' + e);
+    return false;
+  }
+}
 function montarPainel_(ss) {
   const origem = ss.getSheetByName(ABA_CHAMADAS).getRange('A:F');
   let aba = ss.getSheetByName('Painel');
@@ -218,7 +242,8 @@ function montarPainel_(ss) {
 
   aba.getRange('A1').setValue('Frequência — Instituto Veridiana')
     .setFontSize(16).setFontWeight('bold').setFontColor('#4A1D6E');
-  aba.getRange('A2').setValue('Tudo aqui se atualiza sozinho a cada chamada salva.')
+  aba.getRange('A2').setValue('Tudo aqui se atualiza sozinho a cada chamada salva. ' +
+    'O histórico completo está no app: Gestão → Histórico.')
     .setFontSize(10).setFontColor('#6B5E78');
 
   /* As duas dinâmicas ficam LADO A LADO, não uma embaixo da outra.
@@ -227,20 +252,22 @@ function montarPainel_(ss) {
      lançava erro no meio do arrumarPlanilha, deixando a planilha meio
      formatada, ou a segunda dava #REF!. Lado a lado a colisão é
      impossível, porque cada uma cresce só para baixo. */
-  aba.getRange('A4').setValue('POR TURMA')
-    .setFontWeight('bold').setFontSize(11).setFontColor('#4A1D6E');
   const p1 = aba.getRange('A5').createPivotTable(origem);
   p1.addRowGroup(3);                                   // C = Turma
   p1.addColumnGroup(6);                                // F = Status
   p1.addPivotValue(5, SpreadsheetApp.PivotTableSummarizeFunction.COUNTA); // E = Aluno
-
-  aba.getRange('G4').setValue('POR DIA')
+  const mes = janelaPainel_(p1, '=LEFT(TEXT(Data,"yyyy-mm-dd"),7)=TEXT(TODAY(),"yyyy-mm")');
+  aba.getRange('A4').setValue(mes ? 'POR TURMA · MÊS ATUAL' : 'POR TURMA')
     .setFontWeight('bold').setFontSize(11).setFontColor('#4A1D6E');
+
   const p2 = aba.getRange('G5').createPivotTable(origem);
   p2.addRowGroup(2);                                   // B = Data
   p2.addRowGroup(3);                                   // C = Turma
   p2.addColumnGroup(6);                                // F = Status
   p2.addPivotValue(5, SpreadsheetApp.PivotTableSummarizeFunction.COUNTA);
+  const dias = janelaPainel_(p2, '=TEXT(Data,"yyyy-mm-dd")>=TEXT(TODAY()-' + DIAS_PAINEL + ',"yyyy-mm-dd")');
+  aba.getRange('G4').setValue(dias ? 'POR DIA · ÚLTIMOS ' + DIAS_PAINEL + ' DIAS' : 'POR DIA')
+    .setFontWeight('bold').setFontSize(11).setFontColor('#4A1D6E');
 
   aba.setColumnWidth(1, 200);
   aba.setColumnWidth(7, 110);

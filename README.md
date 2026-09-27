@@ -263,7 +263,9 @@ depois de 7 dias sem acesso — férias escolares derrubariam o sistema.
 
 **Nada de gráfico dentro do app.** O painel de frequência vive na
 planilha, com Tabela Dinâmica montada pelo próprio código. Duplicar cria
-duas verdades, e a do app sempre fica pior.
+duas verdades, e a do app sempre fica pior. Cada tabela olha para uma
+janela — o mês atual por turma, os últimos 14 dias por dia — para não
+crescer para sempre; o histórico inteiro, mês a mês, está no app.
 
 **Aluno nunca é apagado.** Sai da chamada virando `Ativo = NAO`, para o
 histórico dele não ficar órfão.
