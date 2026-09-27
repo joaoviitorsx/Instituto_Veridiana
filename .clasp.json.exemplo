@@ -1,4 +1,7 @@
 {
   "scriptId": "SEU_ID_DO_SCRIPT",
-  "rootDir": "apps-script"
+  "rootDir": "apps-script",
+  "scriptExtensions": [".gs"],
+  "htmlExtensions": [".html"],
+  "jsonExtensions": [".json"]
 }
