@@ -14,7 +14,8 @@ var S = {
   sessao:'', usuario:null, gest:null, filtro:'ativos', busca:''
 };
 
-var CICLO = { 'Presente':'Falta', 'Falta':'Justificada', 'Justificada':'Presente' };
+/* A chamada começa com todo mundo em falta: um toque dá presença. */
+var CICLO = { 'Falta':'Presente', 'Presente':'Justificada', 'Justificada':'Falta' };
 
 /* ─── icones: Lucide, traco 2, colados inline ─── */
 var P = {
@@ -507,7 +508,7 @@ function desenhar(){
   el('cabTitulo').textContent = tela.titulo || '';
   el('btVoltar').hidden = S.pilha.length < 2 && !tela.voltar;
   el('btVoltar').innerHTML = ico('esq', 24);
-  el('btGestao').hidden = !tela.gestao || !ehGestao();
+  el('btGestao').hidden = !tela.gestao;
   el('btGestao').innerHTML = ico('engrenagem', 22);
   el('cabPlacar').hidden = !tela.placar;
 
@@ -535,7 +536,7 @@ function medirBarra(){
 }
 
 el('btVoltar').addEventListener('click', voltar);
-el('btGestao').addEventListener('click', function(){ comGestao('gestao'); });
+el('btGestao').addEventListener('click', function(){ ir('gestao'); });
 
 /* Escuta no documento, não no #palco: a barra de ação (#barra) e o
    cabeçalho ficam FORA do palco, e um listener só no palco deixava

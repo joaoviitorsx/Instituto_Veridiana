@@ -109,7 +109,7 @@ function listaTurmas_(mapa) {
 
 /** Quem da turma já tem histórico suficiente para receber certificado. */
 function alunosParaCertificado(sessao, turma) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   return doCache('cert_' + turma + '_' + versaoResumo_(), TTL_CACHE, function () { return alunosParaCertificado_(sessao, turma); });
 }
 function alunosParaCertificado_(sessao, turma) {
@@ -142,7 +142,7 @@ function pastaCertificados_() {
  * nomes = array de nomes de alunos.
  */
 function gerarCertificado(sessao, nomes, turma) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const lista = (nomes || []).filter(function (n) { return String(n || '').trim(); });
   if (!lista.length) throw new Error('Escolha pelo menos um aluno.');
   if (lista.length > 60) throw new Error('Máximo de 60 certificados por vez.');

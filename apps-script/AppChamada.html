@@ -1,5 +1,5 @@
 <script>
-/* O fluxo do QR: escolher turma, marcar faltas, salvar. */
+/* O fluxo do QR: escolher turma, marcar presenças, salvar. */
 /* ══════════════ TELA: escolher turma ══════════════ */
 TELAS.turmas = function(){
   return {
@@ -55,7 +55,7 @@ TELAS.chamada = function(p){
     voltar: !S.viaQr,
     depois: function(){
       /* Uma resposta só, nunca repintada: repintar a lista apagaria as
-         faltas já marcadas. Serve a pré-carga se tiver menos de 1 min;
+         presenças já marcadas. Serve a pré-carga se tiver menos de 1 min;
          "já teve chamada hoje" o servidor confere de novo ao salvar. */
       ler('carregarTurma', [p.turma], montarChamada, function(e){
         el('palco').querySelector('.corpo').innerHTML =
@@ -78,9 +78,11 @@ function montarChamada(d){
   /* Quem abriu pelo próprio link (?prof=) já vem escolhido. O cartão
      continua tocável: professora substituta troca num toque. */
   S.professor = profDoLink(S.professores) || d.professorSugerido || '';
-  S.jaRegistrada = !!d.jaRegistrada; S.forcar = false;
+  S.jaRegistrada = !!d.jaRegistrada; S.forcar = false; S.confirmouVazia = false;
   S.token = sorteioToken();
-  S.alunos = (d.alunos || []).map(function(n){ return {aluno:n, status:'Presente'}; });
+  /* Pedido das professoras: todo mundo começa com falta e o toque dá
+     presença. Assim ninguém recebe presença por esquecimento. */
+  S.alunos = (d.alunos || []).map(function(n){ return {aluno:n, status:'Falta'}; });
 
   el('capaData').textContent = dataExtenso(d.data);
 
@@ -110,12 +112,12 @@ function montarChamada(d){
        '<span class="txt"><small>Quem está dando a aula</small>' +
        '<b id="profNome">' + esc(S.professor || 'Escolher') + '</b></span>' +
        '<span class="seta">' + ico('dir') + '</span></button>';
-  h += '<div class="instrucao"><span>Toque em quem faltou</span>' +
+  h += '<div class="instrucao"><span>Toque em quem veio</span>' +
        '<button type="button" id="btTodos" data-acao="todosPresentes" hidden>Todos presentes</button></div>';
   h += '<ul class="lista">';
   S.alunos.forEach(function(a, i){
-    h += '<li class="li" data-st="Presente" id="li' + i + '" data-acao="ciclar" data-i="' + i + '"' +
-         ' role="button" tabindex="0" aria-label="' + esc(a.aluno) + ', presente">' +
+    h += '<li class="li" data-st="Falta" id="li' + i + '" data-acao="ciclar" data-i="' + i + '"' +
+         ' role="button" tabindex="0" aria-label="' + esc(a.aluno) + ', faltou">' +
          '<span class="ini">' + esc(iniciais(a.aluno)) + '</span>' +
          '<span class="nome">' + esc(a.aluno) + '</span>' +
          '<span class="marca" id="mk' + i + '"></span></li>';
@@ -183,10 +185,11 @@ function atualizarPlacar(){
   var p = S.alunos.filter(function(a){ return a.status === 'Presente'; }).length;
   var n = S.alunos.length, f = n - p;
   el('capaN').textContent = p + '/' + n;
-  el('capaR').textContent = f === 0 ? 'turma completa' : plural(f, 'faltou', 'faltaram');
+  el('capaR').textContent = f === 0 ? 'turma completa'
+    : p === 0 ? 'toque em quem veio' : plural(f, 'faltou', 'faltaram');
   el('cabPlacar').textContent = p + '/' + n;
   var bt = el('btTodos');
-  if (bt) bt.hidden = (f === 0);   /* nada a desfazer enquanto todos estao presentes */
+  if (bt) bt.hidden = (f === 0);   /* atalho para turma cheia; some quando todos já estão presentes */
   el('cabPlacar').setAttribute('aria-label', p + ' de ' + n + ' presentes');
 }
 
@@ -209,6 +212,15 @@ ACOES.escolherProf = escolherProf;
 /* ─── salvar ─── */
 ACOES.salvar = function(){
   if (!S.professor){ toast('Escolha quem está dando a aula', 'erro'); escolherProf(); return; }
+  /* Com falta de ponto de partida, salvar sem tocar em ninguém dá falta
+     para a turma inteira. Pode ser verdade (ninguém veio), mas quase
+     sempre é esquecimento: pergunta antes. */
+  if (!S.confirmouVazia && !S.alunos.some(function(a){ return a.status !== 'Falta'; })){
+    confirmar('Ninguém presente?',
+      'Nenhum aluno foi marcado como presente. Se salvar assim, a turma inteira fica com falta.',
+      'Salvar com todos em falta', function(){ S.confirmouVazia = true; ACOES.salvar(); });
+    return;
+  }
   if (S.jaRegistrada && !S.forcar){
     confirmar('Salvar de novo?',
       'Esta turma já teve chamada salva hoje. Salvar de novo cria um segundo registro e conta em dobro nos relatórios.',

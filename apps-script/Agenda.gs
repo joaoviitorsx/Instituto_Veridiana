@@ -14,7 +14,7 @@
  *   Turmas separadas por ponto e vírgula; vazio = todas as turmas.
  *   Datas guardadas como texto aaaa-mm-dd, igual às outras abas.
  *
- * Leitura é de toda a equipe logada. Escrita é só da gestão.
+ * Leitura e escrita são de toda a equipe logada.
  */
 
 const ABA_AGENDA = 'Agenda';
@@ -242,7 +242,7 @@ function acharEvento_(id) {
 }
 
 function criarEvento(sessao, dados) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const e = normalizarEvento_(dados || {});
   return comTrava(function () {
     const id = novoId_('E');
@@ -252,7 +252,7 @@ function criarEvento(sessao, dados) {
 }
 
 function editarEvento(sessao, id, dados) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   return comTrava(function () {
     const ev = acharEvento_(id);
     const e = normalizarEvento_(dados || {}, ev);
@@ -266,7 +266,7 @@ function editarEvento(sessao, id, dados) {
 /* Apagar é para engano de digitação. Evento que não vai mais acontecer
    é Cancelado: continua no registro do ano. */
 function excluirEvento(sessao, id) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   return comTrava(function () {
     const ev = acharEvento_(id);
     abaAgenda().deleteRow(ev.linha);
@@ -300,7 +300,7 @@ function datasFixas_(ano) {
  * já está na agenda do ano é pulada.
  */
 function precarregarDatas(sessao, ano, lista) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const a = anoValido_(ano);
   const quer = (lista || []).map(String);
   const escolhidas = DATAS_FIXAS.filter(function (df) { return quer.indexOf(df.dia) !== -1; });
@@ -358,7 +358,7 @@ const MES_NOME = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'J
                   'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
 function gerarCalendarioPdf(sessao, ano) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   /* Cronômetro: cada chamada ao DocumentApp custa, e o critério para
      trocar de caminho (plano B pela planilha) é o tempo real. Sai no
      Registro de execução e na tela. */

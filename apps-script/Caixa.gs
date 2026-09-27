@@ -99,7 +99,7 @@ function pastaComprovantes_() {
  * restrito a quem já tem acesso ao Drive do instituto.
  */
 function lancarCaixa(sessao, dados) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const d = dados || {};
   const tipo = d.tipo === 'Entrada' ? 'Entrada' : (d.tipo === 'Saída' ? 'Saída' : '');
   if (!tipo) throw new Error('Diga se é entrada ou saída.');
@@ -146,7 +146,7 @@ function comTravaCaixa_(fn) {
 }
 
 function mesesCaixa(sessao) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const vistos = {};
   lerCaixa_().forEach(function (r) {
     if (r.data.length >= 7) vistos[r.data.slice(0, 7)] = 1;
@@ -159,7 +159,7 @@ function mesesCaixa(sessao) {
 
 /** Lançamentos do mês, do mais novo para o mais velho, com o saldo. */
 function listarCaixa(sessao, mes) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   if (!/^[0-9]{4}-[0-9]{2}$/.test(String(mes || ''))) throw new Error('Mês inválido.');
 
   const todos = lerCaixa_();
@@ -204,7 +204,7 @@ function fontesUsadas_(todos) {
 
 /** Apagar é para corrigir digitação. Só pela linha exata. */
 function apagarLancamento(sessao, linha, valorConfere) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const n = Number(linha);
   if (!(n > 1)) throw new Error('Lançamento não encontrado.');
   return comTravaCaixa_(function () {
@@ -223,7 +223,7 @@ function apagarLancamento(sessao, linha, valorConfere) {
 
 /** Totais por categoria e por fonte, para colar na prestação de contas. */
 function resumoCaixa(sessao, inicio, fim) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(String(inicio || '')) ||
       !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(String(fim || '')))
     throw new Error('Escolha as duas datas do período.');

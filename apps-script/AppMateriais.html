@@ -203,7 +203,7 @@ function distintosCliente(campo){
   return Object.keys(v).sort(function(a, b){ return a.localeCompare(b, 'pt-BR'); });
 }
 ACOES.mtAbrir = function(b){ ir('mtItem', {id:b.getAttribute('data-id')}); };
-ACOES.mtNovo = function(){ comGestao('mtNovo', {}); };
+ACOES.mtNovo = function(){ ir('mtNovo', {}); };
 ACOES.mtResumo = function(){ ir('mtResumo'); };
 
 /* ══════════════ MATERIAIS: novo / editar ══════════════ */
@@ -410,7 +410,6 @@ TELAS.mtItem = function(p){
    dedo para: cinco toques seguidos são uma escrita, não cinco. */
 var mtAjuste = {id:'', delta:0, t:0};
 ACOES.mtMais = function(b){
-  if (!ehGestao()){ semPermissao(); return; }
   var id = atual().p.id, it = mtItem(id);
   if (!it) return;
   var n = +b.getAttribute('data-n');
@@ -445,9 +444,8 @@ function enviarAjuste(){
     toast('A quantidade não foi salva. ' + textoErro(e), 'erro');
   });
 }
-ACOES.mtEditar = function(){ enviarAjuste(); comGestao('mtNovo', {id:atual().p.id}); };
+ACOES.mtEditar = function(){ enviarAjuste(); ir('mtNovo', {id:atual().p.id}); };
 ACOES.mtInservivel = function(){
-  if (!ehGestao()){ semPermissao(); return; }
   var id = atual().p.id, it = mtItem(id);
   confirmar('Marcar como inservível', it.item + ' continua na lista, marcado como sem uso. Se foi para o lixo, use "Tirar da lista".',
     'Marcar', function(){
@@ -458,7 +456,6 @@ ACOES.mtInservivel = function(){
     });
 };
 ACOES.mtDescartar = function(){
-  if (!ehGestao()){ semPermissao(); return; }
   var id = atual().p.id, it = mtItem(id);
   confirmar('Tirar da lista', it.item + ' sai da lista de materiais. A linha continua guardada na planilha.',
     'Tirar da lista', function(){
@@ -544,7 +541,6 @@ ACOES.mtListaResumo = function(b){
     voltar();
   }}];
   if (!vazio) ops.push({txt:'Mudar o nome', sub:'muda em todos os itens de uma vez', icone:'renomear', fn:function(){
-    if (!ehGestao()){ semPermissao(); return; }
     pedirTexto('Mudar o nome', campo === 'categoria' ? 'Novo nome da categoria' : 'Novo nome do local', c, 'Mudar', function(novo){
       api('renomearNaLista', [campo, c, novo], function(r){
         vibrar(); toast(plural(r.mudou, 'item mudou', 'itens mudaram') + ' para ' + novo);

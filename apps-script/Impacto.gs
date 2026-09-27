@@ -32,7 +32,7 @@ const DIAS_RISCO = 120;
  * separada no resultado, para a conversa com a família ser outra.
  */
 function alunosEmRisco(sessao, minimo) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   return doCache('risco_' + minimo + '_' + hoje() + '_' + versaoResumo_(), TTL_CACHE, function () { return alunosEmRisco_(sessao, minimo); });
 }
 function alunosEmRisco_(sessao, minimo) {
@@ -83,8 +83,7 @@ function alunosEmRisco_(sessao, minimo) {
 
 /** Só a contagem, para o menu de gestão mostrar sem carregar a tela toda. */
 function contarRisco(sessao) {
-  exigirGestao(sessao);
-  return alunosEmRisco(sessao, 3).alunos.length;
+  return alunosEmRisco(sessao, 3).alunos.length;   // alunosEmRisco já confere a sessão
 }
 
 /**
@@ -94,7 +93,7 @@ function contarRisco(sessao) {
  * que os editais usam.
  */
 function relatorioPeriodo(sessao, inicio, fim) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const de = String(inicio || ''), ate = String(fim || '');
   if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(de) || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(ate))
     throw new Error('Escolha as duas datas do período.');
@@ -157,7 +156,7 @@ function relatorioPeriodo(sessao, inicio, fim) {
 
 /** Aniversariantes de hoje até daqui a 6 dias. */
 function aniversariantesSemana(sessao) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   return doCache('aniv_' + hoje(), TTL_CACHE, function () { return aniversariantesSemana_(sessao); });
 }
 function aniversariantesSemana_(sessao) {

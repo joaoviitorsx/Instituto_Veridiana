@@ -4,14 +4,21 @@
 
 /* ─── endereço do app, para o QR ─── */
 function obterUrlApp(sessao){
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const guardada = PropertiesService.getDocumentProperties().getProperty('URL_APP');
-  if (guardada) return guardada;
+  if (guardada) return urlLimpa_(guardada);
   try {
     const u = ScriptApp.getService().getUrl();
-    if (u) return u;
+    if (u) return urlLimpa_(u);
   } catch (e){}
   return '';
+}
+
+/* O link copiado do navegador vem com /u/2/ quando a pessoa tem várias
+   contas Google abertas: é o número da conta NAQUELE navegador. Num QR,
+   manda o celular de outra pessoa para uma conta que não existe. */
+function urlLimpa_(u){
+  return String(u || '').trim().replace(/\/macros\/u\/\d+\/s\//, '/macros/s/');
 }
 
 function configurarUrlApp(){
@@ -19,7 +26,7 @@ function configurarUrlApp(){
   const r = ui.prompt('Endereço do app',
     'Cole aqui o link que termina em /exec, o mesmo que você abre no celular:', ui.ButtonSet.OK_CANCEL);
   if (r.getSelectedButton() !== ui.Button.OK) return;
-  const u = r.getResponseText().trim();
+  const u = urlLimpa_(r.getResponseText());
   if (!u) return;
   PropertiesService.getDocumentProperties().setProperty('URL_APP', u);
   ui.alert('Pronto. Os QR das turmas já usam esse endereço.');
@@ -29,7 +36,7 @@ function configurarUrlApp(){
    deixar duas funções com o mesmo nome: a segunda apaga a primeira. */
 function onOpen(){
   SpreadsheetApp.getUi().createMenu('Veridiana')
-    .addItem('Criar acesso da gestão', 'criarAcessoGestaoMenu')
+    .addItem('Criar acesso ao app', 'criarAcessoMenu')
     .addItem('Configurar endereço do app', 'configurarUrlApp')
     .addSeparator()
     .addItem('Arrumar e padronizar a planilha', 'arrumarPlanilhaMenu')
@@ -47,7 +54,7 @@ function onOpen(){
  * arquivo — isso continua sendo feito no botão Compartilhar da planilha.
  */
 function obterLinkPlanilha(sessao) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const ss = planilha();
   return { url: ss.getUrl(), nome: ss.getName() };
 }
@@ -56,7 +63,7 @@ function obterLinkPlanilha(sessao) {
 
 const ABAS_PADRAO = [
   { nome: 'Alunos',      cab: ['Turma','Aluno','Ativo','Nascimento','Responsável','Telefone'], larg: [170, 230, 70, 110, 200, 130] },
-  { nome: 'Professores', cab: ['Professor','E-mail','Papel'],                                larg: [260, 260, 110] },
+  { nome: 'Professores', cab: ['Professor','E-mail'],                                        larg: [260, 260] },
   { nome: 'Turmas',      cab: ['Turma', 'Ativa', 'Minutos por aula'],                        larg: [230, 70, 140] },
   { nome: 'Caixa',       cab: ['Registro','Data','Tipo','Valor','Categoria','Descrição','Fonte','Comprovante','Quem registrou'],
                                                                                         larg: [140, 90, 80, 100, 140, 220, 150, 130, 150] },
@@ -85,7 +92,7 @@ function listaNaColuna_(aba, col, valores) {
  * Pode rodar quantas vezes quiser — não duplica nada.
  */
 function arrumarPlanilha(sessao) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   return arrumarPlanilha_();
 }
 function arrumarPlanilha_() {
@@ -112,7 +119,6 @@ function arrumarPlanilha_() {
         .build();
       alunos.getRange(2, 3, Math.max(alunos.getMaxRows() - 1, 1), 1).setDataValidation(regra);
     }
-    listaNaColuna_(ss.getSheetByName(ABA_PROFESSORES), 3, PAPEIS);
     const turmas = ss.getSheetByName(ABA_TURMAS);
     if (turmas) {
       const regra2 = SpreadsheetApp.newDataValidation()

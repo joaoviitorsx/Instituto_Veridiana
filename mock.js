@@ -10,9 +10,9 @@
      preview.html?turma=Jazz%20Juvenil -> como se viesse do QR
      preview.html?dev=1                -> painel de rede e falhas
    Logins no mock (ver EQUIPE abaixo):
-     vera@exemplo.org  / veridiana   -> Gestão
-     aline@exemplo.org / aline123    -> Professor
-     bruno@exemplo.org / temp2345    -> Professor, senha temporária
+     vera@exemplo.org  / veridiana
+     aline@exemplo.org / aline123
+     bruno@exemplo.org / temp2345    -> senha temporária (pede troca)
    ══════════════════════════════════════════════════════════════ */
 (function () {
   if (window.google) return;
@@ -264,9 +264,9 @@
   var TOKENS = {};
   /* e-mail -> acesso. Quem não está aqui não entra. */
   var EQUIPE = {
-    'vera@exemplo.org':  { nome:'Vera Lúcia Sampaio', papel:'Gestão',    senha:'veridiana', tmp:false },
-    'aline@exemplo.org': { nome:'Aline Ferreira',     papel:'Professor', senha:'aline123',  tmp:false },
-    'bruno@exemplo.org': { nome:'Bruno Tavares',      papel:'Professor', senha:'temp2345',  tmp:true }
+    'vera@exemplo.org':  { nome:'Vera Lúcia Sampaio',    senha:'veridiana', tmp:false },
+    'aline@exemplo.org': { nome:'Aline Ferreira',     senha:'aline123',  tmp:false },
+    'bruno@exemplo.org': { nome:'Bruno Tavares',      senha:'temp2345',  tmp:true }
   };
   var SESS = {};   /* token -> {email, so troca?} */
   function emailDe(nome){
@@ -277,7 +277,7 @@
     var s = SESS[t];
     if (!s || s.t || !EQUIPE[s.e]) throw new Error('SESSAO: Sua sessão terminou. Entre de novo.');
     var u = EQUIPE[s.e];
-    return { email:s.e, nome:u.nome, papel:u.papel };
+    return { email:s.e, nome:u.nome };
   }
   function novaSessao(email, soTroca){
     var t = 'T' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Date.now();
@@ -323,11 +323,7 @@
     });
     return fora.sort(function(x,y){ return x.dia===y.dia ? pt(x.aluno,y.aluno) : (x.dia<y.dia?-1:1); });
   }
-  function exigirPin(p){
-    var u = exigirSessao(p);
-    if (u.papel !== 'Gestão') throw new Error('Só a gestão pode fazer isso.');
-    return u;
-  }
+  function exigirPin(p){ return exigirSessao(p); }
   function exigirNome(n){
     var v = String(n==null?'':n).trim().replace(/\s+/g,' ');
     if (v.length < 2) throw new Error('Escreva o nome com pelo menos 2 letras.');
@@ -582,7 +578,7 @@
       if (!e || !senha) throw new Error('Preencha e-mail e senha.');
       if (!u || u.senha !== senha) throw new Error('E-mail ou senha não conferem.');
       var t = novaSessao(e, u.tmp); salvarSess();
-      return { token:t, trocar:u.tmp, usuario:{ nome:u.nome, email:e, papel:u.papel } };
+      return { token:t, trocar:u.tmp, usuario:{ nome:u.nome, email:e } };
     },
     quemSou: function(t){ return exigirSessao(t); },
     trocarSenha: function(t, atual, nova){
@@ -594,40 +590,34 @@
       if (nova === atual) throw new Error('A senha nova precisa ser diferente da atual.');
       u.senha = nova; u.tmp = false; derrubar(s.e);
       var t2 = novaSessao(s.e, false); salvarSess();
-      return { token:t2, usuario:{ nome:u.nome, email:s.e, papel:u.papel } };
+      return { token:t2, usuario:{ nome:u.nome, email:s.e } };
     },
     sair: function(t){ delete SESS[t]; salvarSess(); return { ok:true }; },
     listarEquipe: function(pin){
       exigirPin(pin);
       return PROFS.slice().sort(pt).map(function(n){
         var e = emailDe(n), u = EQUIPE[e];
-        return { nome:n, email:e, papel:u ? u.papel : 'Professor',
+        return { nome:n, email:e,
                  situacao: !u ? 'sem-acesso' : u.tmp ? 'pendente' : 'ativo' };
       });
     },
-    definirAcesso: function(pin, nome, email, papel){
+    definirAcesso: function(pin, nome, email){
       var quem = exigirPin(pin), e = String(email || '').trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) throw new Error('Esse e-mail não parece certo.');
       if (PROFS.every(function(p){ return chave(p) !== chave(nome); })) throw new Error('Professor não encontrado.');
       if (EQUIPE[e] && chave(EQUIPE[e].nome) !== chave(nome)) throw new Error('Esse e-mail já é de ' + EQUIPE[e].nome + '.');
-      if (quem.email === e && papel !== 'Gestão') throw new Error('Você não pode tirar o seu próprio acesso de gestão.');
+      if (quem.email === emailDe(nome)) throw new Error('Para a sua própria conta, use "Trocar senha" na tela inicial.');
       var velho = emailDe(nome);
       if (velho){ delete EQUIPE[velho]; derrubar(velho); }
       var senha = 'k' + Math.random().toString(36).slice(2, 9);
-      EQUIPE[e] = { nome:nome, papel:papel === 'Gestão' ? 'Gestão' : 'Professor', senha:senha, tmp:true };
+      EQUIPE[e] = { nome:nome, senha:senha, tmp:true };
       salvarSess();
-      return { ok:true, nome:nome, email:e, papel:EQUIPE[e].papel, senha:senha };
-    },
-    mudarPapel: function(pin, nome, papel){
-      var quem = exigirPin(pin), e = emailDe(nome);
-      if (e === quem.email && papel !== 'Gestão') throw new Error('Você não pode tirar o seu próprio acesso de gestão.');
-      if (e){ EQUIPE[e].papel = papel === 'Gestão' ? 'Gestão' : 'Professor'; derrubar(e); salvarSess(); }
-      return { ok:true };
+      return { ok:true, nome:nome, email:e, senha:senha };
     },
     adicionarProfessor: function(pin, nome){
       exigirPin(pin); var n = exigirNome(nome);
       if (PROFS.some(function(p){ return chave(p)===chave(n); }))
-        throw new Error('Esse professor já está na equipe.');
+        throw new Error('Essa pessoa já está na equipe.');
       PROFS.push(n); return {ok:true};
     },
     removerProfessor: function(pin, nome){
@@ -883,8 +873,6 @@
             var u = exigirSessao(args[0]);
             args = args.slice(1);
             if (nome === 'resumoInicial') args = [u.nome];
-            if (nome === 'modulo' && args[0] === 'gestao' && u.papel !== 'Gestão')
-              throw new Error('Só a gestão pode abrir essa parte.');
           }
           r = API[nome].apply(null, args);
         }

@@ -177,7 +177,7 @@ function acharMaterial_(id) {
 }
 
 function criarMaterial(sessao, dados) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const m = normalizarMaterial_(dados || {});
   return comTrava(function () {
     const aba = abaMateriais();
@@ -190,7 +190,7 @@ function criarMaterial(sessao, dados) {
 }
 
 function editarMaterial(sessao, id, dados) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   return comTrava(function () {
     const atual = acharMaterial_(id);
     const m = normalizarMaterial_(dados || {}, atual);
@@ -202,7 +202,7 @@ function editarMaterial(sessao, id, dados) {
 /* Os botões de mais e menos. delta vem somado do celular: cinco toques
    rápidos viram uma escrita só. */
 function ajustarQuantidade(sessao, id, delta) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const d = Math.round(Number(delta));
   if (!isFinite(d) || Math.abs(d) > 9999) throw new Error('Ajuste inválido.');
   return comTrava(function () {
@@ -215,7 +215,7 @@ function ajustarQuantidade(sessao, id, delta) {
 
 /* Descartado. Sai da lista, a linha fica na planilha. */
 function inativarMaterial(sessao, id) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   return comTrava(function () {
     const m = acharMaterial_(id);
     abaMateriais().getRange(m.linha, 9).setValue('NAO');
@@ -229,7 +229,7 @@ function inativarMaterial(sessao, id) {
  * sem abrir item por item.
  */
 function renomearNaLista(sessao, campo, de, para) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const col = campo === 'categoria' ? 3 : campo === 'local' ? 7 : 0;
   if (!col) throw new Error('Lista desconhecida.');
   const novo = textoSeguro_(para, 60);

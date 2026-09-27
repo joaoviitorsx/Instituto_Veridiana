@@ -17,10 +17,10 @@ function saudacao(){
 var BLOCOS = [
   {a:'iChamada',   ic:'prancheta',  t:'Chamada',      id:'apTurmas'},
   {a:'iAgenda',    ic:'calendario', t:'Agenda',       id:'apAgenda'},
-  {a:'iCaixa',     ic:'carteira',   t:'Caixa',        id:'apCaixa', gestao:true},
+  {a:'iCaixa',     ic:'carteira',   t:'Caixa',        id:'apCaixa'},
   {a:'iMateriais', ic:'pacote',     t:'Materiais',    id:'apMateriais'},
-  {a:'iCert',      ic:'medalha',    t:'Certificados', gestao:true},
-  {a:'iGestao',    ic:'engrenagem', t:'Gestão',       gestao:true, sub:'turmas, alunos, equipe'}
+  {a:'iCert',      ic:'medalha',    t:'Certificados'},
+  {a:'iGestao',    ic:'engrenagem', t:'Gestão',       sub:'turmas, alunos, equipe'}
 ];
 
 TELAS.inicio = function(){
@@ -28,9 +28,7 @@ TELAS.inicio = function(){
   var dia = dataExtenso(hojeISO());
   var h = '<div id="destaque" class="destaque carregando" aria-hidden="true"><div class="osso"></div></div>';
   h += '<ul class="blocos">';
-  /* Professor não vê o que não pode abrir: botão com cadeado que só
-     responde "não pode" é pior que botão nenhum. */
-  BLOCOS.filter(function(b){ return !b.gestao || ehGestao(); }).forEach(function(b){
+  BLOCOS.forEach(function(b){
     h += '<li><button type="button" class="bloco" data-acao="' + b.a + '">' +
          '<span class="bl-ic">' + ico(b.ic, 22) + '</span>' +
          '<b>' + esc(b.t) + '</b>' +
@@ -38,7 +36,7 @@ TELAS.inicio = function(){
          '</button></li>';
   });
   h += '</ul><div class="conta-rodape"><span>' + esc(S.usuario ? S.usuario.nome : '') +
-       '<small>' + esc(S.usuario ? S.usuario.papel : '') + '</small></span>' +
+       '<small>' + esc(S.usuario ? S.usuario.email : '') + '</small></span>' +
        '<button type="button" data-acao="iSenha">' + ico('chave', 18) + ' Trocar senha</button>' +
        '<button type="button" data-acao="iSair">' + ico('sair', 18) + ' Sair</button></div>' +
        '<p class="rodape">' + esc('Instituto Veridiana · versão ' + VERSAO) + '</p>';
@@ -81,13 +79,11 @@ function preCarregar(d){
     preler('listarAgenda', [+h.slice(0,4), +h.slice(5,7)]);
     preler('listarMateriais', [{}]);
     carregarModulo('agenda', function(){
-      carregarModulo('materiais', function(){ if (ehGestao()) carregarModulo('gestao'); });
+      carregarModulo('materiais', function(){ carregarModulo('gestao'); });
     });
-    if (ehGestao()){
-      preler('entrarNaGestao', []);
-      preler('listarTurmasCompleto', []);
-      preler('contarRisco', []);
-    }
+    /* Dados da gestão NÃO vão por trás: o alerta de faltas lê 60 dias
+       de chamadas e o cache dele cai a cada chamada salva. Quem só veio
+       fazer chamada não pode pagar isso. O menu da gestão busca sozinho. */
   }, 300);
 }
 
@@ -127,9 +123,9 @@ ACOES.iDestaque = function(){
 ACOES.iChamada   = function(){ ir('turmas'); };
 ACOES.iAgenda    = function(){ ir('agenda', {}); };
 ACOES.iMateriais = function(){ ir('mtLista', {}); };
-ACOES.iCaixa     = function(){ comGestao('gCaixa'); };
-ACOES.iCert      = function(){ comGestao('gCert'); };
-ACOES.iGestao    = function(){ comGestao('gestao'); };
+ACOES.iCaixa     = function(){ ir('gCaixa'); };
+ACOES.iCert      = function(){ ir('gCert'); };
+ACOES.iGestao    = function(){ ir('gestao'); };
 ACOES.iSenha     = function(){ ir('trocaSenha', {}); };
 ACOES.iSair      = function(){
   confirmar('Sair', 'Neste aparelho o app vai pedir e-mail e senha de novo.', 'Sair', sairDoApp);

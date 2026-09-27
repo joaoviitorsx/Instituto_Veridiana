@@ -15,7 +15,7 @@
 /* Desligado por decisão da coordenação. A tela inicial abre SEM código,
    o QR fica na parede de uma sala com adolescentes, e tirar o ?turma=
    da URL é trivial: saldo de caixa não fica exposto por engano. O saldo
-   continua dentro do Caixa, só para a gestão. */
+   continua dentro do Caixa. */
 const MOSTRAR_SALDO_NA_ENTRADA = false;
 
 const TTL_RESUMO = 600;            // 10 min

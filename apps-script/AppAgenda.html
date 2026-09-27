@@ -179,13 +179,13 @@ ACOES.agAno = function(){ ir('agAno', {ano:+atual().p.mes.slice(0,4)}); };
 ACOES.agImprimir = function(){
   var a = atual();
   var ano = a.p.ano || +(a.p.mes || hojeISO()).slice(0,4);
-  comGestao('agImprimir', {ano:ano});
+  ir('agImprimir', {ano:ano});
 };
 ACOES.agNovo = function(){
   var mes = atual().p.mes || hojeISO().slice(0,7);
   /* No mês de hoje, a data já vem hoje. Em outro mês, o dia 1 dele:
      quem navegou até abril quer marcar algo em abril. */
-  comGestao('agNovo', {data: mes === hojeISO().slice(0,7) ? hojeISO() : mes + '-01'});
+  ir('agNovo', {data: mes === hojeISO().slice(0,7) ? hojeISO() : mes + '-01'});
 };
 
 /* ─── ver um evento ─── */
@@ -214,7 +214,6 @@ ACOES.agVer = function(b){
     var qual = o.getAttribute('data-ev');
     fecharFolha();
     setTimeout(function(){
-      if (!ehGestao()){ semPermissao(); return; }
       if (qual === 'editar') ir('agNovo', {id:ev.id});
       else if (qual === 'status') mudarStatus(ev);
       else confirmar('Apagar evento', ev.titulo + ' some da agenda. Se ele só não vai mais acontecer, prefira "Cancelado": fica registrado no ano.',
@@ -428,7 +427,7 @@ ACOES.agAbrirMes = function(b){
   if (baixo && baixo.t === 'agenda'){ S.pilha.pop(); baixo.p.mes = mes; desenhar(); }
   else ir('agenda', {mes:mes});
 };
-ACOES.agDatas = function(){ comGestao('agDatas', {ano:atual().p.ano}); };
+ACOES.agDatas = function(){ ir('agDatas', {ano:atual().p.ano}); };
 
 /* ══════════════ AGENDA: datas comemorativas ══════════════ */
 TELAS.agDatas = function(p){

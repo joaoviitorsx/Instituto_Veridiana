@@ -4,7 +4,7 @@
  *
  * Abas esperadas na planilha:
  *   Alunos      -> A: Turma | B: Aluno | C: Ativo (SIM/NAO)
- *   Professores -> A: Professor | B: E-mail | C: Papel (ver Acesso.gs)
+ *   Professores -> A: Professor | B: E-mail (ver Acesso.gs)
  *   Chamadas    -> A: Registro | B: Data | C: Turma | D: Professor | E: Aluno | F: Status
  *   Agenda      -> ver Agenda.gs
  *   Materiais   -> ver Materiais.gs
@@ -88,8 +88,7 @@ const MODULOS = {
  * se faltar (arquivo com erro de sintaxe), o cliente diz em português.
  */
 function modulo(sessao, nome) {
-  const u = exigirSessao(sessao);
-  if (nome === 'gestao' && u.papel !== PAPEL_GESTAO) throw new Error('Só a gestão pode abrir essa parte.');
+  exigirSessao(sessao);
   const partes = MODULOS[nome];
   if (!partes) throw new Error('Parte do app desconhecida: ' + nome);
   return partes.map(arquivo).join('\n') +

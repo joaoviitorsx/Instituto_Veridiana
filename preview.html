@@ -173,10 +173,12 @@ main{padding:0 0 24px}
 .li+.li::before{
   content:"";position:absolute;left:68px;right:0;top:0;height:1px;background:var(--borda);
 }
-.li[data-st="Falta"]{background:var(--falta-fraco)}
+/* Falta é o ponto de partida da chamada: fica quieta. Quem se destaca é
+   quem o professor marcou como presente. */
+.li[data-st="Presente"]{background:var(--presente-fraco)}
 .li[data-st="Justificada"]{background:var(--justif-fraco)}
 .li.tocado{background:var(--roxo-fraco)}
-.li[data-st="Falta"].tocado{background:#F6DDE3}
+.li[data-st="Presente"].tocado{background:#D3E8DC}
 .li[data-st="Justificada"].tocado{background:#F5EAD3}
 
 .ini{
@@ -186,7 +188,8 @@ main{padding:0 0 24px}
   font-size:13px;font-weight:700;letter-spacing:.02em;
   transition:background 160ms var(--curva),color 160ms var(--curva);
 }
-.li[data-st="Falta"] .ini{background:var(--falta);color:#fff}
+.li[data-st="Presente"] .ini{background:var(--presente);color:#fff}
+.li[data-st="Falta"] .ini{background:var(--fundo);color:var(--apagado)}
 .li[data-st="Justificada"] .ini{background:var(--justif);color:#fff}
 
 .nome{flex:1;min-width:0;font-size:16px;font-weight:600;line-height:1.25;overflow-wrap:anywhere}
@@ -194,14 +197,14 @@ main{padding:0 0 24px}
 .marca{flex-shrink:0;display:grid;place-items:center}
 .marca .ok{
   width:26px;height:26px;border-radius:50%;
-  background:var(--presente-fraco);color:var(--presente);
+  background:var(--presente);color:#fff;
   display:grid;place-items:center;
 }
 .marca .selo{
   padding:6px 12px;border-radius:999px;
   font-size:13px;font-weight:700;white-space:nowrap;
 }
-.li[data-st="Falta"] .selo{background:var(--falta);color:#fff}
+.li[data-st="Falta"] .selo{background:var(--fundo);color:var(--apagado);border:1px solid var(--borda)}
 .li[data-st="Justificada"] .selo{background:var(--justif);color:#fff}
 
 /* ─────────── barra de salvar ─────────── */
@@ -535,12 +538,7 @@ main{padding:0 0 24px}
 }
 .senha button.on{color:var(--roxo)}
 
-/* equipe: papel e primeiro acesso pendente */
-.li .papel{
-  flex-shrink:0;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;
-  background:var(--fundo);color:var(--apagado);border:1px solid var(--borda);
-}
-.li .papel.gestao{background:var(--roxo-fraco);color:var(--roxo);border-color:transparent}
+/* equipe: primeiro acesso pendente */
 .li .pendente{flex-shrink:0;width:10px;height:10px;border-radius:50%;background:var(--justif)}
 .li .nome small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .senha-temp{
@@ -707,9 +705,9 @@ main{padding:0 0 24px}
      preview.html?turma=Jazz%20Juvenil -> como se viesse do QR
      preview.html?dev=1                -> painel de rede e falhas
    Logins no mock (ver EQUIPE abaixo):
-     vera@exemplo.org  / veridiana   -> Gestão
-     aline@exemplo.org / aline123    -> Professor
-     bruno@exemplo.org / temp2345    -> Professor, senha temporária
+     vera@exemplo.org  / veridiana
+     aline@exemplo.org / aline123
+     bruno@exemplo.org / temp2345    -> senha temporária (pede troca)
    ══════════════════════════════════════════════════════════════ */
 (function () {
   if (window.google) return;
@@ -961,9 +959,9 @@ main{padding:0 0 24px}
   var TOKENS = {};
   /* e-mail -> acesso. Quem não está aqui não entra. */
   var EQUIPE = {
-    'vera@exemplo.org':  { nome:'Vera Lúcia Sampaio', papel:'Gestão',    senha:'veridiana', tmp:false },
-    'aline@exemplo.org': { nome:'Aline Ferreira',     papel:'Professor', senha:'aline123',  tmp:false },
-    'bruno@exemplo.org': { nome:'Bruno Tavares',      papel:'Professor', senha:'temp2345',  tmp:true }
+    'vera@exemplo.org':  { nome:'Vera Lúcia Sampaio',    senha:'veridiana', tmp:false },
+    'aline@exemplo.org': { nome:'Aline Ferreira',     senha:'aline123',  tmp:false },
+    'bruno@exemplo.org': { nome:'Bruno Tavares',      senha:'temp2345',  tmp:true }
   };
   var SESS = {};   /* token -> {email, so troca?} */
   function emailDe(nome){
@@ -974,7 +972,7 @@ main{padding:0 0 24px}
     var s = SESS[t];
     if (!s || s.t || !EQUIPE[s.e]) throw new Error('SESSAO: Sua sessão terminou. Entre de novo.');
     var u = EQUIPE[s.e];
-    return { email:s.e, nome:u.nome, papel:u.papel };
+    return { email:s.e, nome:u.nome };
   }
   function novaSessao(email, soTroca){
     var t = 'T' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Date.now();
@@ -1020,11 +1018,7 @@ main{padding:0 0 24px}
     });
     return fora.sort(function(x,y){ return x.dia===y.dia ? pt(x.aluno,y.aluno) : (x.dia<y.dia?-1:1); });
   }
-  function exigirPin(p){
-    var u = exigirSessao(p);
-    if (u.papel !== 'Gestão') throw new Error('Só a gestão pode fazer isso.');
-    return u;
-  }
+  function exigirPin(p){ return exigirSessao(p); }
   function exigirNome(n){
     var v = String(n==null?'':n).trim().replace(/\s+/g,' ');
     if (v.length < 2) throw new Error('Escreva o nome com pelo menos 2 letras.');
@@ -1279,7 +1273,7 @@ main{padding:0 0 24px}
       if (!e || !senha) throw new Error('Preencha e-mail e senha.');
       if (!u || u.senha !== senha) throw new Error('E-mail ou senha não conferem.');
       var t = novaSessao(e, u.tmp); salvarSess();
-      return { token:t, trocar:u.tmp, usuario:{ nome:u.nome, email:e, papel:u.papel } };
+      return { token:t, trocar:u.tmp, usuario:{ nome:u.nome, email:e } };
     },
     quemSou: function(t){ return exigirSessao(t); },
     trocarSenha: function(t, atual, nova){
@@ -1291,40 +1285,34 @@ main{padding:0 0 24px}
       if (nova === atual) throw new Error('A senha nova precisa ser diferente da atual.');
       u.senha = nova; u.tmp = false; derrubar(s.e);
       var t2 = novaSessao(s.e, false); salvarSess();
-      return { token:t2, usuario:{ nome:u.nome, email:s.e, papel:u.papel } };
+      return { token:t2, usuario:{ nome:u.nome, email:s.e } };
     },
     sair: function(t){ delete SESS[t]; salvarSess(); return { ok:true }; },
     listarEquipe: function(pin){
       exigirPin(pin);
       return PROFS.slice().sort(pt).map(function(n){
         var e = emailDe(n), u = EQUIPE[e];
-        return { nome:n, email:e, papel:u ? u.papel : 'Professor',
+        return { nome:n, email:e,
                  situacao: !u ? 'sem-acesso' : u.tmp ? 'pendente' : 'ativo' };
       });
     },
-    definirAcesso: function(pin, nome, email, papel){
+    definirAcesso: function(pin, nome, email){
       var quem = exigirPin(pin), e = String(email || '').trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) throw new Error('Esse e-mail não parece certo.');
       if (PROFS.every(function(p){ return chave(p) !== chave(nome); })) throw new Error('Professor não encontrado.');
       if (EQUIPE[e] && chave(EQUIPE[e].nome) !== chave(nome)) throw new Error('Esse e-mail já é de ' + EQUIPE[e].nome + '.');
-      if (quem.email === e && papel !== 'Gestão') throw new Error('Você não pode tirar o seu próprio acesso de gestão.');
+      if (quem.email === emailDe(nome)) throw new Error('Para a sua própria conta, use "Trocar senha" na tela inicial.');
       var velho = emailDe(nome);
       if (velho){ delete EQUIPE[velho]; derrubar(velho); }
       var senha = 'k' + Math.random().toString(36).slice(2, 9);
-      EQUIPE[e] = { nome:nome, papel:papel === 'Gestão' ? 'Gestão' : 'Professor', senha:senha, tmp:true };
+      EQUIPE[e] = { nome:nome, senha:senha, tmp:true };
       salvarSess();
-      return { ok:true, nome:nome, email:e, papel:EQUIPE[e].papel, senha:senha };
-    },
-    mudarPapel: function(pin, nome, papel){
-      var quem = exigirPin(pin), e = emailDe(nome);
-      if (e === quem.email && papel !== 'Gestão') throw new Error('Você não pode tirar o seu próprio acesso de gestão.');
-      if (e){ EQUIPE[e].papel = papel === 'Gestão' ? 'Gestão' : 'Professor'; derrubar(e); salvarSess(); }
-      return { ok:true };
+      return { ok:true, nome:nome, email:e, senha:senha };
     },
     adicionarProfessor: function(pin, nome){
       exigirPin(pin); var n = exigirNome(nome);
       if (PROFS.some(function(p){ return chave(p)===chave(n); }))
-        throw new Error('Esse professor já está na equipe.');
+        throw new Error('Essa pessoa já está na equipe.');
       PROFS.push(n); return {ok:true};
     },
     removerProfessor: function(pin, nome){
@@ -1580,8 +1568,6 @@ main{padding:0 0 24px}
             var u = exigirSessao(args[0]);
             args = args.slice(1);
             if (nome === 'resumoInicial') args = [u.nome];
-            if (nome === 'modulo' && args[0] === 'gestao' && u.papel !== 'Gestão')
-              throw new Error('Só a gestão pode abrir essa parte.');
           }
           r = API[nome].apply(null, args);
         }
@@ -1673,7 +1659,8 @@ var S = {
   sessao:'', usuario:null, gest:null, filtro:'ativos', busca:''
 };
 
-var CICLO = { 'Presente':'Falta', 'Falta':'Justificada', 'Justificada':'Presente' };
+/* A chamada começa com todo mundo em falta: um toque dá presença. */
+var CICLO = { 'Falta':'Presente', 'Presente':'Justificada', 'Justificada':'Falta' };
 
 /* ─── icones: Lucide, traco 2, colados inline ─── */
 var P = {
@@ -2166,7 +2153,7 @@ function desenhar(){
   el('cabTitulo').textContent = tela.titulo || '';
   el('btVoltar').hidden = S.pilha.length < 2 && !tela.voltar;
   el('btVoltar').innerHTML = ico('esq', 24);
-  el('btGestao').hidden = !tela.gestao || !ehGestao();
+  el('btGestao').hidden = !tela.gestao;
   el('btGestao').innerHTML = ico('engrenagem', 22);
   el('cabPlacar').hidden = !tela.placar;
 
@@ -2194,7 +2181,7 @@ function medirBarra(){
 }
 
 el('btVoltar').addEventListener('click', voltar);
-el('btGestao').addEventListener('click', function(){ comGestao('gestao'); });
+el('btGestao').addEventListener('click', function(){ ir('gestao'); });
 
 /* Escuta no documento, não no #palco: a barra de ação (#barra) e o
    cabeçalho ficam FORA do palco, e um listener só no palco deixava
@@ -2262,23 +2249,26 @@ function estado(icone, titulo, texto, botao){
    O iframe do Apps Script nem sempre deixa guardar (Safari em aba
    anônima, bloqueio de terceiros). Sem guardar, o app só pede login de
    novo na próxima vez: nada quebra. */
-var CHAVE_SESSAO = 'veridiana.sessao';
-function guardarSessao(t){ try { localStorage.setItem(CHAVE_SESSAO, t); } catch(e){} }
-function sessaoGuardada(){ try { return localStorage.getItem(CHAVE_SESSAO) || ''; } catch(e){ return ''; } }
-function esquecerSessao(){ try { localStorage.removeItem(CHAVE_SESSAO); } catch(e){} }
-
-function ehGestao(){ return !!(S.usuario && S.usuario.papel === 'Gestão'); }
-function semPermissao(){ toast('Só a gestão pode fazer isso.', 'erro'); }
-function comGestao(tela, p){
-  if (ehGestao()) ir(tela, p); else semPermissao();
+var CHAVE_SESSAO = 'veridiana.sessao', CHAVE_USUARIO = 'veridiana.usuario';
+function guardarSessao(t, u){
+  try { localStorage.setItem(CHAVE_SESSAO, t); localStorage.setItem(CHAVE_USUARIO, JSON.stringify(u)); } catch(e){}
 }
+function sessaoGuardada(){ try { return localStorage.getItem(CHAVE_SESSAO) || ''; } catch(e){ return ''; } }
+function usuarioGuardado(){
+  try { var u = JSON.parse(localStorage.getItem(CHAVE_USUARIO) || 'null'); return u && u.nome ? u : null; }
+  catch(e){ return null; }
+}
+function esquecerSessao(){
+  try { localStorage.removeItem(CHAVE_SESSAO); localStorage.removeItem(CHAVE_USUARIO); } catch(e){}
+}
+
 
 function usarSessao(token, usuario){
   S.sessao = token; S.usuario = usuario;
   /* A saudação e a escolha do professor na chamada saem do login. */
   S.prof = usuario.nome;
   MEM = {}; MEM_GEN++;
-  guardarSessao(token);
+  guardarSessao(token, usuario);
 }
 
 /* Depois do login vai para onde a pessoa queria ir: a turma do QR ou a
@@ -2290,11 +2280,25 @@ function seguir(){
   ir(d.t, d.p, true);
 }
 
-/* Abre o app: tenta a sessão guardada antes de pedir senha. */
+/* Abre o app: tenta a sessão guardada antes de pedir senha.
+
+   Com sessão e nome guardados, a tela abre NA HORA, sem perguntar nada
+   ao servidor: conferir antes custava uma ida inteira (1 a 2 s no 4G)
+   entre escanear o QR e ver a chamada. A conferência vai junto com a
+   primeira busca da tela: se a sessão caiu, a api manda para o login
+   e a pessoa volta para onde estava depois de entrar. */
 function retomarSessao(destino){
   S.destino = destino;
-  var t = sessaoGuardada();
+  var t = sessaoGuardada(), u = usuarioGuardado();
   if (!t){ ir('login', {}, true); return; }
+  if (u){
+    usarSessao(t, u); seguir();
+    /* Nome mudou na planilha? Atualiza por trás, sem repintar. */
+    api('quemSou', [], function(u2){
+      if (S.sessao === t && u2 && u2.nome !== u.nome){ S.usuario = u2; S.prof = u2.nome; guardarSessao(t, u2); }
+    }, function(){});
+    return;
+  }
   S.sessao = t;
   api('quemSou', [], function(u){
     usarSessao(t, u); seguir();
@@ -2307,7 +2311,7 @@ function retomarSessao(destino){
 ACOES.reabrir = function(){ retomarSessao(S.destino); };
 
 /* A api chama isto quando o servidor diz que a sessão acabou: senha
-   trocada em outro aparelho, papel mudou, pessoa saiu da equipe. */
+   trocada em outro aparelho, pessoa saiu da equipe. */
 function sessaoCaiu(){
   var a = atual();
   if (a && a.t === 'login') return;
@@ -2315,6 +2319,11 @@ function sessaoCaiu(){
   S.sessao = ''; S.usuario = null;
   esquecerSessao();
   MEM = {}; MEM_GEN++;
+  /* Quem esperava resposta não vai recebê-la: a api desviou para cá.
+     Sem zerar, a busca da turma e o carregamento de módulo ficavam
+     "em andamento" para sempre, e depois do login a tela abria vazia. */
+  PEND = {};
+  Object.keys(MODS).forEach(function(k){ if (MODS[k] !== true) delete MODS[k]; });
   if (folhaAberta()) fecharFolha();
   ir('login', {aviso:'Sua sessão terminou. Entre de novo.'}, true);
 }
@@ -2454,10 +2463,10 @@ function saudacao(){
 var BLOCOS = [
   {a:'iChamada',   ic:'prancheta',  t:'Chamada',      id:'apTurmas'},
   {a:'iAgenda',    ic:'calendario', t:'Agenda',       id:'apAgenda'},
-  {a:'iCaixa',     ic:'carteira',   t:'Caixa',        id:'apCaixa', gestao:true},
+  {a:'iCaixa',     ic:'carteira',   t:'Caixa',        id:'apCaixa'},
   {a:'iMateriais', ic:'pacote',     t:'Materiais',    id:'apMateriais'},
-  {a:'iCert',      ic:'medalha',    t:'Certificados', gestao:true},
-  {a:'iGestao',    ic:'engrenagem', t:'Gestão',       gestao:true, sub:'turmas, alunos, equipe'}
+  {a:'iCert',      ic:'medalha',    t:'Certificados'},
+  {a:'iGestao',    ic:'engrenagem', t:'Gestão',       sub:'turmas, alunos, equipe'}
 ];
 
 TELAS.inicio = function(){
@@ -2465,9 +2474,7 @@ TELAS.inicio = function(){
   var dia = dataExtenso(hojeISO());
   var h = '<div id="destaque" class="destaque carregando" aria-hidden="true"><div class="osso"></div></div>';
   h += '<ul class="blocos">';
-  /* Professor não vê o que não pode abrir: botão com cadeado que só
-     responde "não pode" é pior que botão nenhum. */
-  BLOCOS.filter(function(b){ return !b.gestao || ehGestao(); }).forEach(function(b){
+  BLOCOS.forEach(function(b){
     h += '<li><button type="button" class="bloco" data-acao="' + b.a + '">' +
          '<span class="bl-ic">' + ico(b.ic, 22) + '</span>' +
          '<b>' + esc(b.t) + '</b>' +
@@ -2475,7 +2482,7 @@ TELAS.inicio = function(){
          '</button></li>';
   });
   h += '</ul><div class="conta-rodape"><span>' + esc(S.usuario ? S.usuario.nome : '') +
-       '<small>' + esc(S.usuario ? S.usuario.papel : '') + '</small></span>' +
+       '<small>' + esc(S.usuario ? S.usuario.email : '') + '</small></span>' +
        '<button type="button" data-acao="iSenha">' + ico('chave', 18) + ' Trocar senha</button>' +
        '<button type="button" data-acao="iSair">' + ico('sair', 18) + ' Sair</button></div>' +
        '<p class="rodape">' + esc('Instituto Veridiana · versão ' + VERSAO) + '</p>';
@@ -2518,13 +2525,11 @@ function preCarregar(d){
     preler('listarAgenda', [+h.slice(0,4), +h.slice(5,7)]);
     preler('listarMateriais', [{}]);
     carregarModulo('agenda', function(){
-      carregarModulo('materiais', function(){ if (ehGestao()) carregarModulo('gestao'); });
+      carregarModulo('materiais', function(){ carregarModulo('gestao'); });
     });
-    if (ehGestao()){
-      preler('entrarNaGestao', []);
-      preler('listarTurmasCompleto', []);
-      preler('contarRisco', []);
-    }
+    /* Dados da gestão NÃO vão por trás: o alerta de faltas lê 60 dias
+       de chamadas e o cache dele cai a cada chamada salva. Quem só veio
+       fazer chamada não pode pagar isso. O menu da gestão busca sozinho. */
   }, 300);
 }
 
@@ -2564,9 +2569,9 @@ ACOES.iDestaque = function(){
 ACOES.iChamada   = function(){ ir('turmas'); };
 ACOES.iAgenda    = function(){ ir('agenda', {}); };
 ACOES.iMateriais = function(){ ir('mtLista', {}); };
-ACOES.iCaixa     = function(){ comGestao('gCaixa'); };
-ACOES.iCert      = function(){ comGestao('gCert'); };
-ACOES.iGestao    = function(){ comGestao('gestao'); };
+ACOES.iCaixa     = function(){ ir('gCaixa'); };
+ACOES.iCert      = function(){ ir('gCert'); };
+ACOES.iGestao    = function(){ ir('gestao'); };
 ACOES.iSenha     = function(){ ir('trocaSenha', {}); };
 ACOES.iSair      = function(){
   confirmar('Sair', 'Neste aparelho o app vai pedir e-mail e senha de novo.', 'Sair', sairDoApp);
@@ -2574,7 +2579,7 @@ ACOES.iSair      = function(){
 </script>
 
 <script>
-/* O fluxo do QR: escolher turma, marcar faltas, salvar. */
+/* O fluxo do QR: escolher turma, marcar presenças, salvar. */
 /* ══════════════ TELA: escolher turma ══════════════ */
 TELAS.turmas = function(){
   return {
@@ -2630,7 +2635,7 @@ TELAS.chamada = function(p){
     voltar: !S.viaQr,
     depois: function(){
       /* Uma resposta só, nunca repintada: repintar a lista apagaria as
-         faltas já marcadas. Serve a pré-carga se tiver menos de 1 min;
+         presenças já marcadas. Serve a pré-carga se tiver menos de 1 min;
          "já teve chamada hoje" o servidor confere de novo ao salvar. */
       ler('carregarTurma', [p.turma], montarChamada, function(e){
         el('palco').querySelector('.corpo').innerHTML =
@@ -2653,9 +2658,11 @@ function montarChamada(d){
   /* Quem abriu pelo próprio link (?prof=) já vem escolhido. O cartão
      continua tocável: professora substituta troca num toque. */
   S.professor = profDoLink(S.professores) || d.professorSugerido || '';
-  S.jaRegistrada = !!d.jaRegistrada; S.forcar = false;
+  S.jaRegistrada = !!d.jaRegistrada; S.forcar = false; S.confirmouVazia = false;
   S.token = sorteioToken();
-  S.alunos = (d.alunos || []).map(function(n){ return {aluno:n, status:'Presente'}; });
+  /* Pedido das professoras: todo mundo começa com falta e o toque dá
+     presença. Assim ninguém recebe presença por esquecimento. */
+  S.alunos = (d.alunos || []).map(function(n){ return {aluno:n, status:'Falta'}; });
 
   el('capaData').textContent = dataExtenso(d.data);
 
@@ -2685,12 +2692,12 @@ function montarChamada(d){
        '<span class="txt"><small>Quem está dando a aula</small>' +
        '<b id="profNome">' + esc(S.professor || 'Escolher') + '</b></span>' +
        '<span class="seta">' + ico('dir') + '</span></button>';
-  h += '<div class="instrucao"><span>Toque em quem faltou</span>' +
+  h += '<div class="instrucao"><span>Toque em quem veio</span>' +
        '<button type="button" id="btTodos" data-acao="todosPresentes" hidden>Todos presentes</button></div>';
   h += '<ul class="lista">';
   S.alunos.forEach(function(a, i){
-    h += '<li class="li" data-st="Presente" id="li' + i + '" data-acao="ciclar" data-i="' + i + '"' +
-         ' role="button" tabindex="0" aria-label="' + esc(a.aluno) + ', presente">' +
+    h += '<li class="li" data-st="Falta" id="li' + i + '" data-acao="ciclar" data-i="' + i + '"' +
+         ' role="button" tabindex="0" aria-label="' + esc(a.aluno) + ', faltou">' +
          '<span class="ini">' + esc(iniciais(a.aluno)) + '</span>' +
          '<span class="nome">' + esc(a.aluno) + '</span>' +
          '<span class="marca" id="mk' + i + '"></span></li>';
@@ -2758,10 +2765,11 @@ function atualizarPlacar(){
   var p = S.alunos.filter(function(a){ return a.status === 'Presente'; }).length;
   var n = S.alunos.length, f = n - p;
   el('capaN').textContent = p + '/' + n;
-  el('capaR').textContent = f === 0 ? 'turma completa' : plural(f, 'faltou', 'faltaram');
+  el('capaR').textContent = f === 0 ? 'turma completa'
+    : p === 0 ? 'toque em quem veio' : plural(f, 'faltou', 'faltaram');
   el('cabPlacar').textContent = p + '/' + n;
   var bt = el('btTodos');
-  if (bt) bt.hidden = (f === 0);   /* nada a desfazer enquanto todos estao presentes */
+  if (bt) bt.hidden = (f === 0);   /* atalho para turma cheia; some quando todos já estão presentes */
   el('cabPlacar').setAttribute('aria-label', p + ' de ' + n + ' presentes');
 }
 
@@ -2784,6 +2792,15 @@ ACOES.escolherProf = escolherProf;
 /* ─── salvar ─── */
 ACOES.salvar = function(){
   if (!S.professor){ toast('Escolha quem está dando a aula', 'erro'); escolherProf(); return; }
+  /* Com falta de ponto de partida, salvar sem tocar em ninguém dá falta
+     para a turma inteira. Pode ser verdade (ninguém veio), mas quase
+     sempre é esquecimento: pergunta antes. */
+  if (!S.confirmouVazia && !S.alunos.some(function(a){ return a.status !== 'Falta'; })){
+    confirmar('Ninguém presente?',
+      'Nenhum aluno foi marcado como presente. Se salvar assim, a turma inteira fica com falta.',
+      'Salvar com todos em falta', function(){ S.confirmouVazia = true; ACOES.salvar(); });
+    return;
+  }
   if (S.jaRegistrada && !S.forcar){
     confirmar('Salvar de novo?',
       'Esta turma já teve chamada salva hoje. Salvar de novo cria um segundo registro e conta em dobro nos relatórios.',
@@ -2856,8 +2873,8 @@ TELAS.gestao = function(){
   var itens = [
     {ic:'prancheta', t:'Turmas', s:plural(g.turmas || 0, 'turma ativa', 'turmas ativas'), a:'gTurmas'},
     {ic:'grupo', t:'Alunos', s:(g.alunosAtivos || 0) + ' ativos, ' + (g.alunosInativos || 0) + ' inativos', a:'gAlunos'},
-    {ic:'pessoa', t:'Equipe e acessos', s:plural(g.professores || 0, 'pessoa', 'pessoas') + ', e-mail e senha', a:'gProfs'},
-    {ic:'qr', t:'QR e links', s:'QR das turmas e link de cada professor', a:'gQr'},
+    {ic:'pessoa', t:'Equipe e acessos', s:plural(g.professores || 0, 'professora', 'professoras') + ', e-mail e senha', a:'gProfs'},
+    {ic:'qr', t:'QR do app', s:'cartaz para abrir o app no celular', a:'gQr'},
     {ic:'sino', t:'Precisam de atenção', s:'carregando…', a:'gRisco', id:'itRisco'},
     {ic:'calendario', t:'Histórico', s:'quem veio, por dia e por mês', a:'gHistorico'},
     {ic:'carteira', t:'Caixa', s:'entradas, saídas e comprovantes', a:'gCaixa'},
@@ -3171,8 +3188,8 @@ ACOES.filtro = function(b){
 };
 
 /* ══════════════ GESTÃO: equipe e acessos ══════════════ */
-/* Cada pessoa da equipe entra com e-mail e senha. A gestão cadastra o
-   e-mail e o papel; o servidor gera uma senha temporária que aparece
+/* Cada pessoa da equipe entra com e-mail e senha, e todas acessam
+   tudo. Aqui se cadastra o e-mail; o servidor gera uma senha temporária que aparece
    UMA vez, para mandar pelo WhatsApp. No primeiro acesso a pessoa
    escolhe a dela. */
 var SITUACAO = {
@@ -3183,7 +3200,7 @@ var SITUACAO = {
 TELAS.gProfs = function(){
   return {
     titulo:'Equipe e acessos', html:esqueleto(4),
-    barra:'<button type="button" class="salvar" data-acao="novoProf">' + ico('mais') + 'Adicionar pessoa</button>',
+    barra:'<button type="button" class="salvar" data-acao="novoProf">' + ico('mais') + 'Adicionar professora</button>',
     depois:function(){
       carregarProfs();
       /* O link do app entra na mensagem da senha. */
@@ -3198,7 +3215,7 @@ function carregarProfs(){
     S.equipe = ps;
     if (!ps.length){
       alvo.innerHTML = estado('pessoa','Ninguém na equipe ainda',
-        'Toque em "Adicionar pessoa" aqui embaixo.');
+        'Toque em "Adicionar professora" aqui embaixo.');
       return;
     }
     var h = '<ul class="lista">';
@@ -3207,7 +3224,6 @@ function carregarProfs(){
            '<span class="ini">' + esc(iniciais(p.nome)) + '</span>' +
            '<span class="nome">' + esc(p.nome) +
            '<small>' + esc(p.email ? p.email : SITUACAO['sem-acesso']) + '</small></span>' +
-           '<span class="papel' + (p.papel === 'Gestão' ? ' gestao' : '') + '">' + esc(p.papel) + '</span>' +
            (p.situacao === 'pendente' ? '<span class="pendente" title="' + esc(SITUACAO.pendente) + '"></span>' : '') +
            '<span class="marca">' + ico('dir', 18) + '</span></li>';
     });
@@ -3219,39 +3235,27 @@ function carregarProfs(){
   });
 }
 
-/* Folha com nome, e-mail e papel. Nome só no cadastro novo: renomear
+/* Folha com nome e e-mail. Nome só no cadastro novo: renomear
    quebraria o vínculo com as chamadas já salvas. */
 function fichaAcesso(titulo, p, rotulo, fn){
-  var papel = p.papel || 'Professor';
   var h = '<div style="padding:0 8px">';
   if (!p.nome) h += '<div class="campo"><label for="acNome">Nome</label>' +
     '<input id="acNome" type="text" autocomplete="off" autocapitalize="words"></div>';
   h += '<div class="campo"><label for="acEmail">E-mail</label>' +
     '<input id="acEmail" type="email" inputmode="email" autocomplete="off" autocapitalize="none" ' +
-    'autocorrect="off" spellcheck="false" value="' + esc(p.email || '') + '"></div>' +
-    '<div class="campo"><label>Papel</label><div class="chips" id="acPapel">' +
-    ['Professor', 'Gestão'].map(function(x){
-      return '<button type="button" class="chip' + (x === papel ? ' on' : '') + '" data-p="' + x + '">' + x + '</button>';
-    }).join('') + '</div>' +
-    '<small class="dica">Professor: chamada, agenda e materiais. Gestão: tudo, inclusive caixa e cadastros.</small></div>';
+    'autocorrect="off" spellcheck="false" value="' + esc(p.email || '') + '"></div>';
   abrirFolha(titulo, h + '</div>' +
     '<div class="acoes"><button type="button" class="cancelar" data-t="0">Cancelar</button>' +
     '<button type="button" class="confirmar" style="background:var(--roxo)" data-t="1">' + esc(rotulo) + '</button></div>');
   function enviar(){
     var nome = p.nome || (el('acNome').value || '').trim().replace(/\s+/g, ' ');
     var email = (el('acEmail').value || '').trim().toLowerCase();
-    var on = el('acPapel').querySelector('.chip.on');
     if (nome.length < 2){ toast('Escreva o nome.', 'erro'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast('Esse e-mail não parece certo.', 'erro'); return; }
     fecharFolha();
-    setTimeout(function(){ fn(nome, email, on ? on.getAttribute('data-p') : 'Professor'); }, 60);
+    setTimeout(function(){ fn(nome, email); }, 60);
   }
   el('folhaCorpo').onclick = function(e){
-    var c = e.target.closest('.chip');
-    if (c){
-      el('acPapel').querySelectorAll('.chip').forEach(function(x){ x.classList.toggle('on', x === c); });
-      return;
-    }
     var b = e.target.closest('[data-t]');
     if (!b) return;
     if (b.dataset.t === '1') enviar(); else fecharFolha();
@@ -3262,14 +3266,14 @@ function fichaAcesso(titulo, p, rotulo, fn){
 
 /* Cria (se preciso) e liga o acesso, depois mostra a senha. */
 ACOES.novoProf = function(){
-  fichaAcesso('Adicionar pessoa', {}, 'Adicionar e gerar senha', function(nome, email, papel){
+  fichaAcesso('Adicionar professora', {}, 'Adicionar e gerar senha', function(nome, email){
     api('adicionarProfessor', [nome], function(){
-      gerarAcesso(nome, email, papel);
+      gerarAcesso(nome, email);
     }, function(e){ toast(textoErro(e), 'erro'); });
   });
 };
-function gerarAcesso(nome, email, papel){
-  api('definirAcesso', [nome, email, papel], function(r){
+function gerarAcesso(nome, email){
+  api('definirAcesso', [nome, email], function(r){
     vibrar(); recontar();
     mostrarSenha(r);
     if (atual() && atual().t === 'gProfs') carregarProfs();
@@ -3290,8 +3294,7 @@ function mostrarSenha(r){
     '<p class="sub">Mande para ' + esc(primeiroNome(r.nome)) + '. Essa senha não aparece de novo; ' +
     'se perder, é só gerar outra.</p>' +
     '<div class="senha-temp"><small>E-mail</small><b>' + esc(r.email) + '</b>' +
-    '<small>Senha temporária</small><b class="cod">' + esc(r.senha) + '</b>' +
-    '<small>Papel</small><b>' + esc(r.papel) + '</b></div>' +
+    '<small>Senha temporária</small><b class="cod">' + esc(r.senha) + '</b></div>' +
     '<a class="botao-zap" href="https://wa.me/?text=' + encodeURIComponent(texto) +
     '" target="_blank" rel="noopener">' + ico('conversa', 18) + ' Enviar no WhatsApp</a>' +
     '<button type="button" class="botao-cheio" style="margin-top:8px;background:var(--papel);' +
@@ -3313,17 +3316,11 @@ ACOES.acoesProf = function(b){
   } else {
     ops.push({txt:'Gerar senha nova', sub:'a senha atual para de valer na hora', icone:'chave', fn:function(){
       confirmar('Senha nova', p.nome + ' vai precisar da senha nova para entrar. A atual para de valer agora.',
-        'Gerar senha', function(){ gerarAcesso(p.nome, p.email, p.papel); });
+        'Gerar senha', function(){ gerarAcesso(p.nome, p.email); });
     }});
     ops.push({txt:'Mudar e-mail', sub:p.email, icone:'renomear', fn:function(){
       fichaAcesso('E-mail de ' + primeiroNome(p.nome), p, 'Salvar e gerar senha', gerarAcesso);
     }});
-    ops.push({txt:p.papel === 'Gestão' ? 'Tornar Professor' : 'Tornar Gestão',
-      sub:p.papel === 'Gestão' ? 'perde caixa, cadastros e relatórios' : 'passa a ver tudo',
-      icone:'engrenagem', fn:function(){
-        var novo = p.papel === 'Gestão' ? 'Professor' : 'Gestão';
-        escrever('mudarPapel', [p.nome, novo], p.nome + ' agora é ' + novo, carregarProfs);
-      }});
   }
   if (!eu) ops.push({txt:'Tirar da equipe', sub:'perde o acesso; as chamadas antigas continuam com o nome',
     icone:'desativar', perigo:true, fn:function(){
@@ -3335,18 +3332,16 @@ ACOES.acoesProf = function(b){
   folhaOpcoes(p.nome, ops);
 };
 
-/* ══════════════ GESTÃO: QR das turmas e link por professor ══════════════ */
-/* Duas abas. "Turmas" é o QR da parede. "Professores" é o link pessoal
-   (?prof=Nome) que cada um salva na tela inicial do celular: a saudação
-   usa o nome e a chamada já vem com o professor escolhido. */
+/* ══════════════ GESTÃO: QR ══════════════ */
+/* O principal é um QR só, do app: com login, o QR não controla acesso,
+   é atalho. Serve para instalar — escanear uma vez, entrar e adicionar à
+   tela inicial — e não depende das turmas: turma nova não pede cartaz
+   novo. Os QR por turma continuam, opcionais, para quem quiser a
+   chamada abrindo direto na sala. */
 TELAS.gQr = function(){
-  var aba = S.qrAba || 'turmas';
   return {
-    titulo:'QR e links',
-    html:'<div class="filtro" role="tablist">' +
-      '<button type="button" role="tab" data-acao="qrAba" data-f="turmas" aria-selected="' + (aba === 'turmas') + '">QR das turmas</button>' +
-      '<button type="button" role="tab" data-acao="qrAba" data-f="profs" aria-selected="' + (aba === 'profs') + '">Link por professor</button>' +
-      '</div><div id="qrLista">' + esqueleto(4) + '</div>',
+    titulo:'QR do app',
+    html:'<div id="qrLista">' + esqueleto(4) + '</div>',
     depois:function(){
       function falhou(e){ if (el('qrLista')) el('qrLista').innerHTML = estado('alerta','Não deu para carregar', textoErro(e)); }
       ler('obterUrlApp', [], function(url){
@@ -3357,12 +3352,11 @@ TELAS.gQr = function(){
             'Publique o app e abra esta tela de novo. Se continuar assim, use "Configurar endereço do app" no menu Veridiana da planilha, uma vez só.');
           return;
         }
-        if (aba === 'profs') listarLinksProf(falhou); else listarQrTurmas(falhou);
+        listarQrTurmas(falhou);
       }, falhou, {fresco:600000});
     }
   };
 };
-ACOES.qrAba = function(b){ S.qrAba = b.getAttribute('data-f'); vibrar(); trocar('gQr'); };
 
 function listarQrTurmas(falhou){
   ler('listarTurmasCompleto', [], function(ts){
@@ -3372,8 +3366,11 @@ function listarQrTurmas(falhou){
       alvo.innerHTML = estado('prancheta','Nenhuma turma ainda','Crie uma turma para gerar o QR dela.');
       return;
     }
-    var h = '<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
-            'Escolha a turma para gerar o código de colar na parede.</p><ul class="cartoes">';
+    var h = '<ul class="cartoes"><li><button type="button" class="item" data-acao="verQrApp">' +
+            ico('qr', 22) + '<span class="txt">Acessar o app<small>um cartaz só, para todo mundo</small></span>' +
+            '<span class="seta">' + ico('dir') + '</span></button></li></ul>' +
+            '<p style="color:var(--apagado);font-size:14px;margin:24px 0 12px 4px">' +
+            'Opcional: QR por turma, que já abre a chamada daquela sala.</p><ul class="cartoes">';
     ts.forEach(function(t){
       h += '<li><button type="button" class="item" data-acao="verQr" data-t="' + esc(t.nome) + '">' +
            '<span class="txt">' + esc(t.nome) + '</span>' +
@@ -3383,51 +3380,30 @@ function listarQrTurmas(falhou){
   }, falhou);
 }
 
-function listarLinksProf(falhou){
-  ler('listarProfessores', [], function(ps){
-    var alvo = el('qrLista');
-    if (!alvo) return;
-    if (!ps.length){
-      alvo.innerHTML = estado('pessoa','Ninguém na equipe ainda','Cadastre os professores em Gestão → Professores.');
-      return;
-    }
-    var h = '<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
-            'Cada professor recebe um link com o próprio nome. Salvo na tela inicial do celular, ' +
-            'a chamada já abre com ele escolhido.</p><ul class="lista">';
-    ps.forEach(function(n){
-      h += '<li class="li" data-acao="verLinkProf" data-n="' + esc(n) + '" role="button" tabindex="0">' +
-           '<span class="ini">' + esc(iniciais(n)) + '</span>' +
-           '<span class="nome">' + esc(n) + '</span>' +
-           '<span class="marca">' + ico('partilha', 18) + '</span></li>';
-    });
-    alvo.innerHTML = h + '</ul>';
-  }, falhou);
-}
-ACOES.verLinkProf = function(b){ ir('gLinkProf', {prof:b.getAttribute('data-n')}); };
-
 function comParametro(url, nome, valor){
   return url + (url.indexOf('?') === -1 ? '?' : '&') + nome + '=' + encodeURIComponent(valor);
 }
 
-TELAS.gLinkProf = function(p){
-  var url = comParametro(S.urlApp, 'prof', p.prof);
-  var nome = primeiroNome(p.prof);
-  var texto = 'Oi, ' + nome + '! Este é o seu link da chamada do Instituto Veridiana. ' +
-    'Abra no celular e adicione à tela inicial: a chamada já vai abrir com o seu nome. ' + url;
-  var h = '<div class="folha-qr">' +
-    '<p class="turma">' + esc(p.prof) + '</p>' + qrSvg(url) +
-    '<p class="marca">link pessoal da chamada</p></div>';
-  h += '<a class="botao-zap" style="margin-top:0" href="https://wa.me/?text=' + encodeURIComponent(texto) +
-       '" target="_blank" rel="noopener">' + ico('conversa', 18) + ' Enviar no WhatsApp</a>';
-  h += '<button type="button" class="botao-cheio" style="margin-top:8px;background:var(--papel);' +
-       'color:var(--roxo);border:1px solid var(--borda)" data-acao="copiarLink" data-u="' + esc(url) + '">' +
-       ico('copiar', 18) + ' Copiar link</button>';
-  h += '<p class="dica" style="margin:16px 4px 0">No iPhone, abra no Safari e use Compartilhar → ' +
-       'Adicionar à Tela de Início. No Android, menu ⋮ → Adicionar à tela inicial.</p>';
-  return { titulo:p.prof, html:h };
-};
-
 ACOES.verQr = function(b){ ir('gQrTurma', {turma:b.getAttribute('data-t')}); };
+
+ACOES.verQrApp = function(){ ir('gQrApp'); };
+TELAS.gQrApp = function(){
+  var url = S.urlApp;
+  var podeCompartilhar = !!navigator.share;
+  var h = '<div class="folha-qr" id="paraImprimir">' +
+    '<p class="turma">Instituto Veridiana</p>' + qrSvg(url) +
+    '<p class="marca">Aponte a câmera, entre com seu e-mail e adicione à tela inicial</p></div>';
+  h += '<div class="duplo">';
+  if (podeCompartilhar)
+    h += '<button type="button" class="principal" data-acao="partilhar" data-u="' + esc(url) +
+         '" data-t="">' + ico('partilha', 18) + ' Compartilhar</button>';
+  h += '<button type="button" class="' + (podeCompartilhar ? 'secundario' : 'principal') +
+       '" data-acao="copiarLink" data-u="' + esc(url) + '">' + ico('copiar', 18) + ' Copiar link</button>';
+  h += '</div>';
+  h += '<p class="dica" style="margin:16px 4px 0">Para imprimir, abra esta tela no computador e mande imprimir. ' +
+       'No celular: iPhone, Safari → Compartilhar → Adicionar à Tela de Início; Android, menu ⋮ → Adicionar à tela inicial.</p>';
+  return { titulo:'QR do app', html:h };
+};
 
 TELAS.gQrTurma = function(p){
   var url = comParametro(S.urlApp, 'turma', p.turma);
@@ -3447,7 +3423,8 @@ TELAS.gQrTurma = function(p){
 ACOES.partilhar = function(b){
   var url = b.getAttribute('data-u'), t = b.getAttribute('data-t');
   try {
-    navigator.share({ title:'Chamada · ' + t, text:'Chamada da turma ' + t, url:url })
+    navigator.share(t ? { title:'Chamada · ' + t, text:'Chamada da turma ' + t, url:url }
+                      : { title:'Instituto Veridiana', text:'App do Instituto Veridiana', url:url })
       .catch(function(){ /* cancelou ou o iframe bloqueou: silencio */ });
   } catch(e){ copiar(url); }
 };
@@ -4658,13 +4635,13 @@ ACOES.agAno = function(){ ir('agAno', {ano:+atual().p.mes.slice(0,4)}); };
 ACOES.agImprimir = function(){
   var a = atual();
   var ano = a.p.ano || +(a.p.mes || hojeISO()).slice(0,4);
-  comGestao('agImprimir', {ano:ano});
+  ir('agImprimir', {ano:ano});
 };
 ACOES.agNovo = function(){
   var mes = atual().p.mes || hojeISO().slice(0,7);
   /* No mês de hoje, a data já vem hoje. Em outro mês, o dia 1 dele:
      quem navegou até abril quer marcar algo em abril. */
-  comGestao('agNovo', {data: mes === hojeISO().slice(0,7) ? hojeISO() : mes + '-01'});
+  ir('agNovo', {data: mes === hojeISO().slice(0,7) ? hojeISO() : mes + '-01'});
 };
 
 /* ─── ver um evento ─── */
@@ -4693,7 +4670,6 @@ ACOES.agVer = function(b){
     var qual = o.getAttribute('data-ev');
     fecharFolha();
     setTimeout(function(){
-      if (!ehGestao()){ semPermissao(); return; }
       if (qual === 'editar') ir('agNovo', {id:ev.id});
       else if (qual === 'status') mudarStatus(ev);
       else confirmar('Apagar evento', ev.titulo + ' some da agenda. Se ele só não vai mais acontecer, prefira "Cancelado": fica registrado no ano.',
@@ -4907,7 +4883,7 @@ ACOES.agAbrirMes = function(b){
   if (baixo && baixo.t === 'agenda'){ S.pilha.pop(); baixo.p.mes = mes; desenhar(); }
   else ir('agenda', {mes:mes});
 };
-ACOES.agDatas = function(){ comGestao('agDatas', {ano:atual().p.ano}); };
+ACOES.agDatas = function(){ ir('agDatas', {ano:atual().p.ano}); };
 
 /* ══════════════ AGENDA: datas comemorativas ══════════════ */
 TELAS.agDatas = function(p){
@@ -5249,7 +5225,7 @@ function distintosCliente(campo){
   return Object.keys(v).sort(function(a, b){ return a.localeCompare(b, 'pt-BR'); });
 }
 ACOES.mtAbrir = function(b){ ir('mtItem', {id:b.getAttribute('data-id')}); };
-ACOES.mtNovo = function(){ comGestao('mtNovo', {}); };
+ACOES.mtNovo = function(){ ir('mtNovo', {}); };
 ACOES.mtResumo = function(){ ir('mtResumo'); };
 
 /* ══════════════ MATERIAIS: novo / editar ══════════════ */
@@ -5456,7 +5432,6 @@ TELAS.mtItem = function(p){
    dedo para: cinco toques seguidos são uma escrita, não cinco. */
 var mtAjuste = {id:'', delta:0, t:0};
 ACOES.mtMais = function(b){
-  if (!ehGestao()){ semPermissao(); return; }
   var id = atual().p.id, it = mtItem(id);
   if (!it) return;
   var n = +b.getAttribute('data-n');
@@ -5491,9 +5466,8 @@ function enviarAjuste(){
     toast('A quantidade não foi salva. ' + textoErro(e), 'erro');
   });
 }
-ACOES.mtEditar = function(){ enviarAjuste(); comGestao('mtNovo', {id:atual().p.id}); };
+ACOES.mtEditar = function(){ enviarAjuste(); ir('mtNovo', {id:atual().p.id}); };
 ACOES.mtInservivel = function(){
-  if (!ehGestao()){ semPermissao(); return; }
   var id = atual().p.id, it = mtItem(id);
   confirmar('Marcar como inservível', it.item + ' continua na lista, marcado como sem uso. Se foi para o lixo, use "Tirar da lista".',
     'Marcar', function(){
@@ -5504,7 +5478,6 @@ ACOES.mtInservivel = function(){
     });
 };
 ACOES.mtDescartar = function(){
-  if (!ehGestao()){ semPermissao(); return; }
   var id = atual().p.id, it = mtItem(id);
   confirmar('Tirar da lista', it.item + ' sai da lista de materiais. A linha continua guardada na planilha.',
     'Tirar da lista', function(){
@@ -5590,7 +5563,6 @@ ACOES.mtListaResumo = function(b){
     voltar();
   }}];
   if (!vazio) ops.push({txt:'Mudar o nome', sub:'muda em todos os itens de uma vez', icone:'renomear', fn:function(){
-    if (!ehGestao()){ semPermissao(); return; }
     pedirTexto('Mudar o nome', campo === 'categoria' ? 'Novo nome da categoria' : 'Novo nome do local', c, 'Mudar', function(novo){
       api('renomearNaLista', [campo, c, novo], function(r){
         vibrar(); toast(plural(r.mudou, 'item mudou', 'itens mudaram') + ' para ' + novo);

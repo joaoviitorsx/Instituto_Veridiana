@@ -5,23 +5,26 @@
    O iframe do Apps Script nem sempre deixa guardar (Safari em aba
    anônima, bloqueio de terceiros). Sem guardar, o app só pede login de
    novo na próxima vez: nada quebra. */
-var CHAVE_SESSAO = 'veridiana.sessao';
-function guardarSessao(t){ try { localStorage.setItem(CHAVE_SESSAO, t); } catch(e){} }
-function sessaoGuardada(){ try { return localStorage.getItem(CHAVE_SESSAO) || ''; } catch(e){ return ''; } }
-function esquecerSessao(){ try { localStorage.removeItem(CHAVE_SESSAO); } catch(e){} }
-
-function ehGestao(){ return !!(S.usuario && S.usuario.papel === 'Gestão'); }
-function semPermissao(){ toast('Só a gestão pode fazer isso.', 'erro'); }
-function comGestao(tela, p){
-  if (ehGestao()) ir(tela, p); else semPermissao();
+var CHAVE_SESSAO = 'veridiana.sessao', CHAVE_USUARIO = 'veridiana.usuario';
+function guardarSessao(t, u){
+  try { localStorage.setItem(CHAVE_SESSAO, t); localStorage.setItem(CHAVE_USUARIO, JSON.stringify(u)); } catch(e){}
 }
+function sessaoGuardada(){ try { return localStorage.getItem(CHAVE_SESSAO) || ''; } catch(e){ return ''; } }
+function usuarioGuardado(){
+  try { var u = JSON.parse(localStorage.getItem(CHAVE_USUARIO) || 'null'); return u && u.nome ? u : null; }
+  catch(e){ return null; }
+}
+function esquecerSessao(){
+  try { localStorage.removeItem(CHAVE_SESSAO); localStorage.removeItem(CHAVE_USUARIO); } catch(e){}
+}
+
 
 function usarSessao(token, usuario){
   S.sessao = token; S.usuario = usuario;
   /* A saudação e a escolha do professor na chamada saem do login. */
   S.prof = usuario.nome;
   MEM = {}; MEM_GEN++;
-  guardarSessao(token);
+  guardarSessao(token, usuario);
 }
 
 /* Depois do login vai para onde a pessoa queria ir: a turma do QR ou a
@@ -33,11 +36,25 @@ function seguir(){
   ir(d.t, d.p, true);
 }
 
-/* Abre o app: tenta a sessão guardada antes de pedir senha. */
+/* Abre o app: tenta a sessão guardada antes de pedir senha.
+
+   Com sessão e nome guardados, a tela abre NA HORA, sem perguntar nada
+   ao servidor: conferir antes custava uma ida inteira (1 a 2 s no 4G)
+   entre escanear o QR e ver a chamada. A conferência vai junto com a
+   primeira busca da tela: se a sessão caiu, a api manda para o login
+   e a pessoa volta para onde estava depois de entrar. */
 function retomarSessao(destino){
   S.destino = destino;
-  var t = sessaoGuardada();
+  var t = sessaoGuardada(), u = usuarioGuardado();
   if (!t){ ir('login', {}, true); return; }
+  if (u){
+    usarSessao(t, u); seguir();
+    /* Nome mudou na planilha? Atualiza por trás, sem repintar. */
+    api('quemSou', [], function(u2){
+      if (S.sessao === t && u2 && u2.nome !== u.nome){ S.usuario = u2; S.prof = u2.nome; guardarSessao(t, u2); }
+    }, function(){});
+    return;
+  }
   S.sessao = t;
   api('quemSou', [], function(u){
     usarSessao(t, u); seguir();
@@ -50,7 +67,7 @@ function retomarSessao(destino){
 ACOES.reabrir = function(){ retomarSessao(S.destino); };
 
 /* A api chama isto quando o servidor diz que a sessão acabou: senha
-   trocada em outro aparelho, papel mudou, pessoa saiu da equipe. */
+   trocada em outro aparelho, pessoa saiu da equipe. */
 function sessaoCaiu(){
   var a = atual();
   if (a && a.t === 'login') return;
@@ -58,6 +75,11 @@ function sessaoCaiu(){
   S.sessao = ''; S.usuario = null;
   esquecerSessao();
   MEM = {}; MEM_GEN++;
+  /* Quem esperava resposta não vai recebê-la: a api desviou para cá.
+     Sem zerar, a busca da turma e o carregamento de módulo ficavam
+     "em andamento" para sempre, e depois do login a tela abria vazia. */
+  PEND = {};
+  Object.keys(MODS).forEach(function(k){ if (MODS[k] !== true) delete MODS[k]; });
   if (folhaAberta()) fecharFolha();
   ir('login', {aviso:'Sua sessão terminou. Entre de novo.'}, true);
 }

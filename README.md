@@ -34,6 +34,43 @@ Sem registro confiável, duas coisas aconteciam:
 ## O fluxo
 
 Cada turma tem um QR code colado na parede da sala. O professor escaneia,
+a lista abre com **todos em falta**, ele toca em quem veio, confere o
+próprio nome e salva.
+
+> **Por que falta é o padrão.** A primeira versão abria com todos
+> presentes e o toque marcava falta: menos toques, mas presença dada por
+> esquecimento. As professoras pediram o contrário — presença só para
+> quem foi visto na sala. Turma cheia tem o atalho **Todos presentes**,
+> e salvar sem nenhum presente pede confirmação.
+
+<p align="center">
+  <img src="assets/chamada.png" width="240" alt="Tela de chamada">
+  <img src="assets/evasao.png" width="240" alt="Alunos que faltaram três aulas seguidas">
+  <img src="assets/relatorio.png" width="240" alt="Relatório para edital">
+</p>
+
+---
+
+## O problema
+
+O Instituto Veridiana atende crianças e jovens em situação de
+vulnerabilidade social pelos projetos *Sonho de Dançar* (3 a 12 anos) e
+*Cia Corpo Identidade* (13 a 28 anos). Cerca de 20 professores, a maioria
+voluntária. O instituto se mantém com bazar, doações e editais.
+
+A chamada era feita no papel e digitada depois — quando era digitada.
+Sem registro confiável, duas coisas aconteciam:
+
+- O instituto não conseguia **comprovar atendimento em edital**, que é de
+  onde vem o dinheiro.
+- Criança que parava de vir só era notada **semanas depois**, quando
+  faltar já tinha virado hábito.
+
+---
+
+## O fluxo
+
+Cada turma tem um QR code colado na parede da sala. O professor escaneia,
 a lista abre com **todos já marcados como presentes**, ele toca só em quem
 faltou, confirma o próprio nome e salva.
 
@@ -43,14 +80,16 @@ faltou, confirma o próprio nome e salva.
 > fosse.
 
 <p align="center">
-  <img src="assets/chamada.png" width="230" alt="Lista com faltas marcadas">
+  <img src="assets/chamada.png" width="230" alt="Lista da chamada">
   <img src="assets/salvo.png" width="230" alt="Confirmação de chamada salva">
   <img src="assets/qr.png" width="230" alt="QR code da turma">
 </p>
 
-Presença é o padrão e fica silenciosa: um visto verde discreto. Falta
-grita — fundo rosa, avatar vermelho, selo escrito. Numa sala barulhenta,
-com o celular na mão, o olho acha as três faltas sem procurar.
+Falta é o ponto de partida e fica quieta: selo cinza. Presença se
+destaca — fundo verde, avatar verde, visto. Um toque dá presença, o
+segundo marca falta justificada, o terceiro volta para falta. Numa sala
+barulhenta, com o celular na mão, o olho vê na hora quem ainda não foi
+marcado.
 
 ---
 
@@ -196,8 +235,8 @@ menu, e o aniversário do dia aparece na tela da chamada — sem custar um
 toque a mais. Para uma criança daqui, o instituto lembrar do aniversário
 dela não é enfeite.
 
-Caixa, cadastros, certificados e relatórios são só de quem tem o papel
-**Gestão**. Professor nem vê esses botões.
+Não há níveis de acesso: quem entra com e-mail e senha usa tudo. O app é
+da equipe do instituto, e a equipe inteira cuida dele.
 
 ---
 
@@ -302,9 +341,9 @@ Abra o **`preview.html`** no navegador. Ele já vem montado, com um mock do
 - `preview.html?turma=Jazz%20Juvenil` — como se viesse do QR da parede
 - `preview.html?dev=1` — painel para simular 4G ruim e queda de rede
 - Logins do preview (só valem aqui, nunca no app publicado):
-  - `vera@exemplo.org` / `veridiana` — Gestão
-  - `aline@exemplo.org` / `aline123` — Professor
-  - `bruno@exemplo.org` / `temp2345` — Professor no primeiro acesso (pede senha nova)
+  - `vera@exemplo.org` / `veridiana`
+  - `aline@exemplo.org` / `aline123`
+  - `bruno@exemplo.org` / `temp2345` — primeiro acesso (pede senha nova)
 
 Para regerar o `preview.html` depois de mexer em `apps-script/`:
 
@@ -443,30 +482,27 @@ agenda — o Docs temporário vai para a lixeira logo depois).
 
 ---
 
-## 2. Acessos: e-mail, senha e papel
+## 2. Acessos: e-mail e senha
 
-Ninguém entra no app sem estar na aba `Professores` com e-mail. Cada
-pessoa tem um papel:
+Ninguém entra no app sem estar na aba `Professores` com e-mail. Não há
+papéis: quem entra, entra em tudo.
 
-- **Professor** — chamada, agenda e materiais (só consulta)
-- **Gestão** — tudo: cadastros, caixa, certificados, relatórios, acessos
-
-### O primeiro acesso da gestão
+### O primeiro acesso
 
 Sem ninguém cadastrado, ninguém entra. O primeiro é criado na planilha:
 
 1. Abra a **planilha** (não o editor de script) e recarregue uma vez,
    para o menu **Veridiana** aparecer.
-2. **Veridiana → Criar acesso da gestão**: nome e e-mail.
+2. **Veridiana → Criar acesso ao app**: nome e e-mail.
 3. Aparece a **senha temporária**. Anote: ela não aparece de novo.
 4. No app, entre com o e-mail e essa senha. Ele pede para criar a sua.
 
-O mesmo menu serve se todo mundo da gestão perder a senha.
+O mesmo menu serve se todo mundo perder a senha.
 
 ### O resto da equipe
 
-No app: **Gestão → Equipe e acessos → Adicionar pessoa** (ou toque em
-quem já está na lista → **Dar acesso ao app**). Nome, e-mail e papel. O
+No app: **Gestão → Equipe e acessos → Adicionar professora** (ou toque em
+quem já está na lista → **Dar acesso ao app**). Nome e e-mail. O
 app mostra a senha temporária uma vez, com o botão **Enviar no
 WhatsApp**. No primeiro acesso a pessoa escolhe a dela.
 
@@ -477,12 +513,12 @@ hora, inclusive em celular que já estava logado.
 ### Como a senha é guardada
 
 A senha **não fica na planilha**: fica nas Script Properties, só como
-hash com sal. Quem edita a planilha vê e-mail e papel, nunca senha.
+hash com sal. Quem edita a planilha vê o e-mail, nunca a senha.
 Cinco senhas erradas seguidas travam aquele e-mail por 15 minutos.
 
 O link `/exec` continua público — é o que permite o QR da parede. O que
 mudou é que, sem login, ele não mostra nem grava nada: todo pedido ao
-servidor confere a sessão, e os da gestão conferem o papel.
+servidor confere a sessão.
 
 ---
 
@@ -536,11 +572,24 @@ O atalho abre em tela cheia, sem barra de endereço.
 > `.../Instituto_Veridiana/?turma=Jazz%20Juvenil` — o `?turma=` é
 > repassado para dentro.
 
-## 4. QR de cada turma e link de cada professor
+## 4. QR do app
 
-Tela inicial → **Gestão** → **QR e links**. Aba **QR das turmas**: escolha
-a turma. Aba **Link por professor**: escolha a pessoa e mande pelo
-WhatsApp; ela abre, faz login e adiciona à tela inicial do celular.
+Tela inicial → **Gestão** → **QR do app** → **Acessar o app**: um cartaz
+só, para todo mundo. O QR é atalho, não controle de acesso — quem
+escaneia cai no login. Serve para instalar: escanear uma vez, entrar e
+adicionar à tela inicial. Turma nova não pede cartaz novo.
+
+Na mesma tela, opcionalmente, um QR por turma, que já abre a chamada
+daquela sala.
+
+O endereço no QR é sempre o `/exec` limpo. O link copiado do navegador
+às vezes vem com `/u/2/` no meio (o número da conta Google *naquele*
+navegador); o app tira isso sozinho, porque no celular de outra pessoa
+esse número aponta para a conta errada.
+
+Para o professor ter o app no celular, basta o link `/exec`: ele vai
+junto na mensagem da senha temporária. A pessoa abre, faz login e
+adiciona à tela inicial.
 
 O endereço do app é descoberto sozinho. Se aparecer o aviso de que falta o
 endereço, use **Veridiana → Configurar endereço do app** e cole o link que
@@ -559,7 +608,7 @@ cartaz, no tamanho A5.
 | Aba | Colunas |
 |---|---|
 | `Alunos` | Turma, Aluno, Ativo (SIM/NAO), Nascimento, Responsável, Telefone |
-| `Professores` | Professor, E-mail, Papel (Professor/Gestão) |
+| `Professores` | Professor, E-mail |
 | `Chamadas` | Registro, Data, Turma, Professor, Aluno, Status |
 | `Turmas` | Turma, Ativa (SIM/NAO), Minutos por aula |
 | `Caixa` | Registro, Data, Tipo, Valor, Categoria, Descrição, Fonte, Comprovante, Quem registrou |

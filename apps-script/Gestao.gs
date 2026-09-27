@@ -73,7 +73,10 @@ function contarAlunos(){
 }
 
 function entrarNaGestao(sessao){
-  exigirGestao(sessao);
+  exigirSessao(sessao);
+  return doCache('gest', TTL_CACHE, entrarNaGestao_);
+}
+function entrarNaGestao_(){
   const contas = contarAlunos();
   let ativos = 0, inativos = 0;
   Object.keys(contas).forEach(function (t){ ativos += contas[t].ativos; inativos += contas[t].inativos; });
@@ -87,7 +90,7 @@ function entrarNaGestao(sessao){
 }
 
 function listarTurmasCompleto(sessao){
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   return doCache('tc', TTL_CACHE, function () { return listarTurmasCompleto_(sessao); });
 }
 function listarTurmasCompleto_(sessao){
@@ -102,7 +105,7 @@ function listarTurmasCompleto_(sessao){
 }
 
 function criarTurma(sessao, nome){
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const n = exigirNome(nome, 'da turma');
   return comTrava(function (){
     const jas = turmasRegistradas();
@@ -115,7 +118,7 @@ function criarTurma(sessao, nome){
 }
 
 function renomearTurma(sessao, nomeAtual, nomeNovo){
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const novo = exigirNome(nomeNovo, 'da turma');
   const atual = String(nomeAtual || '').trim();
   if (!atual) throw new Error('Turma não informada.');
@@ -159,7 +162,7 @@ function renomearTurma(sessao, nomeAtual, nomeNovo){
 }
 
 function arquivarTurma(sessao, nome){
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   return comTrava(function (){
     const c = contarAlunos()[nome];
     if (c && c.ativos > 0) throw new Error('Mova ou desative os alunos antes de arquivar.');
@@ -218,7 +221,7 @@ function acharAluno_(nome, turma){
 }
 
 function listarAlunos(sessao, turma, incluirInativos){
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   return doCache('al_' + turma + '_' + !!incluirInativos, TTL_CACHE, function () { return listarAlunos_(sessao, turma, incluirInativos); });
 }
 function listarAlunos_(sessao, turma, incluirInativos){
@@ -234,7 +237,7 @@ function listarAlunos_(sessao, turma, incluirInativos){
 }
 
 function adicionarAluno(sessao, turma, nome, dados){
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const n = exigirNome(nome, 'do aluno');
   const t = String(turma || '').trim();
   if (!t) throw new Error('Turma não informada.');
@@ -260,7 +263,7 @@ function adicionarAluno(sessao, turma, nome, dados){
 
 /* Edita nascimento, responsável e telefone de quem já está cadastrado. */
 function atualizarAluno(sessao, nome, turma, dados){
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const d = dados || {};
   return comTrava(function (){
     const a = acharAluno_(nome, turma);
@@ -282,7 +285,7 @@ function soDigitos_(v){
 }
 
 function moverAluno(sessao, nome, turmaDestino, turmaOrigem){
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const destino = String(turmaDestino || '').trim();
   if (!destino) throw new Error('Turma de destino não informada.');
   return comTrava(function (){
@@ -299,7 +302,7 @@ function moverAluno(sessao, nome, turmaDestino, turmaOrigem){
 
 /* Nada é alterado na aba Chamadas: o histórico do aluno continua inteiro. */
 function desativarAluno(sessao, nome, turma){
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   return comTrava(function (){
     const a = acharAluno_(nome, turma);
     planilha().getSheetByName(ABA_ALUNOS).getRange(a.linha, 3).setValue('NAO');
@@ -308,7 +311,7 @@ function desativarAluno(sessao, nome, turma){
 }
 
 function reativarAluno(sessao, nome, turma){
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   return comTrava(function (){
     const a = acharAluno_(nome, turma);
     planilha().getSheetByName(ABA_ALUNOS).getRange(a.linha, 3).setValue('SIM');
@@ -317,17 +320,17 @@ function reativarAluno(sessao, nome, turma){
 }
 
 /* ─── professores ───
-   A: Professor | B: E-mail | C: Papel. E-mail e papel são o acesso ao
+   A: Professor | B: E-mail. O e-mail é o acesso ao
    app (ver Acesso.gs); quem está sem e-mail aparece na chamada mas não
    entra. */
 function abaProfessores_(){
   let aba = planilha().getSheetByName(ABA_PROFESSORES);
   if (!aba){
     aba = planilha().insertSheet(ABA_PROFESSORES);
-    aba.appendRow(['Professor', 'E-mail', 'Papel']);
+    aba.appendRow(['Professor', 'E-mail']);
     aba.setFrozenRows(1);
   } else if (!String(aba.getRange(1, 2).getValue() || '').trim()){
-    aba.getRange(1, 2, 1, 2).setValues([['E-mail', 'Papel']]);
+    aba.getRange(1, 2).setValue('E-mail');
   }
   return aba;
 }
@@ -335,11 +338,10 @@ function abaProfessores_(){
 function lerProfessores(){
   const aba = planilha().getSheetByName(ABA_PROFESSORES);
   if (!aba || aba.getLastRow() < 2) return [];
-  return aba.getRange(2, 1, aba.getLastRow() - 1, 3).getValues()
+  return aba.getRange(2, 1, aba.getLastRow() - 1, 2).getValues()
     .map(function (l, i){
       const email = String(l[1] || '').trim().toLowerCase();
-      return { nome:String(l[0] || '').trim(), email:email,
-               papel:normPapel_(l[2]), linha:i + 2 };
+      return { nome:String(l[0] || '').trim(), email:email, linha:i + 2 };
     })
     .filter(function (p){ return p.nome; });
 }
@@ -349,7 +351,7 @@ function acharPessoaPorEmail_(email){
 }
 
 function listarProfessores(sessao){
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   return doCache('pf', TTL_CACHE, function () { return listarProfessores_(sessao); });
 }
 function listarProfessores_(sessao){
@@ -359,12 +361,12 @@ function listarProfessores_(sessao){
 }
 
 function adicionarProfessor(sessao, nome){
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   const n = exigirNome(nome, 'do professor');
   return comTrava(function (){
     if (lerProfessores().some(function (p){ return chave(p.nome) === chave(n); }))
-      throw new Error('Esse professor já está na equipe.');
-    abaProfessores_().appendRow([n, '', PAPEL_PROFESSOR]);
+      throw new Error('Essa pessoa já está na equipe.');
+    abaProfessores_().appendRow([n, '']);
     return { ok:true };
   });
 }
@@ -372,10 +374,10 @@ function adicionarProfessor(sessao, nome){
 /* O nome sai da escolha na chamada, mas continua nas chamadas já salvas.
    Sai também o acesso: senha apagada e sessões derrubadas na hora. */
 function removerProfessor(sessao, nome){
-  const quem = exigirGestao(sessao);
+  const quem = exigirSessao(sessao);
   return comTrava(function (){
     const p = lerProfessores().filter(function (x){ return chave(x.nome) === chave(nome); })[0];
-    if (!p) throw new Error('Professor não encontrado.');
+    if (!p) throw new Error('Essa pessoa não está na equipe.');
     if (p.email && p.email === quem.email) throw new Error('Você não pode tirar você mesmo da equipe.');
     if (p.email){ apagarCredencial_(p.email); derrubarSessoes_(p.email); }
     planilha().getSheetByName(ABA_PROFESSORES).deleteRow(p.linha);

@@ -152,10 +152,12 @@ main{padding:0 0 24px}
 .li+.li::before{
   content:"";position:absolute;left:68px;right:0;top:0;height:1px;background:var(--borda);
 }
-.li[data-st="Falta"]{background:var(--falta-fraco)}
+/* Falta é o ponto de partida da chamada: fica quieta. Quem se destaca é
+   quem o professor marcou como presente. */
+.li[data-st="Presente"]{background:var(--presente-fraco)}
 .li[data-st="Justificada"]{background:var(--justif-fraco)}
 .li.tocado{background:var(--roxo-fraco)}
-.li[data-st="Falta"].tocado{background:#F6DDE3}
+.li[data-st="Presente"].tocado{background:#D3E8DC}
 .li[data-st="Justificada"].tocado{background:#F5EAD3}
 
 .ini{
@@ -165,7 +167,8 @@ main{padding:0 0 24px}
   font-size:13px;font-weight:700;letter-spacing:.02em;
   transition:background 160ms var(--curva),color 160ms var(--curva);
 }
-.li[data-st="Falta"] .ini{background:var(--falta);color:#fff}
+.li[data-st="Presente"] .ini{background:var(--presente);color:#fff}
+.li[data-st="Falta"] .ini{background:var(--fundo);color:var(--apagado)}
 .li[data-st="Justificada"] .ini{background:var(--justif);color:#fff}
 
 .nome{flex:1;min-width:0;font-size:16px;font-weight:600;line-height:1.25;overflow-wrap:anywhere}
@@ -173,14 +176,14 @@ main{padding:0 0 24px}
 .marca{flex-shrink:0;display:grid;place-items:center}
 .marca .ok{
   width:26px;height:26px;border-radius:50%;
-  background:var(--presente-fraco);color:var(--presente);
+  background:var(--presente);color:#fff;
   display:grid;place-items:center;
 }
 .marca .selo{
   padding:6px 12px;border-radius:999px;
   font-size:13px;font-weight:700;white-space:nowrap;
 }
-.li[data-st="Falta"] .selo{background:var(--falta);color:#fff}
+.li[data-st="Falta"] .selo{background:var(--fundo);color:var(--apagado);border:1px solid var(--borda)}
 .li[data-st="Justificada"] .selo{background:var(--justif);color:#fff}
 
 /* ─────────── barra de salvar ─────────── */
@@ -514,12 +517,7 @@ main{padding:0 0 24px}
 }
 .senha button.on{color:var(--roxo)}
 
-/* equipe: papel e primeiro acesso pendente */
-.li .papel{
-  flex-shrink:0;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;
-  background:var(--fundo);color:var(--apagado);border:1px solid var(--borda);
-}
-.li .papel.gestao{background:var(--roxo-fraco);color:var(--roxo);border-color:transparent}
+/* equipe: primeiro acesso pendente */
 .li .pendente{flex-shrink:0;width:10px;height:10px;border-radius:50%;background:var(--justif)}
 .li .nome small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .senha-temp{

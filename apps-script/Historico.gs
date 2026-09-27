@@ -4,7 +4,7 @@
 
 /** Meses que já tiveram chamada, do mais novo para o mais velho. */
 function mesesComChamada(sessao) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   return doCache('meses_' + versaoResumo_(), TTL_CACHE, function () { return mesesComChamada_(sessao); });
 }
 function mesesComChamada_(sessao) {
@@ -70,7 +70,7 @@ function lerMes_(mes) {
 
 /** Resumo de um mês: cada aula dada e o total por turma. */
 function resumoHistorico(sessao, mes) {
-  exigirGestao(sessao);
+  exigirSessao(sessao);
   return doCache('hist_' + mes + '_' + versaoResumo_(), TTL_CACHE, function () { return resumoHistorico_(sessao, mes); });
 }
 function resumoHistorico_(sessao, mes) {
