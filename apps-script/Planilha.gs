@@ -38,6 +38,7 @@ function onOpen(){
   SpreadsheetApp.getUi().createMenu('Veridiana')
     .addItem('Criar acesso ao app', 'criarAcessoMenu')
     .addItem('Configurar endereço do app', 'configurarUrlApp')
+    .addItem('Recontar horas dos certificados', 'recontarHorasMenu')
     .addSeparator()
     .addItem('Arrumar e padronizar a planilha', 'arrumarPlanilhaMenu')
     .addToUi();

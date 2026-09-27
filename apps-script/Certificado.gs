@@ -19,7 +19,10 @@ const CERT_PROJETO   = '';            // opcional, ex: 'Sonho de Dançar'
 
 const MESES_EXT = ['janeiro','fevereiro','março','abril','maio','junho','julho',
                    'agosto','setembro','outubro','novembro','dezembro'];
-const LIMITE_HISTORICO = 50000;       // linhas de Chamadas lidas de uma vez
+/* Resumo acumulado das horas: ver historicoCompleto0_. */
+const ABA_HIST_CERT = '_HorasCertificado';
+const BLOCO_HIST = 5000;               // linhas de Chamadas por leitura
+const DIAS_REFAZER_HIST = 30;          // recontagem inteira de tempos em tempos
 
 function dataPorExtenso_(iso) {
   const p = String(iso || '').split('-');
@@ -45,28 +48,134 @@ function historicoCompleto_() {
      versão das chamadas, porque é o número que vai no documento. */
   return doCache('histall_' + versaoResumo_(), TTL_CACHE, historicoCompleto0_);
 }
+/**
+ * As horas de todo mundo, sem ler a aba Chamadas inteira.
+ *
+ * Antes lia tudo a cada vez, com teto de 50 mil linhas: no ritmo do
+ * instituto (~20 linhas por turma por dia) isso acabava em cerca de um
+ * ano, e dali em diante o certificado passaria a contar horas A MENOS.
+ * Documento oficial com número errado.
+ *
+ * Agora há um resumo acumulado numa aba escondida (_HorasCertificado):
+ * uma linha por turma + aluno, com primeira aula, última e presenças, e
+ * até qual linha de Chamadas ele já contou. Cada pedido lê só as linhas
+ * novas depois disso. A leitura fica pequena para sempre, sem teto.
+ *
+ * O resumo é recontado do zero quando:
+ *   - alguma linha antiga de Chamadas foi apagada ou movida (a linha
+ *     marcada como "contada até aqui" não é mais a mesma);
+ *   - passou DIAS_REFAZER_HIST dias (pega correção feita à mão numa
+ *     linha antiga, que não muda a posição de nada);
+ *   - alguém pede no menu Veridiana → Recontar horas dos certificados.
+ *
+ * Os minutos saem na hora, de presenças × minutos da turma: mudar a
+ * duração da aula na aba Turmas vale para o histórico todo, como antes.
+ */
 function historicoCompleto0_() {
-  /* O certificado precisa do histórico INTEIRO da aluna — é o número de
-     horas que vai no documento. Lê tudo, com teto de segurança. */
-  const lido = lerChamadasDesde_('', LIMITE_HISTORICO);
+  const aba = abaChamadas();
+  const ultima = aba.getLastRow();
+  const base = resumoHorasValido_(aba, ultima);
+  const acc = base.acc;
+
+  somarChamadas_(aba, base.ate + 1, ultima, acc);
+  if (ultima > base.ate && (base.refeito || ultima - base.ate >= 500)) {
+    guardarResumoHoras_(acc, aba, ultima, base.refeito ? Date.now() : base.em);
+  }
 
   const minutos = {};
   turmasRegistradas().forEach(function (t) { minutos[t.nome] = t.minutos; });
-
-  const por = { _completo: lido.completo };
-  lido.linhas.forEach(function (r) {
-    const k = r.turma + '|' + r.aluno;
-    if (!por[k]) por[k] = { primeira: r.data, ultima: r.data, turmas: {}, aulas: 0, minutos: 0 };
-    const h = por[k];
-    if (r.data < h.primeira) h.primeira = r.data;
-    if (r.data > h.ultima) h.ultima = r.data;
-    h.turmas[r.turma] = 1;
-    if (r.status === 'Presente') {
-      h.aulas++;
-      h.minutos += (minutos[r.turma] || 60);
-    }
+  const por = { _completo: true };
+  Object.keys(acc).forEach(function (k) {
+    const a = acc[k], turma = k.slice(0, k.indexOf('|'));
+    por[k] = { primeira: a.p, ultima: a.u, turmas: {}, aulas: a.n, minutos: a.n * (minutos[turma] || 60) };
+    por[k].turmas[turma] = 1;
   });
   return por;
+}
+
+/* A marca de "contado até esta linha": o que está nela. Se alguém
+   apagar ou inserir linhas antes, a marca deixa de bater. */
+function assinaturaLinha_(aba, linha) {
+  if (linha < 2) return 'vazio';
+  return aba.getRange(linha, 1, 1, 6).getValues()[0].map(function (v) {
+    return v instanceof Date ? v.getTime() : String(v);
+  }).join('|');
+}
+
+function resumoHorasValido_(aba, ultima) {
+  const pr = PropertiesService.getScriptProperties();
+  const ate = Number(pr.getProperty('HIST_ATE') || 0);
+  const em = Number(pr.getProperty('HIST_EM') || 0);
+  const hist = planilha().getSheetByName(ABA_HIST_CERT);
+  const vale = hist && ate >= 1 && ate <= ultima &&
+    Date.now() - em < DIAS_REFAZER_HIST * 86400000 &&
+    assinaturaLinha_(aba, ate) === pr.getProperty('HIST_ASSIN');
+  if (!vale) return { acc: {}, ate: 1, em: 0, refeito: true };
+
+  const acc = {};
+  if (hist.getLastRow() > 1) {
+    hist.getRange(2, 1, hist.getLastRow() - 1, 5).getValues().forEach(function (l) {
+      const t = String(l[0] || ''), n = String(l[1] || '');
+      if (t && n) acc[t + '|' + n] = { p: textoData(l[2]), u: textoData(l[3]), n: Number(l[4]) || 0 };
+    });
+  }
+  return { acc: acc, ate: ate, em: em, refeito: false };
+}
+
+/* Linhas de..ate de Chamadas, da mais velha para a mais nova, em blocos. */
+function somarChamadas_(aba, de, ate, acc) {
+  for (let ini = Math.max(2, de); ini <= ate; ini += BLOCO_HIST) {
+    const n = Math.min(BLOCO_HIST, ate - ini + 1);
+    aba.getRange(ini, 2, n, 5).getValues().forEach(function (l) {   // Data, Turma, Professor, Aluno, Status
+      const data = textoData(l[0]);
+      const turma = String(l[1] || '').trim(), aluno = String(l[3] || '').trim();
+      if (!data || !turma || !aluno) return;
+      const k = turma + '|' + aluno;
+      const a = acc[k] || (acc[k] = { p: data, u: data, n: 0 });
+      if (data < a.p) a.p = data;
+      if (data > a.u) a.u = data;
+      if (String(l[4] || '').trim() === 'Presente') a.n++;
+    });
+  }
+}
+
+/* Grava o resumo. Se outra pessoa estiver gravando, deixa para a
+   próxima: o número desta vez já saiu certo, só não fica guardado. */
+function guardarResumoHoras_(acc, aba, ultima, em) {
+  const trava = LockService.getScriptLock();
+  if (!trava.tryLock(5000)) return;
+  try {
+    let hist = planilha().getSheetByName(ABA_HIST_CERT);
+    if (!hist) {
+      hist = planilha().insertSheet(ABA_HIST_CERT);
+      try { hist.hideSheet(); } catch (e) {}
+    }
+    const linhas = Object.keys(acc).sort().map(function (k) {
+      const p = k.indexOf('|'), a = acc[k];
+      return [k.slice(0, p), k.slice(p + 1), a.p, a.u, a.n];
+    });
+    hist.clearContents();
+    hist.getRange(1, 1, 1, 5).setValues([['Turma', 'Aluno', 'Primeira', 'Ultima', 'Presencas']]);
+    if (linhas.length) {
+      garantirLinhas_(hist, linhas.length + 1);
+      hist.getRange(2, 3, linhas.length, 2).setNumberFormat('@');   // datas como texto, igual a Chamadas
+      hist.getRange(2, 1, linhas.length, 5).setValues(linhas);
+    }
+    const pr = PropertiesService.getScriptProperties();
+    pr.setProperties({
+      HIST_ATE: String(ultima),
+      HIST_ASSIN: assinaturaLinha_(aba, ultima),
+      HIST_EM: String(em)
+    });
+  } finally { trava.releaseLock(); }
+}
+
+/** Menu da planilha: força a recontagem inteira na próxima vez. */
+function recontarHorasMenu() {
+  PropertiesService.getScriptProperties().deleteProperty('HIST_ATE');
+  invalidarCache();
+  historicoCompleto0_();
+  SpreadsheetApp.getUi().alert('Pronto. As horas dos certificados foram recontadas do zero.');
 }
 
 /**

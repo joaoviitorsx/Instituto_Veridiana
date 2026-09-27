@@ -195,6 +195,18 @@ imprimir e entregar no fim do ano.
 > — teria o nome de 20 crianças num link aberto. Esse fica só no Drive,
 > para imprimir.
 
+**As horas não têm teto.** O certificado precisa do histórico inteiro da
+aluna, e a aba Chamadas cresce umas 20 linhas por turma por dia. Ler
+tudo a cada certificado ficaria lento e, com o teto de segurança antigo,
+passaria a contar horas a menos depois de cerca de um ano. Por isso há
+um resumo acumulado numa aba escondida, `_HorasCertificado` (uma linha
+por turma + aluno), e cada certificado só soma as chamadas novas desde a
+última conta. O resumo se refaz do zero sozinho quando alguma linha
+antiga de Chamadas é apagada ou movida, e a cada 30 dias, para pegar
+correção feita à mão. Corrigiu uma chamada antiga e quer o certificado
+certo na hora: **Veridiana → Recontar horas dos certificados**. Não
+edite a aba escondida: ela é refeita sempre que preciso.
+
 ### Precisam de atenção
 
 <img src="assets/evasao.png" width="260" align="right" alt="Tela de evasão">
