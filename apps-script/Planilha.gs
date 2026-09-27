@@ -3,8 +3,8 @@
  */
 
 /* ─── endereço do app, para o QR ─── */
-function obterUrlApp(pin){
-  exigirPin(pin);
+function obterUrlApp(sessao){
+  exigirGestao(sessao);
   const guardada = PropertiesService.getDocumentProperties().getProperty('URL_APP');
   if (guardada) return guardada;
   try {
@@ -25,22 +25,11 @@ function configurarUrlApp(){
   ui.alert('Pronto. Os QR das turmas já usam esse endereço.');
 }
 
-function configurarPin(){
-  const ui = SpreadsheetApp.getUi();
-  const r = ui.prompt('Código da gestão',
-    'Escolha 4 números para abrir a área de cadastro no celular:', ui.ButtonSet.OK_CANCEL);
-  if (r.getSelectedButton() !== ui.Button.OK) return;
-  const p = r.getResponseText().trim();
-  if (!/^[0-9]{4}$/.test(p)){ ui.alert('Precisa ser exatamente 4 números.'); return; }
-  definirPin(p);
-  ui.alert('Pronto. Use ' + p + ' no botão Gestão da tela inicial do app.');
-}
-
 /* Se você já tem um onOpen, junte estas linhas ao seu em vez de
    deixar duas funções com o mesmo nome: a segunda apaga a primeira. */
 function onOpen(){
   SpreadsheetApp.getUi().createMenu('Veridiana')
-    .addItem('Definir código da gestão', 'configurarPin')
+    .addItem('Criar acesso da gestão', 'criarAcessoGestaoMenu')
     .addItem('Configurar endereço do app', 'configurarUrlApp')
     .addSeparator()
     .addItem('Arrumar e padronizar a planilha', 'arrumarPlanilhaMenu')
@@ -57,8 +46,8 @@ function onOpen(){
  * permissão no Google Drive. Compartilhar o link não compartilha o
  * arquivo — isso continua sendo feito no botão Compartilhar da planilha.
  */
-function obterLinkPlanilha(pin) {
-  exigirPin(pin);
+function obterLinkPlanilha(sessao) {
+  exigirGestao(sessao);
   const ss = planilha();
   return { url: ss.getUrl(), nome: ss.getName() };
 }
@@ -67,7 +56,7 @@ function obterLinkPlanilha(pin) {
 
 const ABAS_PADRAO = [
   { nome: 'Alunos',      cab: ['Turma','Aluno','Ativo','Nascimento','Responsável','Telefone'], larg: [170, 230, 70, 110, 200, 130] },
-  { nome: 'Professores', cab: ['Professor'],                                                  larg: [260] },
+  { nome: 'Professores', cab: ['Professor','E-mail','Papel'],                                larg: [260, 260, 110] },
   { nome: 'Turmas',      cab: ['Turma', 'Ativa', 'Minutos por aula'],                        larg: [230, 70, 140] },
   { nome: 'Caixa',       cab: ['Registro','Data','Tipo','Valor','Categoria','Descrição','Fonte','Comprovante','Quem registrou'],
                                                                                         larg: [140, 90, 80, 100, 140, 220, 150, 130, 150] },
@@ -95,13 +84,17 @@ function listaNaColuna_(aba, col, valores) {
  * formato brasileiro, e o Painel com Tabelas Dinâmicas.
  * Pode rodar quantas vezes quiser — não duplica nada.
  */
-function arrumarPlanilha(pin) {
-  exigirPin(pin);
+function arrumarPlanilha(sessao) {
+  exigirGestao(sessao);
+  return arrumarPlanilha_();
+}
+function arrumarPlanilha_() {
   return comTrava(function () {
     const ss = planilha();
     ss.setSpreadsheetTimeZone(FUSO);
 
     abaChamadas();   // garante que existem antes de formatar
+    abaProfessores_();
     abaTurmas();
     abaCaixa();
     abaAgenda();
@@ -119,6 +112,7 @@ function arrumarPlanilha(pin) {
         .build();
       alunos.getRange(2, 3, Math.max(alunos.getMaxRows() - 1, 1), 1).setDataValidation(regra);
     }
+    listaNaColuna_(ss.getSheetByName(ABA_PROFESSORES), 3, PAPEIS);
     const turmas = ss.getSheetByName(ABA_TURMAS);
     if (turmas) {
       const regra2 = SpreadsheetApp.newDataValidation()
@@ -252,8 +246,6 @@ function montarPainel_(ss) {
 /* ─── histórico ─── */
 
 function arrumarPlanilhaMenu() {
-  const pin = PropertiesService.getScriptProperties().getProperty('PIN_ADMIN');
-  if (!pin) { SpreadsheetApp.getUi().alert('Defina o código da gestão primeiro.'); return; }
-  arrumarPlanilha(pin);
+  arrumarPlanilha_();
   SpreadsheetApp.getUi().alert('Planilha arrumada. O Painel está na primeira aba.');
 }

@@ -203,7 +203,7 @@ function distintosCliente(campo){
   return Object.keys(v).sort(function(a, b){ return a.localeCompare(b, 'pt-BR'); });
 }
 ACOES.mtAbrir = function(b){ ir('mtItem', {id:b.getAttribute('data-id')}); };
-ACOES.mtNovo = function(){ comPin('mtNovo', {}); };
+ACOES.mtNovo = function(){ comGestao('mtNovo', {}); };
 ACOES.mtResumo = function(){ ir('mtResumo'); };
 
 /* ══════════════ MATERIAIS: novo / editar ══════════════ */
@@ -358,7 +358,7 @@ ACOES.mtSalvar = function(){
   if (!(dados.quantidade >= 0)){ toast('Escreva a quantidade.', 'erro'); el('mtQtd').focus(); return; }
   var bt = el('btMtSalvar');
   bt.disabled = true; bt.textContent = 'Salvando…';
-  api(p.id ? 'editarMaterial' : 'criarMaterial', p.id ? [S.pin, p.id, dados] : [S.pin, dados], function(){
+  api(p.id ? 'editarMaterial' : 'criarMaterial', p.id ? [p.id, dados] : [dados], function(){
     vibrar();
     S.mtUltimo = {categoria:dados.categoria, local:dados.local, finalidade:dados.finalidade};
     toast(p.id ? 'Item salvo' : dados.item + ' cadastrado');
@@ -410,7 +410,7 @@ TELAS.mtItem = function(p){
    dedo para: cinco toques seguidos são uma escrita, não cinco. */
 var mtAjuste = {id:'', delta:0, t:0};
 ACOES.mtMais = function(b){
-  if (!S.pin){ pedirPin(); return; }
+  if (!ehGestao()){ semPermissao(); return; }
   var id = atual().p.id, it = mtItem(id);
   if (!it) return;
   var n = +b.getAttribute('data-n');
@@ -432,7 +432,7 @@ function enviarAjuste(){
   var id = mtAjuste.id, d = mtAjuste.delta;
   mtAjuste = {id:'', delta:0, t:0};
   if (!id || !d) return;
-  api('ajustarQuantidade', [S.pin, id, d], function(r){
+  api('ajustarQuantidade', [id, d], function(r){
     var it = mtItem(id);
     if (it) it.quantidade = r.quantidade;
     var a = atual();
@@ -445,24 +445,24 @@ function enviarAjuste(){
     toast('A quantidade não foi salva. ' + textoErro(e), 'erro');
   });
 }
-ACOES.mtEditar = function(){ enviarAjuste(); comPin('mtNovo', {id:atual().p.id}); };
+ACOES.mtEditar = function(){ enviarAjuste(); comGestao('mtNovo', {id:atual().p.id}); };
 ACOES.mtInservivel = function(){
-  if (!S.pin){ pedirPin(); return; }
+  if (!ehGestao()){ semPermissao(); return; }
   var id = atual().p.id, it = mtItem(id);
   confirmar('Marcar como inservível', it.item + ' continua na lista, marcado como sem uso. Se foi para o lixo, use "Tirar da lista".',
     'Marcar', function(){
-      api('editarMaterial', [S.pin, id, {estado:'Inservível'}], function(){
+      api('editarMaterial', [id, {estado:'Inservível'}], function(){
         vibrar(); toast(it.item + ' marcado como inservível');
         carregarMt(function(){ if (atual().t === 'mtItem') desenhar(); });
       }, function(e){ toast(textoErro(e), 'erro'); });
     });
 };
 ACOES.mtDescartar = function(){
-  if (!S.pin){ pedirPin(); return; }
+  if (!ehGestao()){ semPermissao(); return; }
   var id = atual().p.id, it = mtItem(id);
   confirmar('Tirar da lista', it.item + ' sai da lista de materiais. A linha continua guardada na planilha.',
     'Tirar da lista', function(){
-      api('inativarMaterial', [S.pin, id], function(){
+      api('inativarMaterial', [id], function(){
         vibrar(); toast(it.item + ' saiu da lista');
         carregarMt(function(){ if (atual().t === 'mtItem') voltar(); });
       }, function(e){ toast(textoErro(e), 'erro'); });
@@ -544,9 +544,9 @@ ACOES.mtListaResumo = function(b){
     voltar();
   }}];
   if (!vazio) ops.push({txt:'Mudar o nome', sub:'muda em todos os itens de uma vez', icone:'renomear', fn:function(){
-    if (!S.pin){ pedirPin(); return; }
+    if (!ehGestao()){ semPermissao(); return; }
     pedirTexto('Mudar o nome', campo === 'categoria' ? 'Novo nome da categoria' : 'Novo nome do local', c, 'Mudar', function(novo){
-      api('renomearNaLista', [S.pin, campo, c, novo], function(r){
+      api('renomearNaLista', [campo, c, novo], function(r){
         vibrar(); toast(plural(r.mudou, 'item mudou', 'itens mudaram') + ' para ' + novo);
         carregarMt(function(){ if (atual().t === 'mtResumo') pintarResumoMt(); });
       }, function(e){ toast(textoErro(e), 'erro'); });

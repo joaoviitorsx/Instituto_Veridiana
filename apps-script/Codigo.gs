@@ -4,7 +4,7 @@
  *
  * Abas esperadas na planilha:
  *   Alunos      -> A: Turma | B: Aluno | C: Ativo (SIM/NAO)
- *   Professores -> A: Professor
+ *   Professores -> A: Professor | B: E-mail | C: Papel (ver Acesso.gs)
  *   Chamadas    -> A: Registro | B: Data | C: Turma | D: Professor | E: Aluno | F: Status
  *   Agenda      -> ver Agenda.gs
  *   Materiais   -> ver Materiais.gs
@@ -72,7 +72,7 @@ const URL_ICONE = '';
    Motivo: a página inteira já passava de 120 KB antes de agenda e
    materiais, e quem paga esse peso é o professor no 4G que escaneou o
    QR para fazer a chamada — a única tela que ele vai abrir. */
-const PARTES = ['AppNucleo', 'AppInicio', 'AppChamada', 'AppPartida'];
+const PARTES = ['AppNucleo', 'AppEntrada', 'AppInicio', 'AppChamada', 'AppPartida'];
 
 /* Seções carregadas sob demanda. A chave é o nome que o cliente pede.
    AppQr vai junto da gestão porque só a gestão desenha QR. */
@@ -87,7 +87,9 @@ const MODULOS = {
  * <style> que vierem. O modPronto no fim avisa que a seção está de pé;
  * se faltar (arquivo com erro de sintaxe), o cliente diz em português.
  */
-function modulo(nome) {
+function modulo(sessao, nome) {
+  const u = exigirSessao(sessao);
+  if (nome === 'gestao' && u.papel !== PAPEL_GESTAO) throw new Error('Só a gestão pode abrir essa parte.');
   const partes = MODULOS[nome];
   if (!partes) throw new Error('Parte do app desconhecida: ' + nome);
   return partes.map(arquivo).join('\n') +

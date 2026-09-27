@@ -3,7 +3,11 @@
  */
 
 /** Lista as turmas que têm pelo menos um aluno ativo. */
-function listarTurmas() {
+function listarTurmas(sessao) {
+  exigirSessao(sessao);
+  return listarTurmas_();
+}
+function listarTurmas_() {
   return doCache('turmas', TTL_CACHE, function () {
   const aba = planilha().getSheetByName(ABA_ALUNOS);
   if (!aba) throw new Error('A aba "Alunos" não foi encontrada na planilha.');
@@ -30,7 +34,8 @@ function lerFaixaAlunos(aba) {
 }
 
 /** Tudo que a tela da turma precisa, em uma única ida ao servidor. */
-function carregarTurma(turma) {
+function carregarTurma(sessao, turma) {
+  exigirSessao(sessao);
   /* Elenco muda so pela gestao, entao vale cache. Ja "chamada de hoje"
      e "ultimo professor" tem que vir frescos a cada abertura. */
   const fixo = doCache('elenco_' + turma, TTL_CACHE, function () {
@@ -144,7 +149,8 @@ function chamadaJaExiste(turma, data) {
  * Dinâmica do Planilhas entende sem nenhuma fórmula.
  * dados = { turma, professor, token, presencas: [{aluno, status}] }
  */
-function salvarChamada(dados) {
+function salvarChamada(sessao, dados) {
+  exigirSessao(sessao);
   if (!dados || !dados.turma) throw new Error('Turma não informada.');
   if (!dados.professor) throw new Error('Escolha quem está dando a aula.');
   if (!dados.presencas || !dados.presencas.length) throw new Error('Nenhum aluno na lista.');

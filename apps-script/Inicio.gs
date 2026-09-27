@@ -15,7 +15,7 @@
 /* Desligado por decisão da coordenação. A tela inicial abre SEM código,
    o QR fica na parede de uma sala com adolescentes, e tirar o ?turma=
    da URL é trivial: saldo de caixa não fica exposto por engano. O saldo
-   continua dentro do Caixa, atrás do PIN. */
+   continua dentro do Caixa, só para a gestão. */
 const MOSTRAR_SALDO_NA_ENTRADA = false;
 
 const TTL_RESUMO = 600;            // 10 min
@@ -27,8 +27,8 @@ const MIN_AULAS_PADRAO = 3;        // aulas no mesmo dia da semana, dentro da ja
 const FOLGA_HORARIO = 45;          // min em volta da hora típica que contam como "mesma hora"
 const DIAS_EVENTO_DESTAQUE = 14;   // evento só vira destaque se estiver perto
 
-function resumoInicial(prof) {
-  const p = String(prof || '').trim().slice(0, 80);
+function resumoInicial(sessao) {
+  const p = exigirSessao(sessao).nome;
   const hora = Utilities.formatDate(new Date(), FUSO, 'HH');
   /* A hora entra na chave porque "próxima aula" depende do relógio. */
   const k = 'ini_' + hoje() + '_' + hora + '_' + versaoResumo_() + '_' +
@@ -38,7 +38,7 @@ function resumoInicial(prof) {
     const r = { turmas: 0, proximo: null, saldo: null, materiais: null, destaque: null };
     const hj = hoje();
 
-    try { r.turmas = listarTurmas().length; } catch (e) {}
+    try { r.turmas = listarTurmas_().length; } catch (e) {}
 
     let eventos = [];
     try {
@@ -137,7 +137,7 @@ function proximaAula_(prof, hj) {
   const dia = diaDaSemana_(hj);
   const hm = Utilities.formatDate(new Date(), FUSO, 'HH:mm').split(':');
   const agora = Number(hm[0]) * 60 + Number(hm[1]);
-  const ativas = listarTurmas();
+  const ativas = listarTurmas_();
 
   const aulas = {}, feitasHoje = {};
   const BLOCO = 2000, TETO = 12000;

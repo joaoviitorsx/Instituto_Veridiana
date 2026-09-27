@@ -179,13 +179,13 @@ ACOES.agAno = function(){ ir('agAno', {ano:+atual().p.mes.slice(0,4)}); };
 ACOES.agImprimir = function(){
   var a = atual();
   var ano = a.p.ano || +(a.p.mes || hojeISO()).slice(0,4);
-  comPin('agImprimir', {ano:ano});
+  comGestao('agImprimir', {ano:ano});
 };
 ACOES.agNovo = function(){
   var mes = atual().p.mes || hojeISO().slice(0,7);
   /* No mês de hoje, a data já vem hoje. Em outro mês, o dia 1 dele:
      quem navegou até abril quer marcar algo em abril. */
-  comPin('agNovo', {data: mes === hojeISO().slice(0,7) ? hojeISO() : mes + '-01'});
+  comGestao('agNovo', {data: mes === hojeISO().slice(0,7) ? hojeISO() : mes + '-01'});
 };
 
 /* ─── ver um evento ─── */
@@ -214,12 +214,12 @@ ACOES.agVer = function(b){
     var qual = o.getAttribute('data-ev');
     fecharFolha();
     setTimeout(function(){
-      if (!S.pin){ pedirPin(); return; }
+      if (!ehGestao()){ semPermissao(); return; }
       if (qual === 'editar') ir('agNovo', {id:ev.id});
       else if (qual === 'status') mudarStatus(ev);
       else confirmar('Apagar evento', ev.titulo + ' some da agenda. Se ele só não vai mais acontecer, prefira "Cancelado": fica registrado no ano.',
         'Apagar', function(){
-          api('excluirEvento', [S.pin, ev.id], function(){
+          api('excluirEvento', [ev.id], function(){
             vibrar(); toast('Evento apagado'); carregarAgMes(atual().p.mes);
           }, function(e2){ toast(textoErro(e2), 'erro'); });
         });
@@ -231,7 +231,7 @@ function mudarStatus(ev){
   folhaOpcoes('Situação de ' + ev.titulo, S.agListas.status.map(function(st){
     return { txt:st, marcado:(st === ev.status), fn:function(){
       if (st === ev.status) return;
-      api('editarEvento', [S.pin, ev.id, {status:st}], function(){
+      api('editarEvento', [ev.id, {status:st}], function(){
         vibrar(); toast(ev.titulo + ': ' + st.toLowerCase());
         if (atual().t === 'agenda') carregarAgMes(atual().p.mes);
       }, function(e){ toast(textoErro(e), 'erro'); });
@@ -357,7 +357,7 @@ ACOES.agSalvar = function(){
 
   var bt = el('btAgSalvar');
   bt.disabled = true; bt.textContent = 'Salvando…';
-  api(p.id ? 'editarEvento' : 'criarEvento', p.id ? [S.pin, p.id, dados] : [S.pin, dados], function(r){
+  api(p.id ? 'editarEvento' : 'criarEvento', p.id ? [p.id, dados] : [dados], function(r){
     vibrar();
     toast(p.id ? 'Evento salvo' : dados.titulo + ' está na agenda');
     /* Volta para a agenda no mês do evento, para ela ver onde caiu. */
@@ -428,7 +428,7 @@ ACOES.agAbrirMes = function(b){
   if (baixo && baixo.t === 'agenda'){ S.pilha.pop(); baixo.p.mes = mes; desenhar(); }
   else ir('agenda', {mes:mes});
 };
-ACOES.agDatas = function(){ comPin('agDatas', {ano:atual().p.ano}); };
+ACOES.agDatas = function(){ comGestao('agDatas', {ano:atual().p.ano}); };
 
 /* ══════════════ AGENDA: datas comemorativas ══════════════ */
 TELAS.agDatas = function(p){
@@ -473,7 +473,7 @@ ACOES.agPrecarregar = function(){
                          function(n){ return n.getAttribute('data-dia'); });
   if (!dias.length){ toast('Marque pelo menos uma data.', 'erro'); return; }
   var bt = el('btDatas'); bt.disabled = true; bt.textContent = 'Colocando…';
-  api('precarregarDatas', [S.pin, ano, dias], function(r){
+  api('precarregarDatas', [ano, dias], function(r){
     vibrar();
     toast(r.criados ? plural(r.criados, 'data entrou', 'datas entraram') + ' na agenda de ' + ano
                     : 'Essas datas já estavam na agenda');
@@ -533,7 +533,7 @@ ACOES.agGerarPdf = function(){
   esperaPdf(inicio);
   agPdfRelogio = setInterval(function(){ esperaPdf(inicio); }, 1000);
   function parar(){ clearInterval(agPdfRelogio); if (el('agPdfEspera')) el('agPdfEspera').textContent = ''; }
-  api('gerarCalendarioPdf', [S.pin, ano], function(r){
+  api('gerarCalendarioPdf', [ano], function(r){
     parar();
     var b2 = el('btPdf');
     if (b2){ b2.disabled = false; b2.innerHTML = ico('documento', 18) + ' Gerar de novo'; }

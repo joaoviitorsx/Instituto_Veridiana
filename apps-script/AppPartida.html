@@ -1,5 +1,5 @@
 <script>
-/* Partida: lê turma e professor da URL e abre a primeira tela. Roda por último. */
+/* Partida: lê a turma da URL, confere a sessão e abre a primeira tela. Roda por último. */
 /* ══════════════ partida ══════════════ */
 function iniciar(){
   /* getLocation pode levar até 4 s (ou nunca responder). Até aqui o
@@ -7,8 +7,9 @@ function iniciar(){
   el('palco').innerHTML = '<div class="corpo">' + esqueleto(5) + '</div>';
 
   /* Sem ?turma= a pessoa abriu o app pelo atalho, não pelo QR da
-     parede: é aí, e só aí, que aparece a tela inicial. */
-  function semParametro(){ S.viaQr = false; ir('inicio', {}, true); }
+     parede: é aí, e só aí, que aparece a tela inicial. Antes de
+     qualquer uma das duas, a sessão: sem ela, login. */
+  function semParametro(){ S.viaQr = false; retomarSessao({t:'inicio', p:{}}); }
   try {
     if (google.script.url && google.script.url.getLocation){
       var respondeu = false;
@@ -17,12 +18,10 @@ function iniciar(){
         if (respondeu) return;
         respondeu = true; clearTimeout(prazo);
         var q = (loc && loc.parameter) || {};
-        /* ?prof= vem do atalho que cada professor salva no celular. Sem
-           login e sem cookie (o iframe do Apps Script não guarda nada),
-           é o jeito de o app saber quem está com ele na mão. */
-        S.prof = q.prof ? String(q.prof).trim().replace(/\s+/g, ' ').slice(0, 80) : '';
+        /* Quem está com o celular na mão sai do login, não da URL: o
+           antigo ?prof= é ignorado. */
         var t = q.turma ? String(q.turma) : '';
-        if (t){ S.viaQr = true; ir('chamada', {turma:t}, true); }
+        if (t){ S.viaQr = true; retomarSessao({t:'chamada', p:{turma:t}}); }
         else semParametro();
       });
     } else semParametro();

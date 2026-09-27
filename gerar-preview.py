@@ -11,7 +11,7 @@ dentro da página, marcados como prontos: o carregador não pede nada.
 import json, os, sys
 
 B = 'apps-script'
-PARTES = ['AppNucleo', 'AppInicio', 'AppChamada']          # espelha PARTES em Codigo.gs
+PARTES = ['AppNucleo', 'AppEntrada', 'AppInicio', 'AppChamada']  # espelha PARTES em Codigo.gs
 MODULOS = {                                                 # espelha MODULOS em Codigo.gs
     'gestao': ['AppGestao', 'AppCaixa', 'AppQr'],
     'agenda': ['AppAgenda'],

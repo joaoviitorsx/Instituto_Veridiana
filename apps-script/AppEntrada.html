@@ -1,0 +1,179 @@
+<script>
+/* Entrada: login, troca de senha, sessão e papéis. */
+
+/* ─── sessão guardada no aparelho ───
+   O iframe do Apps Script nem sempre deixa guardar (Safari em aba
+   anônima, bloqueio de terceiros). Sem guardar, o app só pede login de
+   novo na próxima vez: nada quebra. */
+var CHAVE_SESSAO = 'veridiana.sessao';
+function guardarSessao(t){ try { localStorage.setItem(CHAVE_SESSAO, t); } catch(e){} }
+function sessaoGuardada(){ try { return localStorage.getItem(CHAVE_SESSAO) || ''; } catch(e){ return ''; } }
+function esquecerSessao(){ try { localStorage.removeItem(CHAVE_SESSAO); } catch(e){} }
+
+function ehGestao(){ return !!(S.usuario && S.usuario.papel === 'Gestão'); }
+function semPermissao(){ toast('Só a gestão pode fazer isso.', 'erro'); }
+function comGestao(tela, p){
+  if (ehGestao()) ir(tela, p); else semPermissao();
+}
+
+function usarSessao(token, usuario){
+  S.sessao = token; S.usuario = usuario;
+  /* A saudação e a escolha do professor na chamada saem do login. */
+  S.prof = usuario.nome;
+  MEM = {}; MEM_GEN++;
+  guardarSessao(token);
+}
+
+/* Depois do login vai para onde a pessoa queria ir: a turma do QR ou a
+   tela inicial. */
+function seguir(){
+  var d = S.destino || {t:'inicio', p:{}};
+  S.destino = null;
+  if (d.t === 'chamada') S.viaQr = true;
+  ir(d.t, d.p, true);
+}
+
+/* Abre o app: tenta a sessão guardada antes de pedir senha. */
+function retomarSessao(destino){
+  S.destino = destino;
+  var t = sessaoGuardada();
+  if (!t){ ir('login', {}, true); return; }
+  S.sessao = t;
+  api('quemSou', [], function(u){
+    usarSessao(t, u); seguir();
+  }, function(e){
+    /* Sessão vencida cai em sessaoCaiu() pela api. Aqui é rede. */
+    el('palco').innerHTML = '<div class="corpo">' +
+      estado('alerta', 'Não deu para abrir', textoErro(e), {acao:'reabrir', txt:'Tentar de novo'}) + '</div>';
+  });
+}
+ACOES.reabrir = function(){ retomarSessao(S.destino); };
+
+/* A api chama isto quando o servidor diz que a sessão acabou: senha
+   trocada em outro aparelho, papel mudou, pessoa saiu da equipe. */
+function sessaoCaiu(){
+  var a = atual();
+  if (a && a.t === 'login') return;
+  if (a && !S.destino && a.t !== 'trocaSenha') S.destino = {t:a.t, p:a.p};
+  S.sessao = ''; S.usuario = null;
+  esquecerSessao();
+  MEM = {}; MEM_GEN++;
+  if (folhaAberta()) fecharFolha();
+  ir('login', {aviso:'Sua sessão terminou. Entre de novo.'}, true);
+}
+
+function sairDoApp(){
+  var t = S.sessao;
+  S.sessao = ''; S.usuario = null; S.prof = ''; S.destino = null;
+  esquecerSessao();
+  MEM = {}; MEM_GEN++;
+  if (t) try { google.script.run.sair(t); } catch(e){}
+  ir('login', {}, true);
+}
+
+/* ─── campo de senha com botão de mostrar ─── */
+function campoSenha(id, rotulo, auto){
+  return '<div class="campo"><label for="' + id + '">' + esc(rotulo) + '</label>' +
+    '<div class="senha"><input id="' + id + '" type="password" autocomplete="' + auto + '" ' +
+    'autocapitalize="none" autocorrect="off" spellcheck="false">' +
+    '<button type="button" data-acao="verSenha" data-alvo="' + id + '" aria-label="Mostrar senha">' +
+    ico('olho', 20) + '</button></div></div>';
+}
+ACOES.verSenha = function(b){
+  var i = el(b.getAttribute('data-alvo'));
+  if (!i) return;
+  var ver = i.type === 'password';
+  i.type = ver ? 'text' : 'password';
+  b.setAttribute('aria-label', ver ? 'Esconder senha' : 'Mostrar senha');
+  b.classList.toggle('on', ver);
+};
+
+function travarBotao(id, txt){
+  var b = el(id);
+  if (!b) return function(){};
+  var antes = b.innerHTML;
+  b.disabled = true; b.textContent = txt;
+  return function(){ var x = el(id); if (x){ x.disabled = false; x.innerHTML = antes; } };
+}
+
+/* ══════════════ TELA: login ══════════════ */
+TELAS.login = function(p){
+  return {
+    titulo:'Entrar', solto:true,
+    html:'<form class="entrada" id="fLogin" novalidate>' +
+      '<div class="entrada-logo">' + LOGO + '</div>' +
+      '<h2>Instituto Veridiana</h2>' +
+      '<p>Entre com o e-mail e a senha que a gestão cadastrou para você.</p>' +
+      (p.aviso ? '<p class="aviso">' + esc(p.aviso) + '</p>' : '') +
+      '<div class="campo"><label for="lgEmail">E-mail</label>' +
+      '<input id="lgEmail" type="email" inputmode="email" autocomplete="username" ' +
+      'autocapitalize="none" autocorrect="off" spellcheck="false"></div>' +
+      campoSenha('lgSenha', 'Senha', 'current-password') +
+      '<button type="submit" class="botao-cheio" id="btEntrar">Entrar</button>' +
+      '<p class="dica">Esqueceu a senha? Peça para a gestão gerar uma nova.</p>' +
+      '</form>',
+    depois:function(){
+      el('fLogin').onsubmit = function(e){ e.preventDefault(); entrarNoApp(); };
+      setTimeout(function(){ var i = el('lgEmail'); if (i) i.focus(); }, 60);
+    }
+  };
+};
+
+function entrarNoApp(){
+  var email = (el('lgEmail').value || '').trim(), senha = el('lgSenha').value || '';
+  if (!email || !senha){ toast('Preencha e-mail e senha.', 'erro'); return; }
+  var soltar = travarBotao('btEntrar', 'Entrando…');
+  api('entrar', [email, senha], function(r){
+    if (r.trocar){
+      /* Senha temporária: a sessão só serve para trocar. A temporária
+         fica na memória para não ser pedida de novo na próxima tela. */
+      S.sessao = r.token; S.usuario = r.usuario; S.senhaTemp = senha;
+      trocar('trocaSenha', {primeira:true});
+      return;
+    }
+    usarSessao(r.token, r.usuario);
+    seguir();
+  }, function(e){
+    soltar();
+    var s = el('lgSenha'); if (s){ s.value = ''; s.focus(); }
+    toast(textoErro(e), 'erro');
+  });
+}
+
+/* ══════════════ TELA: troca de senha ══════════════ */
+TELAS.trocaSenha = function(p){
+  var primeira = !!p.primeira;
+  return {
+    titulo: primeira ? 'Criar sua senha' : 'Trocar senha', solto:true, voltar:!primeira,
+    html:'<form class="entrada" id="fTroca" novalidate>' +
+      '<h2>' + (primeira ? 'Olá, ' + esc(primeiroNome(S.usuario && S.usuario.nome)) + '!' : 'Trocar senha') + '</h2>' +
+      '<p>' + (primeira
+        ? 'Essa senha foi só para o primeiro acesso. Escolha a sua, com pelo menos 6 caracteres.'
+        : 'Pelo menos 6 caracteres. Os outros aparelhos onde você entrou vão pedir a senha nova.') + '</p>' +
+      '<input type="email" autocomplete="username" hidden value="' + esc(S.usuario ? S.usuario.email : '') + '">' +
+      (primeira ? '' : campoSenha('tsAtual', 'Senha atual', 'current-password')) +
+      campoSenha('tsNova', 'Senha nova', 'new-password') +
+      campoSenha('tsConf', 'Repita a senha nova', 'new-password') +
+      '<button type="submit" class="botao-cheio" id="btTroca">Salvar senha</button>' +
+      '</form>',
+    depois:function(){
+      el('fTroca').onsubmit = function(e){ e.preventDefault(); salvarSenhaNova(primeira); };
+      setTimeout(function(){ var i = el(primeira ? 'tsNova' : 'tsAtual'); if (i) i.focus(); }, 60);
+    }
+  };
+};
+
+function salvarSenhaNova(primeira){
+  var atualS = primeira ? (S.senhaTemp || '') : (el('tsAtual').value || '');
+  var nova = el('tsNova').value || '', conf = el('tsConf').value || '';
+  if (nova.length < 6){ toast('A senha nova precisa ter pelo menos 6 caracteres.', 'erro'); return; }
+  if (nova !== conf){ toast('As duas senhas novas não são iguais.', 'erro'); return; }
+  var soltar = travarBotao('btTroca', 'Salvando…');
+  api('trocarSenha', [atualS, nova], function(r){
+    S.senhaTemp = '';
+    usarSessao(r.token, r.usuario);
+    vibrar(); toast('Senha salva');
+    if (primeira) seguir(); else voltar();
+  }, function(e){ soltar(); toast(textoErro(e), 'erro'); });
+}
+</script>

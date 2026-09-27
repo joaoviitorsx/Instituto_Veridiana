@@ -34,7 +34,7 @@ TELAS.gCaixa = function(){
       '<button type="button" class="bt-saida" data-acao="lancar" data-tipo="Saída">' +
       ico('menos', 18) + ' Saiu</button></div>',
     depois:function(){
-      ler('mesesCaixa', [S.pin], function(ms){
+      ler('mesesCaixa', [], function(ms){
         S.mesesCx = ms; S.mesCxIdx = 0;
         carregarCaixa();
       }, function(e){
@@ -52,7 +52,7 @@ function carregarCaixa(){
   var alvo = el('palco').querySelector('.corpo');
   if (!alvo) return;
   alvo.innerHTML = passoCaixa(mes) + esqueleto(3);
-  ler('listarCaixa', [S.pin, mes], function(r){
+  ler('listarCaixa', [mes], function(r){
     if (!noCaixa() || !el('palco').querySelector('.corpo')) return;
     S.caixa = r;
     var h = passoCaixa(mes);
@@ -205,7 +205,7 @@ function salvarLanc(tipo){
   var bt = el('folhaCorpo').querySelector('[data-t="1"]');
   if (bt){ bt.disabled = true; bt.textContent = 'Salvando…'; }
 
-  api('lancarCaixa', [S.pin, dados], function(r){
+  api('lancarCaixa', [dados], function(r){
     vibrar();
     fecharFolha();
     toast(tipo === 'Entrada'
@@ -213,7 +213,7 @@ function salvarLanc(tipo){
       : ('Saída registrada' + (r.pediuFoto && !r.comFoto ? ' — a foto não subiu' : '')));
     fotoAtual = '';
     S.mesCxIdx = 0;
-    api('mesesCaixa', [S.pin], function(ms){ S.mesesCx = ms; carregarCaixa(); }, carregarCaixa);
+    api('mesesCaixa', [], function(ms){ S.mesesCx = ms; carregarCaixa(); }, carregarCaixa);
   }, function(e){
     if (bt){ bt.disabled = false; bt.textContent = 'Salvar'; }
     toast(textoErro(e), 'erro');
@@ -258,7 +258,7 @@ ACOES.apagarLanc = function(b){
     confirmar('Apagar lançamento',
       'Some da planilha e do saldo. Use só para corrigir digitação.',
       'Apagar', function(){
-        api('apagarLancamento', [S.pin, linha, valor], function(){
+        api('apagarLancamento', [linha, valor], function(){
           vibrar(); toast('Lançamento apagado'); carregarCaixa();
         }, function(e){ toast(textoErro(e), 'erro'); });
       });
@@ -288,7 +288,7 @@ TELAS.gCaixaResumo = function(){
 ACOES.gerarCx = function(){
   if (!el('saidaCx')) return;
   el('saidaCx').innerHTML = '<div style="margin-top:20px">' + esqueleto(2) + '</div>';
-  api('resumoCaixa', [S.pin, el('cxIni').value, el('cxFim').value], function(r){
+  api('resumoCaixa', [el('cxIni').value, el('cxFim').value], function(r){
     if (!el('saidaCx')) return;
     S.resCx = r;
     var h = '<div class="secao">Resumo</div><div class="numeros">';

@@ -31,11 +31,11 @@ const DIAS_RISCO = 120;
  * Justificada conta como ausência — a criança não estava lá — mas vem
  * separada no resultado, para a conversa com a família ser outra.
  */
-function alunosEmRisco(pin, minimo) {
-  exigirPin(pin);
-  return doCache('risco_' + minimo + '_' + hoje() + '_' + versaoResumo_(), TTL_CACHE, function () { return alunosEmRisco_(pin, minimo); });
+function alunosEmRisco(sessao, minimo) {
+  exigirGestao(sessao);
+  return doCache('risco_' + minimo + '_' + hoje() + '_' + versaoResumo_(), TTL_CACHE, function () { return alunosEmRisco_(sessao, minimo); });
 }
-function alunosEmRisco_(pin, minimo) {
+function alunosEmRisco_(sessao, minimo) {
   const alvo = Math.max(2, Number(minimo) || 3);
   const linhas = lerChamadasDesde_(diasAtras_(DIAS_RISCO)).linhas;
 
@@ -82,9 +82,9 @@ function alunosEmRisco_(pin, minimo) {
 }
 
 /** Só a contagem, para o menu de gestão mostrar sem carregar a tela toda. */
-function contarRisco(pin) {
-  exigirPin(pin);
-  return alunosEmRisco(pin, 3).alunos.length;
+function contarRisco(sessao) {
+  exigirGestao(sessao);
+  return alunosEmRisco(sessao, 3).alunos.length;
 }
 
 /**
@@ -93,8 +93,8 @@ function contarRisco(pin) {
  * etária. As faixas seguem ECA e Estatuto da Juventude, que é o recorte
  * que os editais usam.
  */
-function relatorioPeriodo(pin, inicio, fim) {
-  exigirPin(pin);
+function relatorioPeriodo(sessao, inicio, fim) {
+  exigirGestao(sessao);
   const de = String(inicio || ''), ate = String(fim || '');
   if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(de) || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(ate))
     throw new Error('Escolha as duas datas do período.');
@@ -156,11 +156,11 @@ function relatorioPeriodo(pin, inicio, fim) {
 }
 
 /** Aniversariantes de hoje até daqui a 6 dias. */
-function aniversariantesSemana(pin) {
-  exigirPin(pin);
-  return doCache('aniv_' + hoje(), TTL_CACHE, function () { return aniversariantesSemana_(pin); });
+function aniversariantesSemana(sessao) {
+  exigirGestao(sessao);
+  return doCache('aniv_' + hoje(), TTL_CACHE, function () { return aniversariantesSemana_(sessao); });
 }
-function aniversariantesSemana_(pin) {
+function aniversariantesSemana_(sessao) {
   return aniversariantesEntre_(0, 6, '');
 }
 

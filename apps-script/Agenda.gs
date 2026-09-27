@@ -14,7 +14,7 @@
  *   Turmas separadas por ponto e vírgula; vazio = todas as turmas.
  *   Datas guardadas como texto aaaa-mm-dd, igual às outras abas.
  *
- * Leitura é aberta (a equipe consulta sem código). Escrita pede o PIN.
+ * Leitura é de toda a equipe logada. Escrita é só da gestão.
  */
 
 const ABA_AGENDA = 'Agenda';
@@ -146,7 +146,8 @@ function listasAgenda_() {
 }
 
 /** Eventos que tocam o mês, inclusive os de vários dias que começaram antes. */
-function listarAgenda(ano, mes) {
+function listarAgenda(sessao, ano, mes) {
+  exigirSessao(sessao);
   return doCache('ag_' + hoje() + '_' + ano + '_' + mes, TTL_CACHE, function () { return listarAgenda_(ano, mes); });
 }
 function listarAgenda_(ano, mes) {
@@ -164,7 +165,8 @@ function listarAgenda_(ano, mes) {
 }
 
 /** Os doze meses com a contagem de cada um. Cancelado não conta. */
-function listarAgendaAno(ano) {
+function listarAgendaAno(sessao, ano) {
+  exigirSessao(sessao);
   return doCache('aga_' + hoje() + '_' + ano, TTL_CACHE, function () { return listarAgendaAno_(ano); });
 }
 function listarAgendaAno_(ano) {
@@ -239,8 +241,8 @@ function acharEvento_(id) {
   return ev;
 }
 
-function criarEvento(pin, dados) {
-  exigirPin(pin);
+function criarEvento(sessao, dados) {
+  exigirGestao(sessao);
   const e = normalizarEvento_(dados || {});
   return comTrava(function () {
     const id = novoId_('E');
@@ -249,8 +251,8 @@ function criarEvento(pin, dados) {
   });
 }
 
-function editarEvento(pin, id, dados) {
-  exigirPin(pin);
+function editarEvento(sessao, id, dados) {
+  exigirGestao(sessao);
   return comTrava(function () {
     const ev = acharEvento_(id);
     const e = normalizarEvento_(dados || {}, ev);
@@ -263,8 +265,8 @@ function editarEvento(pin, id, dados) {
 
 /* Apagar é para engano de digitação. Evento que não vai mais acontecer
    é Cancelado: continua no registro do ano. */
-function excluirEvento(pin, id) {
-  exigirPin(pin);
+function excluirEvento(sessao, id) {
+  exigirGestao(sessao);
   return comTrava(function () {
     const ev = acharEvento_(id);
     abaAgenda().deleteRow(ev.linha);
@@ -273,7 +275,8 @@ function excluirEvento(pin, id) {
 }
 
 /** A lista de datas fixas, dizendo quais já estão na agenda do ano. */
-function datasFixas(ano) {
+function datasFixas(sessao, ano) {
+  exigirSessao(sessao);
   return doCache('df_' + ano, TTL_CACHE, function () { return datasFixas_(ano); });
 }
 function datasFixas_(ano) {
@@ -296,8 +299,8 @@ function datasFixas_(ano) {
  * O título e o tipo vêm daqui, nunca do cliente. Não duplica: data que
  * já está na agenda do ano é pulada.
  */
-function precarregarDatas(pin, ano, lista) {
-  exigirPin(pin);
+function precarregarDatas(sessao, ano, lista) {
+  exigirGestao(sessao);
   const a = anoValido_(ano);
   const quer = (lista || []).map(String);
   const escolhidas = DATAS_FIXAS.filter(function (df) { return quer.indexOf(df.dia) !== -1; });
@@ -354,8 +357,8 @@ const DIAS_LONGOS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'
 const MES_NOME = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho',
                   'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-function gerarCalendarioPdf(pin, ano) {
-  exigirPin(pin);
+function gerarCalendarioPdf(sessao, ano) {
+  exigirGestao(sessao);
   /* Cronômetro: cada chamada ao DocumentApp custa, e o critério para
      trocar de caminho (plano B pela planilha) é o tempo real. Sai no
      Registro de execução e na tela. */

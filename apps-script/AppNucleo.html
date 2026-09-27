@@ -11,7 +11,7 @@ var S = {
   turmaInicial:'', pilha:[], viaQr:false, prof:'',
   turma:'', data:'', alunos:[], professores:[], professor:'', jaRegistrada:false,
   token:'', salvando:false,
-  pin:'', gest:null, filtro:'ativos', busca:''
+  sessao:'', usuario:null, gest:null, filtro:'ativos', busca:''
 };
 
 var CICLO = { 'Presente':'Falta', 'Falta':'Justificada', 'Justificada':'Presente' };
@@ -57,6 +57,8 @@ var P = {
   chave:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/>',
   local:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
   lixo:'<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>',
+  olho:'<path d="M2.1 12.3a1 1 0 0 1 0-.6 10.8 10.8 0 0 1 19.8 0 1 1 0 0 1 0 .6 10.8 10.8 0 0 1-19.8 0"/><circle cx="12" cy="12" r="3"/>',
+  sair:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
   filtro:'<path d="M22 3H2l8 9.5V19l4 2v-8.5z"/>'
 };
 function ico(n, t){
@@ -157,6 +159,13 @@ function api(fn, args, ok, erro, prazo){
     if (erro) erro({ message: 'A conexão com a planilha não abriu. Recarregue a página.' });
     return;
   }
+  /* Toda função do servidor recebe a sessão na frente. Só o login não:
+     é de lá que ela sai. */
+  var chamada = ABERTAS[fn] ? (args || []) : [S.sessao].concat(args || []);
+  var erroFinal = function(e){
+    if (/^\s*(Error:\s*)?SESSAO:/.test(String(e && e.message || ''))){ sessaoCaiu(); return; }
+    if (erro) erro(e);
+  };
   var fim = false;
   var t = setTimeout(function(){
     if (fim) return; fim = true;
@@ -164,12 +173,13 @@ function api(fn, args, ok, erro, prazo){
   }, prazo || 25000);
   function pronto(f){ return function(v){ if (fim) return; fim = true; clearTimeout(t); f(v); }; }
   /* Escrita que deu certo derruba a memória de leitura. */
-  var okFinal = LEITURAS[fn] ? ok : function(v){ MEM = {}; MEM_GEN++; ok(v); };
+  var okFinal = LEITURAS[fn] || ABERTAS[fn] ? ok : function(v){ MEM = {}; MEM_GEN++; ok(v); };
   var r = google.script.run
     .withSuccessHandler(pronto(okFinal))
-    .withFailureHandler(pronto(erro || function(){}));
-  r[fn].apply(r, args || []);
+    .withFailureHandler(pronto(erroFinal));
+  r[fn].apply(r, chamada);
 }
+var ABERTAS = { entrar:1 };
 
 /* ─── leitura com memória ───
    Cada ida ao Apps Script custa de meio a dois segundos, e isso não
@@ -184,7 +194,7 @@ var LEITURAS = {
   entrarNaGestao:1, listarTurmasCompleto:1, listarAlunos:1, listarProfessores:1,
   mesesCaixa:1, listarCaixa:1, resumoCaixa:1, mesesComChamada:1, resumoHistorico:1,
   alunosParaCertificado:1, alunosEmRisco:1, contarRisco:1, aniversariantesSemana:1,
-  relatorioPeriodo:1, obterUrlApp:1, obterLinkPlanilha:1
+  relatorioPeriodo:1, obterUrlApp:1, obterLinkPlanilha:1, listarEquipe:1, quemSou:1
 };
 var MEM = {}, PEND = {}, MEM_GEN = 0;
 
@@ -470,14 +480,6 @@ function carregarModulo(nome, ok, erro){
   }, 40000);
 }
 
-/* Escrita pede o código. Se ainda não foi digitado nesta visita, passa
-   pela tela do PIN e cai direto onde a pessoa queria ir. */
-function comPin(tela, p){
-  if (S.pin) ir(tela, p);
-  else ir('pin', {para:tela, paraP:p || {}});
-}
-/* Para ação que acontece na própria tela: pede o código e volta. */
-function pedirPin(){ ir('pin', {voltar:true}); }
 ACOES.copiarLink = function(b){ copiar(b.getAttribute('data-u')); };
 
 function desenhar(){
@@ -505,7 +507,7 @@ function desenhar(){
   el('cabTitulo').textContent = tela.titulo || '';
   el('btVoltar').hidden = S.pilha.length < 2 && !tela.voltar;
   el('btVoltar').innerHTML = ico('esq', 24);
-  el('btGestao').hidden = !tela.gestao;
+  el('btGestao').hidden = !tela.gestao || !ehGestao();
   el('btGestao').innerHTML = ico('engrenagem', 22);
   el('cabPlacar').hidden = !tela.placar;
 
@@ -533,7 +535,7 @@ function medirBarra(){
 }
 
 el('btVoltar').addEventListener('click', voltar);
-el('btGestao').addEventListener('click', function(){ ir('pin'); });
+el('btGestao').addEventListener('click', function(){ comGestao('gestao'); });
 
 /* Escuta no documento, não no #palco: a barra de ação (#barra) e o
    cabeçalho ficam FORA do palco, e um listener só no palco deixava

@@ -495,31 +495,54 @@ main{padding:0 0 24px}
 .numeros b{display:block;font-size:24px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .numeros span{display:block;font-size:12px;color:var(--roxo-claro);margin-top:4px}
 
-/* ─────────── PIN ─────────── */
-.pin{padding:32px 24px calc(24px + env(safe-area-inset-bottom));text-align:center;max-width:400px;margin:0 auto}
-.pin h2{font-size:21px;margin:0 0 8px;letter-spacing:-.015em}
-.pin p{color:var(--apagado);margin:0 0 32px;font-size:15px}
-.pontos{display:flex;justify-content:center;gap:16px;margin-bottom:40px}
-.pontos i{
-  width:14px;height:14px;border-radius:50%;
-  background:var(--borda);transition:background 160ms var(--curva);
+/* ─────────── entrada: login e troca de senha ─────────── */
+.entrada{padding:32px 20px calc(24px + env(safe-area-inset-bottom));max-width:400px;margin:0 auto}
+.entrada h2{font-size:21px;margin:0 0 8px;letter-spacing:-.015em;text-align:center}
+.entrada > p{color:var(--apagado);margin:0 0 24px;font-size:15px;line-height:1.5;text-align:center}
+.entrada > p.aviso{color:var(--falta);background:var(--falta-fraco);border-radius:var(--r-m);padding:10px 14px}
+.entrada .dica{text-align:center;margin-top:16px}
+.entrada .botao-cheio{margin-top:8px}
+.entrada-logo{display:flex;justify-content:center;margin-bottom:16px}
+.entrada-logo .logo{width:64px;height:64px;border-radius:20px;background:var(--roxo);color:#fff;padding:4px}
+
+.senha{position:relative}
+.campo .senha input{padding-right:52px}
+.senha button{
+  position:absolute;top:0;right:0;width:52px;height:100%;min-height:52px;
+  display:grid;place-items:center;background:none;border:none;color:var(--apagado);
+  border-radius:0 var(--r-m) var(--r-m) 0;
 }
-.pontos i.cheio{background:var(--roxo)}
-.pontos.errou{animation:sacode 340ms var(--curva)}
-@keyframes sacode{
-  20%{transform:translateX(-8px)} 40%{transform:translateX(8px)}
-  60%{transform:translateX(-5px)} 80%{transform:translateX(5px)}
+.senha button.on{color:var(--roxo)}
+
+/* equipe: papel e primeiro acesso pendente */
+.li .papel{
+  flex-shrink:0;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;
+  background:var(--fundo);color:var(--apagado);border:1px solid var(--borda);
 }
-.teclado{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.teclado button{
-  min-height:64px;border-radius:var(--r-m);
-  font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;
-  background:var(--papel);border:1px solid var(--borda);box-shadow:var(--sombra);
-  transition:background 160ms var(--curva);
+.li .papel.gestao{background:var(--roxo-fraco);color:var(--roxo);border-color:transparent}
+.li .pendente{flex-shrink:0;width:10px;height:10px;border-radius:50%;background:var(--justif)}
+.li .nome small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.senha-temp{
+  display:grid;gap:2px;background:var(--fundo);border:1px solid var(--borda);
+  border-radius:var(--r-m);padding:14px 16px;margin:0 0 16px;
 }
-.teclado button:active{background:var(--roxo-fraco)}
-.teclado .vazia{background:none;border:none;box-shadow:none;pointer-events:none}
-.teclado .apagar{box-shadow:none;background:none;border:none;color:var(--apagado)}
+.senha-temp small{font-size:12px;color:var(--apagado);margin-top:8px}
+.senha-temp small:first-child{margin-top:0}
+.senha-temp b{font-size:16px;word-break:break-all}
+.senha-temp .cod{font-size:24px;letter-spacing:.12em;font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--roxo)}
+
+/* conta no rodapé da tela inicial */
+.conta-rodape{
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:24px;
+  padding:14px 16px;background:var(--papel);border:1px solid var(--borda);border-radius:var(--r-m);
+}
+.conta-rodape span{flex:1 1 140px;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.conta-rodape small{display:block;font-weight:400;font-size:13px;color:var(--apagado)}
+.conta-rodape button{
+  display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;
+  background:var(--fundo);border:1px solid var(--borda);border-radius:999px;
+  font:inherit;font-size:14px;font-weight:600;color:var(--roxo);
+}
 
 /* ─────────── campos ─────────── */
 .campo{margin-bottom:16px}
@@ -637,7 +660,6 @@ main{padding:0 0 24px}
   width:44px;height:44px;border-radius:50%;margin-bottom:8px;
   display:grid;place-items:center;background:var(--roxo-fraco);color:var(--roxo);
 }
-.bl-pin{position:absolute;top:16px;right:16px;color:var(--apagado)}
 .bloco b{font-size:17px;font-weight:700;letter-spacing:-.015em;line-height:1.2}
 /* A linha de apoio reserva a altura desde o começo: o número chega
    depois e a grade não pula debaixo do dedo. */

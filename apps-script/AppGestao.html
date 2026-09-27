@@ -1,78 +1,12 @@
 <script>
-/* Área da equipe: PIN, cadastros, QR, histórico e planilha. */
-/* ══════════════ TELA: PIN ══════════════ */
-var pinBuf = '';
-TELAS.pin = function(){
-  pinBuf = '';
-  var teclas = '';
-  for (var i = 1; i <= 9; i++)
-    teclas += '<button type="button" data-acao="pinDig" data-d="' + i + '">' + i + '</button>';
-  teclas += '<span class="vazia"></span>' +
-            '<button type="button" data-acao="pinDig" data-d="0">0</button>' +
-            '<button type="button" class="apagar" data-acao="pinApaga" aria-label="Apagar">' +
-            ico('apagarTecla', 24) + '</button>';
-  return {
-    titulo:'Gestão', solto:true,
-    html:'<div class="pin"><div class="circulo" style="width:64px;height:64px;border-radius:50%;' +
-      'margin:0 auto 16px;display:grid;place-items:center;background:var(--roxo-fraco);color:var(--roxo)">' +
-      ico('cadeado', 26) + '</div>' +
-      '<h2>Área da equipe</h2>' +
-      '<p>Digite o código de 4 números da equipe.</p>' +
-      '<div class="pontos" id="pontos" role="status" aria-label="Código, 0 de 4 números">' +
-      '<i></i><i></i><i></i><i></i></div>' +
-      '<div class="teclado">' + teclas + '</div></div>'
-  };
-};
-function pontos(){
-  var ns = el('pontos');
-  if (!ns) return;
-  for (var i = 0; i < 4; i++) ns.children[i].classList.toggle('cheio', i < pinBuf.length);
-  ns.setAttribute('aria-label', 'Código, ' + pinBuf.length + ' de 4 números');
-}
-ACOES.pinDig = function(b){
-  if (pinBuf.length >= 4) return;
-  pinBuf += b.getAttribute('data-d'); vibrar(); pontos();
-  if (pinBuf.length === 4) setTimeout(validaPin, 120);
-};
-ACOES.pinApaga = function(){ pinBuf = pinBuf.slice(0, -1); vibrar(); pontos(); };
-function validaPin(){
-  var tentativa = pinBuf;
-  /* Quem veio de um botão da tela inicial (Caixa, Novo evento...) cai
-     direto lá. O PIN sai da pilha: voltar não mostra o teclado de novo. */
-  var destino = (atual() && atual().p) || {};
-  api('entrarNaGestao', [tentativa], function(g){
-    S.pin = tentativa; S.gest = g;
-    /* Código certo: as listas da gestão já saem buscadas por trás. */
-    preler('listarTurmasCompleto', [S.pin]);
-    preler('listarProfessores', [S.pin]);
-    preler('contarRisco', [S.pin]);
-    preler('aniversariantesSemana', [S.pin]);
-    if (!atual() || atual().t !== 'pin') return;
-    /* Ação na própria tela (mudar situação de um evento, ajustar
-       quantidade): volta para onde estava, que agora já tem o código. */
-    if (destino.voltar){ voltar(); toast('Código certo. Pode tocar de novo.'); return; }
-    trocar(destino.para || 'gestao', destino.paraP || {});
-  }, function(e){
-    var n = el('pontos');
-    if (n){ n.classList.add('errou'); setTimeout(function(){ n.classList.remove('errou'); }, 360); }
-    pinBuf = ''; pontos();
-    toast(textoErro(e), 'erro');
-  });
-}
-document.addEventListener('keydown', function(e){
-  var a = atual();
-  if (!a || a.t !== 'pin' || folhaAberta()) return;
-  if (/^[0-9]$/.test(e.key)){ ACOES.pinDig({getAttribute:function(){ return e.key; }}); }
-  else if (e.key === 'Backspace'){ ACOES.pinApaga(); }
-});
-
+/* Área da gestão: cadastros, acessos, QR, histórico e planilha. */
 /* ══════════════ TELA: menu de gestão ══════════════ */
 TELAS.gestao = function(){
   var g = S.gest || {};
   var itens = [
     {ic:'prancheta', t:'Turmas', s:plural(g.turmas || 0, 'turma ativa', 'turmas ativas'), a:'gTurmas'},
     {ic:'grupo', t:'Alunos', s:(g.alunosAtivos || 0) + ' ativos, ' + (g.alunosInativos || 0) + ' inativos', a:'gAlunos'},
-    {ic:'pessoa', t:'Professores', s:plural(g.professores || 0, 'na equipe', 'na equipe'), a:'gProfs'},
+    {ic:'pessoa', t:'Equipe e acessos', s:plural(g.professores || 0, 'pessoa', 'pessoas') + ', e-mail e senha', a:'gProfs'},
     {ic:'qr', t:'QR e links', s:'QR das turmas e link de cada professor', a:'gQr'},
     {ic:'sino', t:'Precisam de atenção', s:'carregando…', a:'gRisco', id:'itRisco'},
     {ic:'calendario', t:'Histórico', s:'quem veio, por dia e por mês', a:'gHistorico'},
@@ -91,9 +25,15 @@ TELAS.gestao = function(){
     titulo:'Gestão',
     html:'<div id="caixaBolo"></div>' + h + '</ul>',
     depois:function(){
+      /* Contadores do menu: chegam por trás e repintam se mudaram. */
+      ler('entrarNaGestao', [], function(g2){
+        var mudou = JSON.stringify(g2) !== JSON.stringify(S.gest);
+        S.gest = g2;
+        if (mudou && atual() && atual().t === 'gestao') desenhar();
+      }, function(){});
       /* Fora do carregamento do menu: ler Chamadas para o alerta custa
          caro e não pode segurar a tela. */
-      ler('contarRisco', [S.pin], function(n){
+      ler('contarRisco', [], function(n){
         var i = el('itRisco');
         if (!i) return;
         i.querySelector('small').textContent = n === 0
@@ -101,7 +41,7 @@ TELAS.gestao = function(){
           : plural(n, 'aluno some há 3 aulas', 'alunos somem há 3 aulas');
         if (n > 0) i.querySelector('small').style.color = 'var(--falta)';
       }, function(){});
-      ler('aniversariantesSemana', [S.pin], function(lista){
+      ler('aniversariantesSemana', [], function(lista){
         if (!lista || !lista.length) return;
         var c = el('caixaBolo');
         if (!c) return;
@@ -129,12 +69,12 @@ ACOES.gCaixa     = function(){ ir('gCaixa'); };
 
 /* recarrega os contadores depois de qualquer escrita */
 function recontar(){
-  api('entrarNaGestao', [S.pin], function(g){ S.gest = g; }, function(){});
+  api('entrarNaGestao', [], function(g){ S.gest = g; }, function(){});
 }
 
 /* ─── escrita na gestão: toast vermelho no erro, tela intacta ─── */
 function escrever(fn, args, msgOk, depois){
-  api(fn, [S.pin].concat(args), function(r){
+  api(fn, args, function(r){
     vibrar(); toast(msgOk);
     recontar();
     if (depois) depois(r);
@@ -152,7 +92,7 @@ TELAS.gTurmas = function(){
   };
 };
 function listarTurmasGestao(){
-  ler('listarTurmasCompleto', [S.pin], function(ts){
+  ler('listarTurmasCompleto', [], function(ts){
     var alvo = el('palco').querySelector('.corpo');
     if (!ts.length){
       alvo.innerHTML = estado('prancheta','Nenhuma turma ainda',
@@ -188,7 +128,7 @@ TELAS.gTurma = function(p){
   };
 };
 function carregarFicha(turma){
-  ler('listarAlunos', [S.pin, turma, true], function(as){
+  ler('listarAlunos', [turma, true], function(as){
     S.todosAlunos = as;
     var ativos = as.filter(function(a){ return a.ativo; });
     var inativos = as.filter(function(a){ return !a.ativo; });
@@ -302,7 +242,7 @@ ACOES.acoesAluno = function(b){
   ]);
 };
 function moverAluno(nome, turmaAtual){
-  api('listarTurmasCompleto', [S.pin], function(ts){
+  api('listarTurmasCompleto', [], function(ts){
     var opc = ts.filter(function(t){ return t.nome !== turmaAtual; }).map(function(t){
       return { txt:t.nome, sub:plural(t.ativos, 'aluno', 'alunos'), ini:t.nome, fn:function(){
         escrever('moverAluno', [nome, t.nome, turmaAtual], nome + ' agora está em ' + t.nome, recarregarLista);
@@ -347,7 +287,7 @@ TELAS.gAlunos = function(){
   };
 };
 function carregarAlunos(){
-  ler('listarAlunos', [S.pin, '', true], function(as){
+  ler('listarAlunos', ['', true], function(as){
     S.todosAlunos = as; pintarAlunos();
   }, function(e){
     if (el('listaAlunos')) el('listaAlunos').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
@@ -380,48 +320,169 @@ ACOES.filtro = function(b){
   vibrar(); pintarAlunos();
 };
 
-/* ══════════════ GESTÃO: professores ══════════════ */
+/* ══════════════ GESTÃO: equipe e acessos ══════════════ */
+/* Cada pessoa da equipe entra com e-mail e senha. A gestão cadastra o
+   e-mail e o papel; o servidor gera uma senha temporária que aparece
+   UMA vez, para mandar pelo WhatsApp. No primeiro acesso a pessoa
+   escolhe a dela. */
+var SITUACAO = {
+  'ativo':      'entra no app',
+  'pendente':   'ainda não fez o primeiro acesso',
+  'sem-acesso': 'sem acesso ao app'
+};
 TELAS.gProfs = function(){
   return {
-    titulo:'Professores', html:esqueleto(4),
-    barra:'<button type="button" class="salvar" data-acao="novoProf">' + ico('mais') + 'Adicionar professor</button>',
-    depois:carregarProfs
+    titulo:'Equipe e acessos', html:esqueleto(4),
+    barra:'<button type="button" class="salvar" data-acao="novoProf">' + ico('mais') + 'Adicionar pessoa</button>',
+    depois:function(){
+      carregarProfs();
+      /* O link do app entra na mensagem da senha. */
+      if (!S.urlApp) ler('obterUrlApp', [], function(u){ S.urlApp = u || ''; }, function(){});
+    }
   };
 };
 function carregarProfs(){
-  ler('listarProfessores', [S.pin], function(ps){
+  ler('listarEquipe', [], function(ps){
     var alvo = el('palco').querySelector('.corpo');
+    if (!alvo) return;
+    S.equipe = ps;
     if (!ps.length){
       alvo.innerHTML = estado('pessoa','Ninguém na equipe ainda',
-        'Toque em "Adicionar professor" aqui embaixo.');
+        'Toque em "Adicionar pessoa" aqui embaixo.');
       return;
     }
     var h = '<ul class="lista">';
-    ps.forEach(function(n){
-      h += '<li class="li" data-acao="acoesProf" data-n="' + esc(n) + '" role="button" tabindex="0">' +
-           '<span class="ini">' + esc(iniciais(n)) + '</span>' +
-           '<span class="nome">' + esc(n) + '</span>' +
+    ps.forEach(function(p, i){
+      h += '<li class="li" data-acao="acoesProf" data-i="' + i + '" role="button" tabindex="0">' +
+           '<span class="ini">' + esc(iniciais(p.nome)) + '</span>' +
+           '<span class="nome">' + esc(p.nome) +
+           '<small>' + esc(p.email ? p.email : SITUACAO['sem-acesso']) + '</small></span>' +
+           '<span class="papel' + (p.papel === 'Gestão' ? ' gestao' : '') + '">' + esc(p.papel) + '</span>' +
+           (p.situacao === 'pendente' ? '<span class="pendente" title="' + esc(SITUACAO.pendente) + '"></span>' : '') +
            '<span class="marca">' + ico('dir', 18) + '</span></li>';
     });
-    alvo.innerHTML = h + '</ul>';
+    alvo.innerHTML = '<p class="dica" style="margin:0 4px 16px">Bolinha amarela: ainda não fez o primeiro acesso.</p>' +
+      h + '</ul>';
   }, function(e){
-    el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
+    var alvo = el('palco').querySelector('.corpo');
+    if (alvo) alvo.innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
   });
 }
+
+/* Folha com nome, e-mail e papel. Nome só no cadastro novo: renomear
+   quebraria o vínculo com as chamadas já salvas. */
+function fichaAcesso(titulo, p, rotulo, fn){
+  var papel = p.papel || 'Professor';
+  var h = '<div style="padding:0 8px">';
+  if (!p.nome) h += '<div class="campo"><label for="acNome">Nome</label>' +
+    '<input id="acNome" type="text" autocomplete="off" autocapitalize="words"></div>';
+  h += '<div class="campo"><label for="acEmail">E-mail</label>' +
+    '<input id="acEmail" type="email" inputmode="email" autocomplete="off" autocapitalize="none" ' +
+    'autocorrect="off" spellcheck="false" value="' + esc(p.email || '') + '"></div>' +
+    '<div class="campo"><label>Papel</label><div class="chips" id="acPapel">' +
+    ['Professor', 'Gestão'].map(function(x){
+      return '<button type="button" class="chip' + (x === papel ? ' on' : '') + '" data-p="' + x + '">' + x + '</button>';
+    }).join('') + '</div>' +
+    '<small class="dica">Professor: chamada, agenda e materiais. Gestão: tudo, inclusive caixa e cadastros.</small></div>';
+  abrirFolha(titulo, h + '</div>' +
+    '<div class="acoes"><button type="button" class="cancelar" data-t="0">Cancelar</button>' +
+    '<button type="button" class="confirmar" style="background:var(--roxo)" data-t="1">' + esc(rotulo) + '</button></div>');
+  function enviar(){
+    var nome = p.nome || (el('acNome').value || '').trim().replace(/\s+/g, ' ');
+    var email = (el('acEmail').value || '').trim().toLowerCase();
+    var on = el('acPapel').querySelector('.chip.on');
+    if (nome.length < 2){ toast('Escreva o nome.', 'erro'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast('Esse e-mail não parece certo.', 'erro'); return; }
+    fecharFolha();
+    setTimeout(function(){ fn(nome, email, on ? on.getAttribute('data-p') : 'Professor'); }, 60);
+  }
+  el('folhaCorpo').onclick = function(e){
+    var c = e.target.closest('.chip');
+    if (c){
+      el('acPapel').querySelectorAll('.chip').forEach(function(x){ x.classList.toggle('on', x === c); });
+      return;
+    }
+    var b = e.target.closest('[data-t]');
+    if (!b) return;
+    if (b.dataset.t === '1') enviar(); else fecharFolha();
+  };
+  el('folhaCorpo').onkeydown = function(e){ if (e.key === 'Enter'){ e.preventDefault(); enviar(); } };
+  setTimeout(function(){ var i = el(p.nome ? 'acEmail' : 'acNome'); if (i) i.focus(); }, 320);
+}
+
+/* Cria (se preciso) e liga o acesso, depois mostra a senha. */
 ACOES.novoProf = function(){
-  pedirTexto('Adicionar professor', 'Nome', '', 'Adicionar', function(nome){
-    escrever('adicionarProfessor', [nome], nome + ' entrou na equipe', carregarProfs);
+  fichaAcesso('Adicionar pessoa', {}, 'Adicionar e gerar senha', function(nome, email, papel){
+    api('adicionarProfessor', [nome], function(){
+      gerarAcesso(nome, email, papel);
+    }, function(e){ toast(textoErro(e), 'erro'); });
   });
 };
+function gerarAcesso(nome, email, papel){
+  api('definirAcesso', [nome, email, papel], function(r){
+    vibrar(); recontar();
+    mostrarSenha(r);
+    if (atual() && atual().t === 'gProfs') carregarProfs();
+  }, function(e){
+    toast(textoErro(e), 'erro');
+    if (atual() && atual().t === 'gProfs') carregarProfs();
+  });
+}
+
+/* A senha temporária só existe aqui: fechou a folha, sumiu. */
+function mostrarSenha(r){
+  var url = S.urlApp || '';
+  var texto = 'Oi, ' + primeiroNome(r.nome) + '! Seu acesso ao app do Instituto Veridiana:\n' +
+    (url ? url + '\n' : '') + 'E-mail: ' + r.email + '\nSenha temporária: ' + r.senha +
+    '\nNo primeiro acesso o app pede para você criar a sua senha.';
+  abrirFolha('Acesso de ' + primeiroNome(r.nome),
+    '<div style="padding:0 8px">' +
+    '<p class="sub">Mande para ' + esc(primeiroNome(r.nome)) + '. Essa senha não aparece de novo; ' +
+    'se perder, é só gerar outra.</p>' +
+    '<div class="senha-temp"><small>E-mail</small><b>' + esc(r.email) + '</b>' +
+    '<small>Senha temporária</small><b class="cod">' + esc(r.senha) + '</b>' +
+    '<small>Papel</small><b>' + esc(r.papel) + '</b></div>' +
+    '<a class="botao-zap" href="https://wa.me/?text=' + encodeURIComponent(texto) +
+    '" target="_blank" rel="noopener">' + ico('conversa', 18) + ' Enviar no WhatsApp</a>' +
+    '<button type="button" class="botao-cheio" style="margin-top:8px;background:var(--papel);' +
+    'color:var(--roxo);border:1px solid var(--borda)" data-acao="copiarLink" data-u="' + esc(texto) + '">' +
+    ico('copiar', 18) + ' Copiar mensagem</button></div>');
+}
+
 ACOES.acoesProf = function(b){
-  var n = b.getAttribute('data-n');
-  folhaOpcoes(n, [{txt:'Tirar da equipe', sub:'as chamadas antigas continuam com o nome',
+  var p = (S.equipe || [])[+b.getAttribute('data-i')];
+  if (!p) return;
+  var eu = S.usuario && p.email && p.email === S.usuario.email;
+  var ops = [];
+  if (!p.email){
+    ops.push({txt:'Dar acesso ao app', sub:'cadastrar e-mail e gerar senha', icone:'chave', fn:function(){
+      fichaAcesso('Acesso de ' + primeiroNome(p.nome), p, 'Gerar senha', gerarAcesso);
+    }});
+  } else if (eu){
+    ops.push({txt:'Trocar minha senha', icone:'chave', fn:function(){ ir('trocaSenha', {}); }});
+  } else {
+    ops.push({txt:'Gerar senha nova', sub:'a senha atual para de valer na hora', icone:'chave', fn:function(){
+      confirmar('Senha nova', p.nome + ' vai precisar da senha nova para entrar. A atual para de valer agora.',
+        'Gerar senha', function(){ gerarAcesso(p.nome, p.email, p.papel); });
+    }});
+    ops.push({txt:'Mudar e-mail', sub:p.email, icone:'renomear', fn:function(){
+      fichaAcesso('E-mail de ' + primeiroNome(p.nome), p, 'Salvar e gerar senha', gerarAcesso);
+    }});
+    ops.push({txt:p.papel === 'Gestão' ? 'Tornar Professor' : 'Tornar Gestão',
+      sub:p.papel === 'Gestão' ? 'perde caixa, cadastros e relatórios' : 'passa a ver tudo',
+      icone:'engrenagem', fn:function(){
+        var novo = p.papel === 'Gestão' ? 'Professor' : 'Gestão';
+        escrever('mudarPapel', [p.nome, novo], p.nome + ' agora é ' + novo, carregarProfs);
+      }});
+  }
+  if (!eu) ops.push({txt:'Tirar da equipe', sub:'perde o acesso; as chamadas antigas continuam com o nome',
     icone:'desativar', perigo:true, fn:function(){
-      confirmar('Tirar da equipe', n + ' some da escolha na chamada. As chamadas já salvas continuam com o nome.',
-        'Tirar da equipe', function(){
-          escrever('removerProfessor', [n], n + ' saiu da equipe', carregarProfs);
+      confirmar('Tirar da equipe', p.nome + ' some da escolha na chamada e não entra mais no app. ' +
+        'As chamadas já salvas continuam com o nome.', 'Tirar da equipe', function(){
+          escrever('removerProfessor', [p.nome], p.nome + ' saiu da equipe', carregarProfs);
         });
-    }}]);
+    }});
+  folhaOpcoes(p.nome, ops);
 };
 
 /* ══════════════ GESTÃO: QR das turmas e link por professor ══════════════ */
@@ -438,7 +499,7 @@ TELAS.gQr = function(){
       '</div><div id="qrLista">' + esqueleto(4) + '</div>',
     depois:function(){
       function falhou(e){ if (el('qrLista')) el('qrLista').innerHTML = estado('alerta','Não deu para carregar', textoErro(e)); }
-      ler('obterUrlApp', [S.pin], function(url){
+      ler('obterUrlApp', [], function(url){
         S.urlApp = url || '';
         if (!el('qrLista')) return;
         if (!S.urlApp){
@@ -454,7 +515,7 @@ TELAS.gQr = function(){
 ACOES.qrAba = function(b){ S.qrAba = b.getAttribute('data-f'); vibrar(); trocar('gQr'); };
 
 function listarQrTurmas(falhou){
-  ler('listarTurmasCompleto', [S.pin], function(ts){
+  ler('listarTurmasCompleto', [], function(ts){
     var alvo = el('qrLista');
     if (!alvo) return;
     if (!ts.length){
@@ -473,7 +534,7 @@ function listarQrTurmas(falhou){
 }
 
 function listarLinksProf(falhou){
-  ler('listarProfessores', [S.pin], function(ps){
+  ler('listarProfessores', [], function(ps){
     var alvo = el('qrLista');
     if (!alvo) return;
     if (!ps.length){
@@ -547,7 +608,7 @@ TELAS.gCert = function(){
   return {
     titulo:'Certificados', html:esqueleto(4),
     depois:function(){
-      ler('listarTurmasCompleto', [S.pin], function(ts){
+      ler('listarTurmasCompleto', [], function(ts){
         var alvo = el('palco').querySelector('.corpo');
         if (!ts.length){
           alvo.innerHTML = estado('prancheta','Nenhuma turma ainda','Crie uma turma para emitir certificados.');
@@ -580,7 +641,7 @@ TELAS.gCertTurma = function(p){
           'data-acao="certTodos" data-t="' + esc(p.turma) + '">' +
           ico('medalha') + 'Gerar da turma inteira</button>',
     depois:function(){
-      ler('alunosParaCertificado', [S.pin, p.turma], function(as){
+      ler('alunosParaCertificado', [p.turma], function(as){
         if (atual().t !== 'gCertTurma' || atual().p.turma !== p.turma) return;
         S.certAlunos = as;
         S.certTurma = p.turma;
@@ -631,7 +692,7 @@ ACOES.certTodos = function(b){
 
 function emitir(nomes, turma, umNome){
   toast('Gerando… pode levar alguns segundos.');
-  api('gerarCertificado', [S.pin, nomes, turma], function(r){
+  api('gerarCertificado', [nomes, turma], function(r){
     fecharToast(); vibrar();
     var ficha = umNome ? (S.certAlunos || []).filter(function(a){
       return a.nome === umNome && a.turma === turma;
@@ -688,7 +749,7 @@ TELAS.gRisco = function(){
   return {
     titulo:'Precisam de atenção', html:esqueleto(3),
     depois:function(){
-      ler('alunosEmRisco', [S.pin, 3], function(r){
+      ler('alunosEmRisco', [3], function(r){
         var alvo = el('palco').querySelector('.corpo');
         if (!r.alunos.length){
           alvo.innerHTML = estado('cheque', 'Ninguém sumido',
@@ -762,7 +823,7 @@ ACOES.gerarRel = function(){
   if (!el('dtIni') || !el('saidaRel')) return;
   var de = el('dtIni').value, ate = el('dtFim').value;
   el('saidaRel').innerHTML = '<div style="margin-top:20px">' + esqueleto(2) + '</div>';
-  api('relatorioPeriodo', [S.pin, de, ate], function(r){
+  api('relatorioPeriodo', [de, ate], function(r){
     if (!el('saidaRel')) return;
     S.rel = r;
     var h = '<div class="secao">Resumo</div><div class="numeros">';
@@ -838,7 +899,7 @@ TELAS.gHistorico = function(){
   return {
     titulo:'Histórico', html:esqueleto(4),
     depois:function(){
-      ler('mesesComChamada', [S.pin], function(meses){
+      ler('mesesComChamada', [], function(meses){
         S.meses = meses || []; S.mesIdx = 0;
         if (!S.meses.length){
           el('palco').querySelector('.corpo').innerHTML = estado('calendario',
@@ -857,7 +918,7 @@ function carregarMes(){
   var mes = S.meses[S.mesIdx];
   var alvo = el('palco').querySelector('.corpo');
   alvo.innerHTML = passoMes(mes) + esqueleto(3);
-  ler('resumoHistorico', [S.pin, mes], function(r){
+  ler('resumoHistorico', [mes], function(r){
     var h = passoMes(mes);
     var t = r.totais;
 
@@ -915,7 +976,7 @@ TELAS.gPlanilha = function(){
   return {
     titulo:'Planilha', html:esqueleto(2),
     depois:function(){
-      ler('obterLinkPlanilha', [S.pin], function(d){
+      ler('obterLinkPlanilha', [], function(d){
         var podeCompartilhar = !!navigator.share;
         var h = '<div class="cartao-info">' + ico('tabela', 26) +
           '<b>' + esc(d.nome) + '</b>' +
@@ -957,7 +1018,7 @@ ACOES.partilharPlanilha = function(b){
 ACOES.arrumar = function(){
   var bt = el('btArrumar');
   bt.disabled = true; bt.textContent = 'Arrumando…';
-  api('arrumarPlanilha', [S.pin], function(){
+  api('arrumarPlanilha', [], function(){
     bt.disabled = false; bt.innerHTML = ico('varinha', 18) + ' Arrumar planilha';
     vibrar(); toast('Planilha arrumada. O Painel está na primeira aba.');
   }, function(e){

@@ -99,10 +99,12 @@ function comSugestoes_(usadas, sugestoes) {
   };
 }
 
-function listarCategorias() {
+function listarCategorias(sessao) {
+  exigirSessao(sessao);
   return comSugestoes_(distintos_(lerMateriais_(true), 'categoria'), SUGESTAO_CATEGORIAS);
 }
-function listarLocais() {
+function listarLocais(sessao) {
+  exigirSessao(sessao);
   return comSugestoes_(distintos_(lerMateriais_(true), 'local'), SUGESTAO_LOCAIS);
 }
 
@@ -112,7 +114,8 @@ function listarLocais() {
  * letra a letra não pode esperar o servidor —, mas os filtros existem
  * aqui para quem chamar de outro lugar.
  */
-function listarMateriais(filtros) {
+function listarMateriais(sessao, filtros) {
+  exigirSessao(sessao);
   return doCache('mt_' + Utilities.base64EncodeWebSafe(JSON.stringify(filtros || {})).slice(0, 200), TTL_CACHE, function () { return listarMateriais_(filtros); });
 }
 function listarMateriais_(filtros) {
@@ -173,8 +176,8 @@ function acharMaterial_(id) {
   return m;
 }
 
-function criarMaterial(pin, dados) {
-  exigirPin(pin);
+function criarMaterial(sessao, dados) {
+  exigirGestao(sessao);
   const m = normalizarMaterial_(dados || {});
   return comTrava(function () {
     const aba = abaMateriais();
@@ -186,8 +189,8 @@ function criarMaterial(pin, dados) {
   });
 }
 
-function editarMaterial(pin, id, dados) {
-  exigirPin(pin);
+function editarMaterial(sessao, id, dados) {
+  exigirGestao(sessao);
   return comTrava(function () {
     const atual = acharMaterial_(id);
     const m = normalizarMaterial_(dados || {}, atual);
@@ -198,8 +201,8 @@ function editarMaterial(pin, id, dados) {
 
 /* Os botões de mais e menos. delta vem somado do celular: cinco toques
    rápidos viram uma escrita só. */
-function ajustarQuantidade(pin, id, delta) {
-  exigirPin(pin);
+function ajustarQuantidade(sessao, id, delta) {
+  exigirGestao(sessao);
   const d = Math.round(Number(delta));
   if (!isFinite(d) || Math.abs(d) > 9999) throw new Error('Ajuste inválido.');
   return comTrava(function () {
@@ -211,8 +214,8 @@ function ajustarQuantidade(pin, id, delta) {
 }
 
 /* Descartado. Sai da lista, a linha fica na planilha. */
-function inativarMaterial(pin, id) {
-  exigirPin(pin);
+function inativarMaterial(sessao, id) {
+  exigirGestao(sessao);
   return comTrava(function () {
     const m = acharMaterial_(id);
     abaMateriais().getRange(m.linha, 9).setValue('NAO');
@@ -225,8 +228,8 @@ function inativarMaterial(pin, id) {
  * É o "editar" das listas livres: corrigir "Som" para "Som e áudio"
  * sem abrir item por item.
  */
-function renomearNaLista(pin, campo, de, para) {
-  exigirPin(pin);
+function renomearNaLista(sessao, campo, de, para) {
+  exigirGestao(sessao);
   const col = campo === 'categoria' ? 3 : campo === 'local' ? 7 : 0;
   if (!col) throw new Error('Lista desconhecida.');
   const novo = textoSeguro_(para, 60);

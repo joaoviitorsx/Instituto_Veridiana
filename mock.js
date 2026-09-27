@@ -7,10 +7,12 @@
 
    Abra assim:
      preview.html                      -> tela inicial
-     preview.html?prof=Vera%20Lúcia%20Sampaio -> atalho pessoal do professor
      preview.html?turma=Jazz%20Juvenil -> como se viesse do QR
      preview.html?dev=1                -> painel de rede e falhas
-   Código da gestão no mock: 1234
+   Logins no mock (ver EQUIPE abaixo):
+     vera@exemplo.org  / veridiana   -> Gestão
+     aline@exemplo.org / aline123    -> Professor
+     bruno@exemplo.org / temp2345    -> Professor, senha temporária
    ══════════════════════════════════════════════════════════════ */
 (function () {
   if (window.google) return;
@@ -260,7 +262,32 @@
   }
 
   var TOKENS = {};
-  var PIN = '1234';
+  /* e-mail -> acesso. Quem não está aqui não entra. */
+  var EQUIPE = {
+    'vera@exemplo.org':  { nome:'Vera Lúcia Sampaio', papel:'Gestão',    senha:'veridiana', tmp:false },
+    'aline@exemplo.org': { nome:'Aline Ferreira',     papel:'Professor', senha:'aline123',  tmp:false },
+    'bruno@exemplo.org': { nome:'Bruno Tavares',      papel:'Professor', senha:'temp2345',  tmp:true }
+  };
+  var SESS = {};   /* token -> {email, so troca?} */
+  function emailDe(nome){
+    for (var e in EQUIPE) if (chave(EQUIPE[e].nome) === chave(nome)) return e;
+    return '';
+  }
+  function exigirSessao(t){
+    var s = SESS[t];
+    if (!s || s.t || !EQUIPE[s.e]) throw new Error('SESSAO: Sua sessão terminou. Entre de novo.');
+    var u = EQUIPE[s.e];
+    return { email:s.e, nome:u.nome, papel:u.papel };
+  }
+  function novaSessao(email, soTroca){
+    var t = 'T' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Date.now();
+    SESS[t] = { e:email, t:!!soTroca };
+    return t;
+  }
+  function derrubar(email){ for (var t in SESS) if (SESS[t].e === email) delete SESS[t]; }
+  /* A sessão sobrevive ao recarregar o preview, como no app de verdade. */
+  try { SESS = JSON.parse(sessionStorage.getItem('mockSess') || '{}'); } catch(e){}
+  function salvarSess(){ try { sessionStorage.setItem('mockSess', JSON.stringify(SESS)); } catch(e){} }
   var URL_APP = 'https://script.google.com/macros/s/AKfycbwEXEMPLO0000000000000000000000000000/exec';
 
   function hoje(){
@@ -296,7 +323,11 @@
     });
     return fora.sort(function(x,y){ return x.dia===y.dia ? pt(x.aluno,y.aluno) : (x.dia<y.dia?-1:1); });
   }
-  function exigirPin(p){ if (String(p) !== PIN) throw new Error('Código errado. Tente de novo.'); }
+  function exigirPin(p){
+    var u = exigirSessao(p);
+    if (u.papel !== 'Gestão') throw new Error('Só a gestão pode fazer isso.');
+    return u;
+  }
   function exigirNome(n){
     var v = String(n==null?'':n).trim().replace(/\s+/g,' ');
     if (v.length < 2) throw new Error('Escreva o nome com pelo menos 2 letras.');
@@ -546,6 +577,53 @@
     desativarAluno: function(pin, nome, turma){ exigirPin(pin); acharAluno(nome,turma).ativo = false; return {ok:true}; },
     reativarAluno:  function(pin, nome, turma){ exigirPin(pin); acharAluno(nome,turma).ativo = true;  return {ok:true}; },
     listarProfessores: function(pin){ exigirPin(pin); return PROFS.slice().sort(pt); },
+    entrar: function(email, senha){
+      var e = String(email || '').trim().toLowerCase(), u = EQUIPE[e];
+      if (!e || !senha) throw new Error('Preencha e-mail e senha.');
+      if (!u || u.senha !== senha) throw new Error('E-mail ou senha não conferem.');
+      var t = novaSessao(e, u.tmp); salvarSess();
+      return { token:t, trocar:u.tmp, usuario:{ nome:u.nome, email:e, papel:u.papel } };
+    },
+    quemSou: function(t){ return exigirSessao(t); },
+    trocarSenha: function(t, atual, nova){
+      var s = SESS[t];
+      if (!s) throw new Error('SESSAO: Sua sessão terminou. Entre de novo.');
+      var u = EQUIPE[s.e];
+      if (String(nova || '').length < 6) throw new Error('A senha nova precisa ter pelo menos 6 caracteres.');
+      if (u.senha !== atual) throw new Error('A senha atual não confere.');
+      if (nova === atual) throw new Error('A senha nova precisa ser diferente da atual.');
+      u.senha = nova; u.tmp = false; derrubar(s.e);
+      var t2 = novaSessao(s.e, false); salvarSess();
+      return { token:t2, usuario:{ nome:u.nome, email:s.e, papel:u.papel } };
+    },
+    sair: function(t){ delete SESS[t]; salvarSess(); return { ok:true }; },
+    listarEquipe: function(pin){
+      exigirPin(pin);
+      return PROFS.slice().sort(pt).map(function(n){
+        var e = emailDe(n), u = EQUIPE[e];
+        return { nome:n, email:e, papel:u ? u.papel : 'Professor',
+                 situacao: !u ? 'sem-acesso' : u.tmp ? 'pendente' : 'ativo' };
+      });
+    },
+    definirAcesso: function(pin, nome, email, papel){
+      var quem = exigirPin(pin), e = String(email || '').trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) throw new Error('Esse e-mail não parece certo.');
+      if (PROFS.every(function(p){ return chave(p) !== chave(nome); })) throw new Error('Professor não encontrado.');
+      if (EQUIPE[e] && chave(EQUIPE[e].nome) !== chave(nome)) throw new Error('Esse e-mail já é de ' + EQUIPE[e].nome + '.');
+      if (quem.email === e && papel !== 'Gestão') throw new Error('Você não pode tirar o seu próprio acesso de gestão.');
+      var velho = emailDe(nome);
+      if (velho){ delete EQUIPE[velho]; derrubar(velho); }
+      var senha = 'k' + Math.random().toString(36).slice(2, 9);
+      EQUIPE[e] = { nome:nome, papel:papel === 'Gestão' ? 'Gestão' : 'Professor', senha:senha, tmp:true };
+      salvarSess();
+      return { ok:true, nome:nome, email:e, papel:EQUIPE[e].papel, senha:senha };
+    },
+    mudarPapel: function(pin, nome, papel){
+      var quem = exigirPin(pin), e = emailDe(nome);
+      if (e === quem.email && papel !== 'Gestão') throw new Error('Você não pode tirar o seu próprio acesso de gestão.');
+      if (e){ EQUIPE[e].papel = papel === 'Gestão' ? 'Gestão' : 'Professor'; derrubar(e); salvarSess(); }
+      return { ok:true };
+    },
     adicionarProfessor: function(pin, nome){
       exigirPin(pin); var n = exigirNome(nome);
       if (PROFS.some(function(p){ return chave(p)===chave(n); }))
@@ -553,7 +631,9 @@
       PROFS.push(n); return {ok:true};
     },
     removerProfessor: function(pin, nome){
-      exigirPin(pin);
+      var quem = exigirPin(pin), e = emailDe(nome);
+      if (e && e === quem.email) throw new Error('Você não pode tirar você mesmo da equipe.');
+      if (e){ delete EQUIPE[e]; derrubar(e); salvarSess(); }
       var i = PROFS.findIndex(function(p){ return chave(p)===chave(nome); });
       if (i === -1) throw new Error('Professor não encontrado.');
       PROFS.splice(i,1); return {ok:true};
@@ -779,6 +859,9 @@
     }
   };
 
+  var ABERTAS_SESSAO = { modulo:1, resumoInicial:1, listarAgenda:1, listarAgendaAno:1, datasFixas:1,
+    listarMateriais:1, listarCategorias:1, listarLocais:1, listarTurmas:1, carregarTurma:1, salvarChamada:1 };
+
   /* ─── a ponte, igualzinha à do Apps Script ─── */
   function Corredor(ok, err){ this._ok = ok; this._err = err; }
   Corredor.prototype.withSuccessHandler = function(f){ return new Corredor(f, this._err); };
@@ -793,7 +876,18 @@
           if (err) err(new Error('Falha de rede simulada.')); return;
         }
         var r;
-        try { r = API[nome].apply(null, args); }
+        try {
+          /* No servidor de verdade estas recebem a sessão na frente e
+             conferem. Aqui confere e tira, e a função segue igual. */
+          if (ABERTAS_SESSAO[nome]){
+            var u = exigirSessao(args[0]);
+            args = args.slice(1);
+            if (nome === 'resumoInicial') args = [u.nome];
+            if (nome === 'modulo' && args[0] === 'gestao' && u.papel !== 'Gestão')
+              throw new Error('Só a gestão pode abrir essa parte.');
+          }
+          r = API[nome].apply(null, args);
+        }
         catch (e){ if (err) err(e); return; }
         if (ok) ok(JSON.parse(JSON.stringify(r)));
       }, espera);
@@ -826,7 +920,7 @@
       '<label><input type="radio" name="rd" checked> boa (420ms)</label><br>' +
       '<label><input type="radio" name="rd"> 4G ruim (2.5s, 25% falha)</label><br>' +
       '<label><input type="radio" name="rd"> offline</label><br>' +
-      '<span style="opacity:.6">PIN 1234</span>';
+      '<span style="opacity:.6">vera@exemplo.org / veridiana</span>';
     /* O mock roda no <head>: o body ainda não existe. */
     if (document.body) document.body.appendChild(d);
     else document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(d); });

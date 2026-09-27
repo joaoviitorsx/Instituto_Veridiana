@@ -69,11 +69,12 @@ que ainda não existem —, então o cartão só aparece com padrão firme
 (3 aulas na mesma hora) e sem empate entre turmas. Na dúvida, não
 aparece: cartão errado na primeira tela custa mais que cartão nenhum.
 
-**Link por professor.** O iframe do Apps Script não guarda nada entre
-uma visita e outra, então o app sabe quem é a pessoa pelo endereço:
-`.../exec?prof=Vera%20Lúcia`. A saudação usa o primeiro nome e a chamada
-já vem com a professora escolhida — de 5 para 4 toques. Em **Gestão →
-QR e links → Link por professor** cada um recebe o seu pelo WhatsApp.
+**Login.** Cada pessoa da equipe entra com e-mail e senha. O app sabe
+quem está com o celular na mão: a saudação usa o primeiro nome e a
+chamada já vem com a professora escolhida — de 5 para 4 toques. A
+sessão fica guardada no aparelho por 30 dias quando o navegador deixa;
+quando não deixa, o app pede a senha de novo. QR da parede sem sessão
+abre o login e, depois dele, a chamada da turma.
 
 ## Agenda anual
 
@@ -188,7 +189,6 @@ Um botão copia tudo em texto, pronto para colar no formulário do edital.
 <p align="center">
   <img src="assets/historico.png" width="240" alt="Histórico por mês">
   <img src="assets/gestao.png" width="240" alt="Menu de gestão com aniversariantes">
-  <img src="assets/pin.png" width="240" alt="Tela do código de acesso">
 </p>
 
 Histórico por dia e por mês, só leitura. Aniversariantes da semana no
@@ -196,8 +196,8 @@ menu, e o aniversário do dia aparece na tela da chamada — sem custar um
 toque a mais. Para uma criança daqui, o instituto lembrar do aniversário
 dela não é enfeite.
 
-A área de gestão fica atrás de um código de 4 dígitos, porque o QR está
-colado numa parede por onde passam adolescentes.
+Caixa, cadastros, certificados e relatórios são só de quem tem o papel
+**Gestão**. Professor nem vê esses botões.
 
 ---
 
@@ -231,12 +231,13 @@ mínimo 44px.
 ## Estrutura
 
 ```
-apps-script/        cole estes 23 arquivos no editor do Apps Script
+apps-script/        cole estes 25 arquivos no editor do Apps Script
   Codigo.gs           constantes, doGet, montagem da página e módulos
   Util.gs             planilha, datas, cache e trava
   Inicio.gs           números da tela inicial e "próxima aula"
   Chamada.gs          o fluxo do QR
-  Gestao.gs           PIN, turmas, alunos, professores
+  Acesso.gs           login, senha, sessão e papéis
+  Gestao.gs           turmas, alunos, professores
   Planilha.gs         link, padronização, Painel e menu
   Historico.gs        leitura do histórico por mês
   Impacto.gs          evasão, relatório de edital, aniversários
@@ -247,9 +248,10 @@ apps-script/        cole estes 23 arquivos no editor do Apps Script
   Index.html          casca da página
   Estilo.html         CSS da casca, da entrada, da chamada e da gestão
   AppNucleo.html      estado, ícones, ponte, roteador, módulos sob demanda
+  AppEntrada.html     login, troca de senha e sessão
   AppInicio.html      tela inicial
   AppChamada.html     telas da chamada
-  AppPartida.html     lê turma e professor da URL e abre a primeira tela
+  AppPartida.html     lê a turma da URL, confere a sessão e abre a primeira tela
   AppGestao.html      telas da área da equipe          (sob demanda)
   AppCaixa.html       telas do fluxo de caixa          (sob demanda)
   AppQr.html          encoder de QR                    (sob demanda)
@@ -297,10 +299,12 @@ Abra o **`preview.html`** no navegador. Ele já vem montado, com um mock do
 `google.script.run` que só liga quando `window.google` não existe.
 
 - `preview.html` — tela inicial
-- `preview.html?prof=Vera%20Lúcia%20Sampaio` — atalho pessoal da professora
 - `preview.html?turma=Jazz%20Juvenil` — como se viesse do QR da parede
 - `preview.html?dev=1` — painel para simular 4G ruim e queda de rede
-- Código da gestão no preview: **1234**
+- Logins do preview (só valem aqui, nunca no app publicado):
+  - `vera@exemplo.org` / `veridiana` — Gestão
+  - `aline@exemplo.org` / `aline123` — Professor
+  - `bruno@exemplo.org` / `temp2345` — Professor no primeiro acesso (pede senha nova)
 
 Para regerar o `preview.html` depois de mexer em `apps-script/`:
 
@@ -409,10 +413,10 @@ Saiba disso antes de publicar, não durante o problema.
 Dá para colar à mão: no editor, **+** ao lado de "Arquivos" cria cada um.
 
 **Script** (`+` → **Script**, nome sem `.gs`):
-`Codigo` · `Util` · `Inicio` · `Chamada` · `Gestao` · `Planilha` · `Historico` · `Impacto` · `Certificado` · `Caixa` · `Agenda` · `Materiais`
+`Codigo` · `Util` · `Acesso` · `Inicio` · `Chamada` · `Gestao` · `Planilha` · `Historico` · `Impacto` · `Certificado` · `Caixa` · `Agenda` · `Materiais`
 
 **HTML** (`+` → **HTML**, nome sem `.html`):
-`Index` · `Estilo` · `AppNucleo` · `AppInicio` · `AppChamada` · `AppPartida` · `AppGestao` · `AppCaixa` · `AppQr` · `AppAgenda` · `AppMateriais`
+`Index` · `Estilo` · `AppNucleo` · `AppEntrada` · `AppInicio` · `AppChamada` · `AppPartida` · `AppGestao` · `AppCaixa` · `AppQr` · `AppAgenda` · `AppMateriais`
 
 Em cada um: `Ctrl+A`, `Delete`, cole o arquivo de mesmo nome, `Ctrl+S`.
 Depois, a mesma sequência de publicação acima.
@@ -439,32 +443,46 @@ agenda — o Docs temporário vai para a lixeira logo depois).
 
 ---
 
-## 2. Criar o código da gestão (o "PIN")
+## 2. Acessos: e-mail, senha e papel
 
-**Não existe senha padrão.** Enquanto você não criar uma, o botão Gestão
-responde *"Ainda não existe código"* — é isso que você viu.
+Ninguém entra no app sem estar na aba `Professores` com e-mail. Cada
+pessoa tem um papel:
 
-O `1234` só vale no `preview.html`, nunca no app publicado.
+- **Professor** — chamada, agenda e materiais (só consulta)
+- **Gestão** — tudo: cadastros, caixa, certificados, relatórios, acessos
 
-Para criar:
+### O primeiro acesso da gestão
 
-1. Abra a **planilha** (não o editor de script).
-2. Recarregue a página uma vez, para o menu **Veridiana** aparecer.
-3. **Veridiana → Definir código da gestão**, digite 4 números, OK.
+Sem ninguém cadastrado, ninguém entra. O primeiro é criado na planilha:
 
-Se o menu não aparecer, dá para fazer pelo editor: escolha a função
-`configurarPin` na barra de cima e clique em **Executar**.
+1. Abra a **planilha** (não o editor de script) e recarregue uma vez,
+   para o menu **Veridiana** aparecer.
+2. **Veridiana → Criar acesso da gestão**: nome e e-mail.
+3. Aparece a **senha temporária**. Anote: ela não aparece de novo.
+4. No app, entre com o e-mail e essa senha. Ele pede para criar a sua.
 
-O código fica nas Script Properties, nunca dentro do código-fonte.
+O mesmo menu serve se todo mundo da gestão perder a senha.
 
-### O que esse PIN protege, e o que não protege
+### O resto da equipe
 
-Ele impede toque acidental e curiosidade de adolescente que passa perto
-do QR na parede. É esse o risco real.
+No app: **Gestão → Equipe e acessos → Adicionar pessoa** (ou toque em
+quem já está na lista → **Dar acesso ao app**). Nome, e-mail e papel. O
+app mostra a senha temporária uma vez, com o botão **Enviar no
+WhatsApp**. No primeiro acesso a pessoa escolhe a dela.
 
-Ele **não** protege contra alguém determinado: trafega em texto e não tem
-limite de tentativas. A rede de segurança de verdade é o histórico de
-versões do Google Sheets, que desfaz qualquer estrago.
+Esqueceu a senha? Na mesma lista: pessoa → **Gerar senha nova**. A
+antiga para de valer na hora. **Tirar da equipe** derruba o acesso na
+hora, inclusive em celular que já estava logado.
+
+### Como a senha é guardada
+
+A senha **não fica na planilha**: fica nas Script Properties, só como
+hash com sal. Quem edita a planilha vê e-mail e papel, nunca senha.
+Cinco senhas erradas seguidas travam aquele e-mail por 15 minutos.
+
+O link `/exec` continua público — é o que permite o QR da parede. O que
+mudou é que, sem login, ele não mostra nem grava nada: todo pedido ao
+servidor confere a sessão, e os da gestão conferem o papel.
 
 ---
 
@@ -522,7 +540,7 @@ O atalho abre em tela cheia, sem barra de endereço.
 
 Tela inicial → **Gestão** → **QR e links**. Aba **QR das turmas**: escolha
 a turma. Aba **Link por professor**: escolha a pessoa e mande pelo
-WhatsApp; ela abre e adiciona à tela inicial do celular.
+WhatsApp; ela abre, faz login e adiciona à tela inicial do celular.
 
 O endereço do app é descoberto sozinho. Se aparecer o aviso de que falta o
 endereço, use **Veridiana → Configurar endereço do app** e cole o link que
@@ -541,7 +559,7 @@ cartaz, no tamanho A5.
 | Aba | Colunas |
 |---|---|
 | `Alunos` | Turma, Aluno, Ativo (SIM/NAO), Nascimento, Responsável, Telefone |
-| `Professores` | Professor |
+| `Professores` | Professor, E-mail, Papel (Professor/Gestão) |
 | `Chamadas` | Registro, Data, Turma, Professor, Aluno, Status |
 | `Turmas` | Turma, Ativa (SIM/NAO), Minutos por aula |
 | `Caixa` | Registro, Data, Tipo, Valor, Categoria, Descrição, Fonte, Comprovante, Quem registrou |
@@ -562,7 +580,7 @@ Linha digitada direto na planilha, sem ID, ganha um na primeira leitura.
 > **Saldo fora da tela inicial.** A tela inicial abre sem código e o QR
 > fica numa parede por onde passam adolescentes, então o saldo do caixa
 > não aparece nela (`MOSTRAR_SALDO_NA_ENTRADA = false` em `Inicio.gs`).
-> Continua dentro do Caixa, atrás do PIN.
+> Continua dentro do Caixa, só para a gestão.
 
 `Turmas` foi acrescentada porque turma criada sem nenhum aluno não tinha
 onde existir nas três abas originais, e "arquivar turma" precisa guardar
