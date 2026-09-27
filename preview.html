@@ -1059,6 +1059,7 @@ main{padding:0 0 24px}
       return { ok:true, url:'https://drive.google.com/file/d/1EXEMPLO_CALENDARIO_000/view',
         baixar:'https://drive.google.com/uc?export=download&id=1EXEMPLO_CALENDARIO_000',
         nome:'Calendário ' + ano + ' — Instituto Veridiana.pdf', publico:true, paginas:4,
+        tempo:{ montar:0.3, exportar:0.1, total:0.4 },
         eventos: API.listarAgendaAno(ano).total };
     },
     listarMateriais: function(){
@@ -1487,7 +1488,9 @@ main{padding:0 0 24px}
       '<label><input type="radio" name="rd"> 4G ruim (2.5s, 25% falha)</label><br>' +
       '<label><input type="radio" name="rd"> offline</label><br>' +
       '<span style="opacity:.6">PIN 1234</span>';
-    document.body.appendChild(d);
+    /* O mock roda no <head>: o body ainda não existe. */
+    if (document.body) document.body.appendChild(d);
+    else document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(d); });
     var rs = d.querySelectorAll('input');
     rs[0].onchange = function(){ CFG = {atraso:420, falha:0, offline:false}; };
     rs[1].onchange = function(){ CFG = {atraso:2500, falha:.25, offline:false}; };
@@ -4490,7 +4493,8 @@ TELAS.agImprimir = function(p){
         'e espaço em branco para escrever à mão. Mês com muito evento ganha página própria.</span>' +
         '<span id="agImpConta" style="margin-top:8px;font-weight:600;color:var(--roxo)"></span></div>' +
       '<button type="button" class="botao-cheio" id="btPdf" data-acao="agGerarPdf">' +
-        ico('documento', 18) + ' Gerar o PDF</button>',
+        ico('documento', 18) + ' Gerar o PDF</button>' +
+      '<p class="dica" id="agPdfEspera" role="status" aria-live="polite" style="text-align:center;min-height:3em"></p>',
     depois:function(){
       api('listarAgendaAno', [p.ano], function(r){
         var n = el('agImpConta');
@@ -4502,16 +4506,36 @@ TELAS.agImprimir = function(p){
   };
 };
 ACOES.agImpPasso = function(b){ vibrar(); trocar('agImprimir', {ano:atual().p.ano + +b.getAttribute('data-n')}); };
+/* "Gerando…" parado por 40 segundos é igual a travado. O contador anda
+   a cada segundo e o texto muda conforme a espera cresce. Não finge
+   progresso: o servidor não conta em que página está, só o relógio. */
+var agPdfRelogio = 0;
+function esperaPdf(inicio){
+  var n = el('agPdfEspera');
+  if (!n){ clearInterval(agPdfRelogio); return; }
+  var s = Math.round((Date.now() - inicio) / 1000);
+  n.textContent = (s < 20 ? 'Montando as páginas do calendário no Google'
+    : s < 60 ? 'Ainda montando. O Google leva seu tempo com PDF; pode deixar a tela aberta'
+    : 'Está demorando mais que o normal, mas continua trabalhando') + ' · ' + s + ' s';
+}
 ACOES.agGerarPdf = function(){
   var ano = atual().p.ano;
   var bt = el('btPdf');
-  bt.disabled = true; bt.textContent = 'Montando o calendário… pode levar meio minuto';
+  bt.disabled = true; bt.textContent = 'Gerando o calendário…';
+  var inicio = Date.now();
+  clearInterval(agPdfRelogio);
+  esperaPdf(inicio);
+  agPdfRelogio = setInterval(function(){ esperaPdf(inicio); }, 1000);
+  function parar(){ clearInterval(agPdfRelogio); if (el('agPdfEspera')) el('agPdfEspera').textContent = ''; }
   api('gerarCalendarioPdf', [S.pin, ano], function(r){
+    parar();
     var b2 = el('btPdf');
     if (b2){ b2.disabled = false; b2.innerHTML = ico('documento', 18) + ' Gerar de novo'; }
     vibrar();
     var texto = 'Calendário ' + ano + ' do Instituto Veridiana: ' + r.url;
-    var h = '<p class="sub">' + esc(r.nome) + ' · ' + plural(r.paginas, 'página', 'páginas') + '</p>' +
+    var seg = r.tempo ? r.tempo.total : Math.round((Date.now() - inicio) / 1000);
+    var h = '<p class="sub">' + esc(r.nome) + ' · ' + plural(r.paginas, 'página', 'páginas') +
+      ' · pronto em ' + String(seg).replace('.', ',') + ' s</p>' +
       '<div style="padding:0 8px">' +
       '<a class="botao-cheio" href="' + esc(r.url) + '" target="_blank" rel="noopener">' + ico('abrir', 18) + ' Abrir o PDF</a>';
     if (r.publico){
@@ -4526,6 +4550,7 @@ ACOES.agGerarPdf = function(){
     }
     abrirFolha('Calendário pronto', h + '</div>');
   }, function(e){
+    parar();
     var b2 = el('btPdf');
     if (b2){ b2.disabled = false; b2.innerHTML = ico('documento', 18) + ' Gerar o PDF'; }
     toast(textoErro(e), 'erro');

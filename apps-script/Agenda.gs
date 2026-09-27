@@ -347,6 +347,11 @@ const MES_NOME = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'J
 
 function gerarCalendarioPdf(pin, ano) {
   exigirPin(pin);
+  /* Cronômetro: cada chamada ao DocumentApp custa, e o critério para
+     trocar de caminho (plano B pela planilha) é o tempo real. Sai no
+     Registro de execução e na tela. */
+  const t0 = Date.now();
+  let tMontado = 0, tExportado = 0;
   const a = anoValido_(ano);
   const iniAno = a + '-01-01', fimAno = a + '-12-31';
 
@@ -409,11 +414,13 @@ function gerarCalendarioPdf(pin, ano) {
     } catch (e) {}
 
     doc.saveAndClose();
+    tMontado = Date.now();
 
     const pasta = pastaAgenda_();
     const antigos = pasta.getFilesByName(nome);
     while (antigos.hasNext()) antigos.next().setTrashed(true);   // um PDF por ano, sempre o último
     arquivo = pasta.createFile(DriveApp.getFileById(idDoc).getAs(MimeType.PDF).setName(nome));
+    tExportado = Date.now();
   } finally {
     try { DriveApp.getFileById(idDoc).setTrashed(true); } catch (e) {}
   }
@@ -426,8 +433,16 @@ function gerarCalendarioPdf(pin, ano) {
     publico = true;
   } catch (e) {}
 
+  const tempo = {
+    montar: Math.round((tMontado - t0) / 100) / 10,
+    exportar: Math.round((tExportado - tMontado) / 100) / 10,
+    total: Math.round((Date.now() - t0) / 100) / 10
+  };
+  console.log('calendário ' + a + ': ' + paginas.length + ' páginas, ' + evs.length + ' eventos, ' +
+              'montar ' + tempo.montar + ' s, exportar ' + tempo.exportar + ' s, total ' + tempo.total + ' s');
+
   return {
-    ok: true, url: arquivo.getUrl(), nome: nome, publico: publico,
+    ok: true, url: arquivo.getUrl(), nome: nome, publico: publico, tempo: tempo,
     baixar: 'https://drive.google.com/uc?export=download&id=' + arquivo.getId(),
     paginas: paginas.length, eventos: evs.length
   };

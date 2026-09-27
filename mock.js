@@ -398,6 +398,7 @@
       return { ok:true, url:'https://drive.google.com/file/d/1EXEMPLO_CALENDARIO_000/view',
         baixar:'https://drive.google.com/uc?export=download&id=1EXEMPLO_CALENDARIO_000',
         nome:'Calendário ' + ano + ' — Instituto Veridiana.pdf', publico:true, paginas:4,
+        tempo:{ montar:0.3, exportar:0.1, total:0.4 },
         eventos: API.listarAgendaAno(ano).total };
     },
     listarMateriais: function(){
@@ -826,7 +827,9 @@
       '<label><input type="radio" name="rd"> 4G ruim (2.5s, 25% falha)</label><br>' +
       '<label><input type="radio" name="rd"> offline</label><br>' +
       '<span style="opacity:.6">PIN 1234</span>';
-    document.body.appendChild(d);
+    /* O mock roda no <head>: o body ainda não existe. */
+    if (document.body) document.body.appendChild(d);
+    else document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(d); });
     var rs = d.querySelectorAll('input');
     rs[0].onchange = function(){ CFG = {atraso:420, falha:0, offline:false}; };
     rs[1].onchange = function(){ CFG = {atraso:2500, falha:.25, offline:false}; };

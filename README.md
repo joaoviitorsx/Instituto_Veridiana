@@ -370,11 +370,19 @@ A sequência:
    autorização
 3. Aceitar o escopo novo
 4. **Testar a chamada na `/dev`.** É essa a verificação que importa
-5. Testar o recurso novo (na v2: gerar o calendário em PDF e conferir
-   que saiu em A4 deitado)
+5. Testar o recurso novo. Na v2: gerar o calendário em PDF, conferir
+   que saiu em A4 deitado e **olhar o tempo** — aparece na folha de
+   resultado ("pronto em 23 s") e no Registro de execução, separado em
+   montar e exportar. Acima de 30 s, o Docs não vale a pena: ir para o
+   plano B abaixo
 6. Só então: **Implantar → Gerenciar implantações → ✏️ → Versão: Nova
    versão → Implantar**. Editar a implantação existente mantém o mesmo
    link `/exec` — e os QR impressos continuam valendo
+
+**Se der errado depois de publicar:** Implantar → Gerenciar
+implantações → ✏️ → em Versão, escolher a **anterior** → Implantar.
+Trinta segundos, mesmo link `/exec`, QR da parede continuam valendo.
+Saiba disso antes de publicar, não durante o problema.
 
 > **Se o Docs der trabalho:** o plano B é montar o calendário numa aba
 > temporária da própria planilha e exportar pela URL de exportação do
