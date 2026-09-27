@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>App do Instituto Veridiana — Manual do Usuário · v3.5</title>
+<style>
+/* Fonte do app em arquivos ESTÁTICOS, um por peso. A versão variável do
+   Google Fonts sai no PDF do Chrome com os espaços entre palavras
+   encolhidos. */
+@font-face{font-family:'Plus Jakarta Sans';font-weight:400;font-display:block;src:url(fontes/pjs-latin-400.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Plus Jakarta Sans';font-weight:400;font-display:block;src:url(fontes/pjs-latin-ext-400.woff2) format('woff2');unicode-range:U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Plus Jakarta Sans';font-weight:500;font-display:block;src:url(fontes/pjs-latin-500.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Plus Jakarta Sans';font-weight:500;font-display:block;src:url(fontes/pjs-latin-ext-500.woff2) format('woff2');unicode-range:U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Plus Jakarta Sans';font-weight:600;font-display:block;src:url(fontes/pjs-latin-600.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Plus Jakarta Sans';font-weight:600;font-display:block;src:url(fontes/pjs-latin-ext-600.woff2) format('woff2');unicode-range:U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Plus Jakarta Sans';font-weight:700;font-display:block;src:url(fontes/pjs-latin-700.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Plus Jakarta Sans';font-weight:700;font-display:block;src:url(fontes/pjs-latin-ext-700.woff2) format('woff2');unicode-range:U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Plus Jakarta Sans';font-weight:800;font-display:block;src:url(fontes/pjs-latin-800.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Plus Jakarta Sans';font-weight:800;font-display:block;src:url(fontes/pjs-latin-ext-800.woff2) format('woff2');unicode-range:U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+
+/* Manual do usuário. Fonte: este HTML. O PDF sai de gerar-manual.py,
+   que põe os prints e o logo e imprime pelo Chrome em A4. */
+:root{
+  --roxo:#4A1D6E; --roxo-fundo:#3A1556; --roxo-fraco:#EDE4F3; --roxo-claro:#D6C3E8;
+  --tinta:#1B1020; --fundo:#F4F1F7; --borda:#E5DCEC; --apagado:#6B5E78;
+  --presente:#16704A; --presente-fraco:#E8F3ED;
+  --falta:#AF2338; --falta-fraco:#FBEAEE;
+  --justif:#8A6314; --justif-fraco:#FAF2E1;
+}
+@page{
+  size:A4; margin:20mm 17mm 18mm 17mm;
+  @top-left{content:"App do Instituto Veridiana — Manual do Usuário";font:500 7.5pt 'Plus Jakarta Sans',sans-serif;color:#6B5E78;vertical-align:bottom;padding-bottom:4mm}
+  @top-right{content:"Versão 3.5 · 27/09/2026";font:500 7.5pt 'Plus Jakarta Sans',sans-serif;color:#6B5E78;vertical-align:bottom;padding-bottom:4mm}
+  @bottom-left{content:"Instituto Veridiana · Manual do Usuário · v3.5";font:500 7.5pt 'Plus Jakarta Sans',sans-serif;color:#6B5E78;vertical-align:top;padding-top:4mm}
+  @bottom-right{content:counter(page);font:600 8pt 'Plus Jakarta Sans',sans-serif;color:#4A1D6E;vertical-align:top;padding-top:4mm}
+}
+@page capa{
+  margin:0;
+  @top-left{content:none} @top-right{content:none} @bottom-left{content:none} @bottom-right{content:none}
+}
+*{box-sizing:border-box}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--tinta);font-size:9.6pt;line-height:1.55;word-spacing:.05em;background:#fff}
+p{margin:0 0 7pt}
+b,strong{font-weight:700}
+ul,ol{margin:0 0 8pt;padding-left:15pt}
+li{margin-bottom:3pt}
+
+/* ─── capa ─── */
+.capa{page:capa;height:297mm;padding:26mm 22mm 20mm;display:flex;flex-direction:column;position:relative;overflow:hidden;break-after:page}
+.capa::after{content:"";position:absolute;right:-60mm;top:-40mm;width:170mm;height:170mm;border-radius:50%;background:var(--roxo-fraco);z-index:-1}
+.capa .marca{display:flex;align-items:center;gap:12pt}
+.capa .marca .logo{width:54pt;height:54pt;border-radius:15pt;background:var(--roxo);color:#fff;padding:4pt}
+.capa .marca b{display:block;font-size:15pt;letter-spacing:-.01em;color:var(--roxo)}
+.capa .marca span{font-size:8pt;letter-spacing:.14em;color:var(--apagado);font-weight:600}
+.capa .meio{margin-top:auto;margin-bottom:26mm}
+.capa .barra{width:42mm;height:3pt;background:var(--roxo);margin-bottom:14pt}
+.capa .kicker{font-size:8.5pt;letter-spacing:.2em;font-weight:700;color:var(--roxo);margin-bottom:10pt}
+.capa h1{font-size:40pt;line-height:1.04;letter-spacing:-.03em;font-weight:800;margin:0 0 14pt;color:var(--tinta)}
+.capa .sub{font-size:11pt;color:var(--apagado);max-width:120mm;line-height:1.5}
+.capa .meta{display:grid;grid-template-columns:repeat(4,1fr);gap:10pt;border-top:1px solid var(--borda);padding-top:12pt}
+.capa .meta small{display:block;font-size:6.8pt;letter-spacing:.14em;font-weight:700;color:var(--apagado);margin-bottom:4pt}
+.capa .meta b{font-size:9pt}
+.capa .rodape{margin-top:14pt;font-size:7.5pt;color:var(--apagado)}
+
+/* ─── sumário ─── */
+.sumario{border:1px solid var(--borda);border-radius:8pt;padding:12pt 16pt;margin:16pt 0}
+.sumario h3{font-size:7pt;letter-spacing:.16em;color:var(--apagado);margin:0 0 6pt;font-weight:700}
+.sumario ol{list-style:none;padding:0;margin:0;counter-reset:s}
+.sumario li{counter-increment:s;display:flex;gap:8pt;padding:5pt 0;border-bottom:1px solid var(--borda);margin:0;font-weight:600}
+.sumario li:last-child{border:0}
+.sumario li::before{content:counter(s) ".";color:var(--roxo);font-weight:800;min-width:14pt}
+.sumario li span{font-weight:400;color:var(--apagado)}
+
+/* ─── títulos ─── */
+h2{font-size:17pt;letter-spacing:-.02em;font-weight:800;margin:0 0 10pt;padding-bottom:6pt;border-bottom:1px solid var(--borda);break-after:avoid}
+h2 .n{color:var(--roxo);margin-right:6pt}
+.secao{break-before:page}
+h3{font-size:11.5pt;font-weight:700;margin:14pt 0 6pt;break-after:avoid}
+h3 .n{color:var(--roxo);margin-right:5pt}
+h4{font-size:9.8pt;font-weight:700;margin:10pt 0 4pt;break-after:avoid}
+
+/* ─── nomes de botão e campo ─── */
+.bt{display:inline-block;font-weight:600;font-size:.9em;background:var(--fundo);border:1px solid var(--borda);border-radius:4pt;padding:0 4pt;line-height:1.45;white-space:nowrap}
+.caminho{font-weight:600;color:var(--roxo)}
+
+/* ─── etapas em cartões ─── */
+.etapas{display:grid;grid-template-columns:repeat(6,1fr);gap:6pt;margin:8pt 0 12pt}
+.etapas div{border:1px solid var(--borda);border-radius:6pt;padding:7pt 7pt 9pt;font-size:8.4pt;line-height:1.35}
+.etapas b{display:block;color:var(--roxo);font-size:8.5pt;margin-bottom:3pt}
+
+/* ─── quadros ─── */
+.quadro{border-left:3.5pt solid var(--roxo);background:var(--roxo-fraco);border-radius:0 6pt 6pt 0;padding:10pt 13pt;margin:10pt 0 12pt;break-inside:avoid}
+.quadro h4{margin:0 0 5pt;color:var(--roxo)}
+.quadro p:last-child,.quadro ul:last-child{margin-bottom:0}
+.quadro.cuidado{border-color:var(--falta);background:var(--falta-fraco)}
+.quadro.cuidado h4{color:var(--falta)}
+.quadro.ok{border-color:var(--presente);background:var(--presente-fraco)}
+.quadro.ok h4{color:var(--presente)}
+
+/* ─── passo a passo ─── */
+ol.passos{list-style:none;padding:0;counter-reset:p;margin:6pt 0 10pt}
+ol.passos>li{counter-increment:p;position:relative;padding-left:22pt;margin-bottom:6pt;break-inside:avoid}
+ol.passos>li::before{content:counter(p);position:absolute;left:0;top:0;width:15pt;height:15pt;border-radius:50%;background:var(--roxo);color:#fff;font-size:7.5pt;font-weight:700;display:grid;place-items:center;line-height:1}
+
+/* ─── tabelas ─── */
+table{width:100%;border-collapse:collapse;margin:6pt 0 12pt;font-size:8.6pt;line-height:1.4}
+thead{display:table-header-group}
+th{background:var(--roxo);color:#fff;text-align:left;font-size:7pt;letter-spacing:.1em;font-weight:700;padding:6pt 8pt}
+td{padding:6pt 8pt;border-bottom:1px solid var(--borda);vertical-align:top}
+tr{break-inside:avoid}
+td:first-child{font-weight:600}
+.selo{display:inline-block;padding:1pt 7pt;border-radius:99pt;font-weight:700;font-size:7.8pt;white-space:nowrap}
+.selo.falta{background:var(--fundo);color:var(--apagado);border:1px solid var(--borda)}
+.selo.presente{background:var(--presente);color:#fff}
+.selo.justif{background:var(--justif);color:#fff}
+
+/* ─── texto ao lado do print ─── */
+.com-tela{display:grid;grid-template-columns:1fr 50mm;gap:14pt;align-items:start;margin:4pt 0 8pt}
+.com-tela.duas{grid-template-columns:1fr 50mm 50mm}
+figure{margin:0;break-inside:avoid}
+figure img{width:100%;display:block;border-radius:12pt;border:1px solid var(--borda);box-shadow:0 2pt 10pt rgba(27,16,32,.08)}
+figcaption{font-size:7.2pt;color:var(--apagado);text-align:center;margin-top:5pt;line-height:1.35}
+.telas{display:grid;grid-template-columns:repeat(3,1fr);gap:12pt;margin:8pt 0 12pt;break-inside:avoid}
+
+/* ─── glossário ─── */
+dl.glossario{display:grid;grid-template-columns:36mm 1fr;margin:0}
+dl.glossario dt{font-weight:700;padding:6pt 0;border-bottom:1px solid var(--borda)}
+dl.glossario dd{margin:0;padding:6pt 0;border-bottom:1px solid var(--borda)}
+.lado{display:grid;grid-template-columns:1fr 1fr;gap:10pt;break-inside:avoid}
+.lado .quadro{margin:4pt 0 0}
+.fim-doc{margin-top:18pt;font-size:8pt;color:var(--apagado);border-top:1px solid var(--borda);padding-top:8pt}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ CAPA ══════════════ -->
+<section class="capa">
+  <div class="marca">{{LOGO}}<div><b>Instituto Veridiana</b><span>DANÇA · JANGURUSSU · FORTALEZA</span></div></div>
+  <div class="meio">
+    <div class="barra"></div>
+    <div class="kicker">APP DO INSTITUTO · CHAMADA E GESTÃO</div>
+    <h1>Entrar, Chamar,<br>Cuidar</h1>
+    <p class="sub">Manual da equipe para fazer a chamada, acompanhar os alunos e cuidar da agenda, dos materiais, do caixa e dos certificados pelo celular.</p>
+  </div>
+  <div class="meta">
+    <div><small>PÚBLICO-ALVO</small><b>Professoras e coordenação</b></div>
+    <div><small>ÁREA RESPONSÁVEL</small><b>Coordenação</b></div>
+    <div><small>VERSÃO</small><b>3.5</b></div>
+    <div><small>EMISSÃO</small><b>27/09/2026</b></div>
+  </div>
+  <div class="rodape">Instituto Veridiana · projetos Sonho de Dançar e Cia Corpo Identidade</div>
+</section>
+
+<!-- ══════════════ APRESENTAÇÃO ══════════════ -->
+<section>
+<p>Este manual explica como a equipe do Instituto Veridiana usa o app, tela por tela: do primeiro acesso até a chamada do dia, e da chamada até o certificado da aluna e o relatório do edital. O objetivo é que qualquer pessoa da equipe consiga usar o app sozinha — sabendo o que cada botão faz, o que cada aviso quer dizer e o que dá para desfazer.</p>
+<p>Não é preciso ler tudo de uma vez. Para começar, bastam a <b>seção 2</b> (primeiro acesso) e a <b>seção 3</b> (fazer a chamada). O resto serve de consulta.</p>
+
+<div class="sumario">
+  <h3>SUMÁRIO</h3>
+  <ol>
+    <li>O que o app faz <span>— e o que ele não faz</span></li>
+    <li>Primeiro acesso <span>— passo a passo</span></li>
+    <li>Fazer a chamada <span>— o coração do app</span></li>
+    <li>A tela inicial</li>
+    <li>Agenda</li>
+    <li>Materiais</li>
+    <li>Caixa</li>
+    <li>Gestão <span>— turmas, alunos, equipe, certificados e relatórios</span></li>
+    <li>Na planilha <span>— o menu Veridiana</span></li>
+    <li>Quando o app avisa ou recusa <span>— o que cada mensagem significa</span></li>
+    <li>Glossário</li>
+  </ol>
+</div>
+</section>
+
+<!-- ══════════════ 1 ══════════════ -->
+<section class="secao">
+<h2><span class="n">1</span>O que o app faz</h2>
+
+<h4>Como era sem o app</h4>
+<p>A chamada era feita no papel e digitada depois — quando era digitada. Sem registro confiável, o instituto não conseguia <b>comprovar atendimento em edital</b>, que é de onde vem o dinheiro, e a criança que parava de vir só era notada <b>semanas depois</b>, quando faltar já tinha virado hábito.</p>
+
+<h4>O que o app faz</h4>
+<div class="etapas">
+  <div><b>01</b>Cada pessoa entra com o próprio e-mail e senha</div>
+  <div><b>02</b>A chamada da turma é feita no celular, em segundos</div>
+  <div><b>03</b>Avisa quem está faltando seguido</div>
+  <div><b>04</b>Guarda agenda, materiais e caixa</div>
+  <div><b>05</b>Emite o certificado de horas da aluna</div>
+  <div><b>06</b>Monta o relatório para o edital</div>
+</div>
+
+<p>Tudo o que o app mostra e grava fica numa <b>planilha do Google</b> do instituto. Ela é a única fonte dos dados: o app só lê e escreve nela. Quem tem acesso à planilha pode conferir qualquer número direto lá.</p>
+
+<div class="quadro cuidado">
+  <h4>Três coisas que valem desde já</h4>
+  <ul>
+    <li><b>Chamada salva conta para tudo.</b> Ela entra no histórico, no alerta de faltas, no certificado e no relatório do edital. Salvar duas vezes a mesma aula conta em dobro — por isso o app pergunta antes.</li>
+    <li><b>Nunca apague linhas da aba Chamadas na planilha.</b> Chamada errada se corrige mudando a célula, não apagando a linha. Apagar some com horas do certificado das alunas.</li>
+    <li><b>O e-mail e a senha são de cada pessoa.</b> Não empreste o seu acesso: a chamada fica registrada com o nome de quem estava logado.</li>
+  </ul>
+</div>
+
+<h3><span class="n">1.1</span>O que ele não faz</h3>
+<p><b>Não funciona sem internet.</b> Se a internet cair na hora de salvar, as marcações continuam na tela e o app oferece <span class="bt">Tentar de novo</span>. Nada se perde enquanto a tela estiver aberta.</p>
+<p><b>Não apaga aluno.</b> Aluno que sai vira <i>inativo</i>: some da chamada, mas o histórico dele continua — é dele que sai o certificado.</p>
+<p><b>Não tem níveis de acesso.</b> Toda pessoa cadastrada entra em tudo, inclusive caixa e cadastros. Por isso só entra quem a coordenação cadastrou.</p>
+<p><b>Não guarda a senha de ninguém à vista.</b> Nem a coordenação consegue ver a senha de uma professora; se alguém esquecer, gera-se uma senha nova (seção 8.3).</p>
+</section>
+
+<!-- ══════════════ 2 ══════════════ -->
+<section class="secao">
+<h2><span class="n">2</span>Primeiro acesso — passo a passo</h2>
+<p>Antes do primeiro acesso, a coordenação cadastra você em <span class="caminho">Gestão → Equipe e acessos</span> e manda pelo WhatsApp uma mensagem com o link do app, o seu e-mail e uma <b>senha temporária</b>.</p>
+
+<div class="com-tela duas">
+  <div>
+    <ol class="passos">
+      <li><b>Abra o link</b> da mensagem, ou aponte a câmera do celular para o <b>QR do app</b> (o cartaz do instituto).</li>
+      <li>Na tela <b>Entrar</b>, digite o <b>e-mail</b> e a <b>senha temporária</b>, exatamente como vieram. O olhinho ao lado da senha mostra o que você digitou.</li>
+      <li>Toque em <span class="bt">Entrar</span>.</li>
+      <li>O app pede para você <b>criar a sua senha</b>, com pelo menos 6 caracteres. Digite duas vezes e toque em <span class="bt">Salvar senha</span>.</li>
+      <li>Pronto: você cai na tela inicial. A senha temporária deixa de valer.</li>
+    </ol>
+  </div>
+  <figure><img src="img/01-login.jpg"><figcaption>Tela de entrada</figcaption></figure>
+  <figure><img src="img/02-criar-senha.jpg"><figcaption>Primeiro acesso: criar a sua senha</figcaption></figure>
+</div>
+
+<h3><span class="n">2.1</span>Deixar o app na tela inicial do celular</h3>
+<p>Assim ele abre com um toque, como qualquer aplicativo, e você não precisa do QR de novo.</p>
+<ol class="passos">
+  <li><b>iPhone:</b> abra o app no <b>Safari</b> → botão <span class="bt">Compartilhar</span> → <span class="bt">Adicionar à Tela de Início</span>.</li>
+  <li><b>Android:</b> abra no <b>Chrome</b> → menu <span class="bt">⋮</span> → <span class="bt">Adicionar à tela inicial</span>.</li>
+</ol>
+
+<div class="quadro">
+  <h4>O app lembra de você</h4>
+  <p>Depois de entrar, o celular fica conectado por até <b>30 dias</b>. Alguns navegadores não deixam guardar (aba anônima, por exemplo): nesse caso o app só pede e-mail e senha de novo. Para desconectar de um celular emprestado, use <span class="bt">Sair</span> no fim da tela inicial.</p>
+</div>
+
+<h3><span class="n">2.2</span>Esqueci a senha</h3>
+<p>Peça para alguém da coordenação abrir <span class="caminho">Gestão → Equipe e acessos</span>, tocar no seu nome e escolher <span class="bt">Gerar senha nova</span>. Chega uma nova senha temporária, e no próximo acesso você cria a sua de novo. A senha antiga para de valer na hora.</p>
+<p>Para trocar a senha quando quiser, use <span class="bt">Trocar senha</span> no fim da tela inicial.</p>
+</section>
+
+<!-- ══════════════ 3 ══════════════ -->
+<section class="secao">
+<h2><span class="n">3</span>Fazer a chamada</h2>
+<p>É a tela mais usada do app, e foi pensada para ser feita com a aula começando, com o celular numa mão só.</p>
+
+<div class="com-tela duas">
+  <div>
+    <ol class="passos">
+      <li>Na tela inicial, toque em <span class="bt">Chamada</span> e escolha a turma. Se aparecer o cartão <b>Aula agora</b> no topo, um toque nele já abre a turma certa.</li>
+      <li>A lista abre com <b>todo mundo em falta</b>. Toque no nome de <b>quem veio</b>: a linha fica <b>verde</b>, com um visto.</li>
+      <li>Confira o quadro <b>Quem está dando a aula</b>. Ele já vem com o seu nome; se for substituir alguém, toque nele e escolha.</li>
+      <li>Toque em <span class="bt">Salvar chamada</span>.</li>
+      <li>Aparece <b>Chamada salva</b>, com o total de presentes e faltas.</li>
+    </ol>
+    <p>Turma cheia? O atalho <span class="bt">Todos presentes</span> marca todo mundo de uma vez; depois é só tocar em quem faltou para voltar para falta. Se tocar sem querer, aparece <span class="bt">Desfazer</span> por alguns segundos.</p>
+  </div>
+  <figure><img src="img/04-turmas.jpg"><figcaption>Escolher a turma</figcaption></figure>
+  <figure><img src="img/05-chamada.jpg"><figcaption>Presentes em verde, falta justificada em dourado</figcaption></figure>
+</div>
+
+<h3><span class="n">3.1</span>O que cada toque faz</h3>
+<table>
+  <thead><tr><th style="width:26%">COMO APARECE</th><th>O QUE SIGNIFICA</th><th style="width:30%">COMO CHEGAR NELE</th></tr></thead>
+  <tbody>
+    <tr><td><span class="selo falta">Faltou</span></td><td>O aluno não foi marcado. É como toda a lista começa. Se salvar assim, conta como falta.</td><td>É o ponto de partida. Três toques voltam para cá.</td></tr>
+    <tr><td><span class="selo presente">✓ Presente</span></td><td>O aluno veio à aula. Conta no histórico, no certificado e no relatório.</td><td>Um toque no nome.</td></tr>
+    <tr><td><span class="selo justif">Justificada</span></td><td>Faltou com motivo (atestado, aviso da família). Não conta como falta seguida no alerta da gestão.</td><td>Dois toques no nome.</td></tr>
+  </tbody>
+</table>
+<p>No topo da tela, o placar mostra <b>quantos presentes de quantos alunos</b> (por exemplo, <b>5/18</b>) e quantos faltaram. Se for aniversário de alguém da turma, aparece um aviso antes da lista.</p>
+
+<div class="com-tela">
+  <div>
+    <div class="quadro cuidado">
+      <h4>Antes de tocar em "Salvar chamada"</h4>
+      <p>Confira duas coisas: se <b>quem veio está verde</b> e se o nome em <b>Quem está dando a aula</b> está certo. Depois de salva, a chamada entra no histórico, no certificado e no relatório — corrigir exige mexer na planilha.</p>
+    </div>
+    <h4>Situações que o app avisa</h4>
+    <ul>
+      <li><b>"Ninguém presente?"</b> — você tocou em salvar sem marcar ninguém. Se a turma realmente não veio, confirme; se foi esquecimento, cancele e marque.</li>
+      <li><b>"Esta turma já teve chamada salva hoje."</b> — alguém já salvou esta turma hoje. Salvar de novo cria um segundo registro e conta a aula em dobro. Só confirme se for mesmo uma segunda aula.</li>
+      <li><b>"Sem internet agora."</b> — as marcações continuam na tela. Espere o sinal voltar e toque em <span class="bt">Tentar</span>.</li>
+    </ul>
+    <p>Depois de salvar, <span class="bt">Fazer outra chamada</span> volta para a lista de turmas.</p>
+  </div>
+  <figure><img src="img/06-salva.jpg"><figcaption>Confirmação da chamada salva</figcaption></figure>
+</div>
+</section>
+
+<!-- ══════════════ 4 ══════════════ -->
+<section class="secao">
+<h2><span class="n">4</span>A tela inicial</h2>
+<div class="com-tela">
+  <div>
+    <p>É a primeira tela depois de entrar. No topo, a saudação com o seu nome e a data de hoje.</p>
+    <h4>O cartão de destaque</h4>
+    <p>Logo abaixo, às vezes aparece um cartão com o que é mais provável você precisar agora:</p>
+    <ul>
+      <li><b>Aula agora / Próxima aula</b> — a turma que costuma ter aula neste horário, neste dia da semana. Um toque abre a chamada dela.</li>
+      <li><b>Hoje na agenda / Próximo na agenda</b> — um evento de hoje ou dos próximos 14 dias.</li>
+    </ul>
+    <p>O app descobre o horário das turmas sozinho, pelas chamadas das últimas semanas. Nas primeiras semanas de uso, ou quando há duas turmas no mesmo horário, o cartão <b>não aparece</b> — de propósito: cartão errado atrapalha mais do que ajuda.</p>
+    <h4>Os blocos</h4>
+    <p><b>Chamada</b>, <b>Agenda</b>, <b>Caixa</b>, <b>Materiais</b>, <b>Certificados</b> e <b>Gestão</b>, cada um com um número de apoio (quantas turmas, o próximo evento, quantos itens).</p>
+    <h4>A sua conta</h4>
+    <p>No fim da tela aparecem o seu nome e e-mail, com <span class="bt">Trocar senha</span> e <span class="bt">Sair</span>.</p>
+  </div>
+  <figure><img src="img/03-inicio.jpg"><figcaption>Tela inicial</figcaption></figure>
+</div>
+</section>
+
+<!-- ══════════════ 5 ══════════════ -->
+<section class="secao">
+<h2><span class="n">5</span>Agenda</h2>
+<div class="com-tela">
+  <div>
+    <p>O planejamento do ano: apresentações, ensaios, bazares, reuniões e datas comemorativas. A agenda não substitui o calendário de papel da coordenação — ela o alimenta: dela sai o calendário impresso.</p>
+    <ul>
+      <li><b>Mês a mês:</b> as setas no topo trocam de mês.</li>
+      <li><span class="bt">Ver o ano</span> mostra os 12 meses com a contagem de eventos de cada um.</li>
+      <li><span class="bt">Imprimir</span> gera o <b>calendário em PDF</b>, A4 deitado, um trimestre por página, com espaço em branco em cada dia para escrever à mão. Pode levar alguns segundos: o app mostra um cronômetro enquanto monta.</li>
+      <li><span class="bt">Novo evento</span> abre a ficha: nome, data (ou vários dias), tipo, turmas, local, situação e observação.</li>
+      <li>Tocar num evento permite <b>editar</b>, <b>mudar a situação</b> ou <b>apagar</b>.</li>
+    </ul>
+  </div>
+  <figure><img src="img/07-agenda.jpg"><figcaption>Agenda do mês</figcaption></figure>
+</div>
+
+<table>
+  <thead><tr><th style="width:26%">SITUAÇÃO</th><th>QUANDO USAR</th></tr></thead>
+  <tbody>
+    <tr><td>Planejado</td><td>Está na intenção, ainda sem confirmação.</td></tr>
+    <tr><td>Confirmado</td><td>Vai acontecer: data e local fechados.</td></tr>
+    <tr><td>Realizado</td><td>Já aconteceu. Fica no registro do ano.</td></tr>
+    <tr><td>Cancelado</td><td>Não vai mais acontecer. Prefira isto a apagar: o cancelamento fica registrado no ano.</td></tr>
+  </tbody>
+</table>
+<p>Tipos de evento: Apresentação, Competição, Data comemorativa, Bazar, Ensaio geral, Reunião, Mídia e Outro. Em janeiro, a opção de <b>datas fixas</b> pré-carrega as datas que se repetem todo ano (hoje, o Dia Internacional da Dança).</p>
+</section>
+
+<!-- ══════════════ 6 ══════════════ -->
+<section class="secao">
+<h2><span class="n">6</span>Materiais</h2>
+<div class="com-tela">
+  <div>
+    <p>O que o instituto tem: som, figurinos, material de aula, móveis, doações para o bazar.</p>
+    <ul>
+      <li><b>Atalhos no topo:</b> <span class="bt">Para o bazar</span> e <span class="bt">Precisa reparo</span>, cada um com a quantidade — sem precisar abrir filtro.</li>
+      <li><b>Busca</b> pelo nome do item ou pelo local, e <b>filtros</b> por categoria, finalidade e estado.</li>
+      <li><span class="bt">Resumo</span> mostra quantas unidades há em cada categoria.</li>
+      <li><span class="bt">Novo item</span> abre a ficha: nome, categoria, finalidade, quantidade, estado, local e observação. <b>Categoria e local</b> você cria digitando, na própria ficha.</li>
+      <li>Na ficha do item, os botões <span class="bt">+</span> e <span class="bt">−</span> ajustam a quantidade num toque.</li>
+    </ul>
+    <p>Item que foi embora (doado, quebrado sem conserto) é <b>inativado</b>, nunca apagado.</p>
+  </div>
+  <figure><img src="img/08-materiais.jpg"><figcaption>Lista de materiais</figcaption></figure>
+</div>
+<table>
+  <thead><tr><th style="width:26%">CAMPO</th><th>OPÇÕES</th></tr></thead>
+  <tbody>
+    <tr><td>Finalidade</td><td>Instituto, Bazar, Espetáculo ou Ambos.</td></tr>
+    <tr><td>Estado</td><td>Novo, Bom, Usado, Precisa reparo ou Inservível.</td></tr>
+    <tr><td>Categoria</td><td>Livre. Sugestões: Som e áudio, Figurino, Material de aula, Móveis, Limpeza, Bazar, Cenário.</td></tr>
+    <tr><td>Local</td><td>Livre. Sugestões: Sala de dança, Depósito, Recepção, Armário 1.</td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ══════════════ 7 ══════════════ -->
+<section class="secao">
+<h2><span class="n">7</span>Caixa</h2>
+<div class="com-tela">
+  <div>
+    <p>Entradas e saídas de dinheiro, lançadas do celular entre uma aula e outra.</p>
+    <ol class="passos">
+      <li>Toque em <span class="bt">Entrou</span> ou <span class="bt">Saiu</span>.</li>
+      <li>Preencha <b>valor</b>, <b>categoria</b> e <b>fonte</b> (de onde veio ou de qual dinheiro saiu), e uma descrição curta.</li>
+      <li>Numa saída, toque na câmera para <b>fotografar a nota</b> na hora. A foto é reduzida no próprio celular antes de subir.</li>
+      <li>Toque em <span class="bt">Salvar</span>.</li>
+    </ol>
+    <p>No topo, <b>em caixa</b> é o saldo acumulado até o mês que está na tela; abaixo, o que entrou e o que saiu no mês. Tocar num lançamento mostra os detalhes, o comprovante e a opção de apagar.</p>
+    <p><span class="bt">Resumo para prestação de contas</span> soma por categoria e por fonte num período, avisa quantas saídas estão <b>sem nota</b> e tem um botão para copiar tudo em texto.</p>
+  </div>
+  <figure><img src="img/09-caixa.jpg"><figcaption>Caixa do mês</figcaption></figure>
+</div>
+<div class="quadro">
+  <h4>Por que a fonte importa</h4>
+  <p>O instituto vive de edital, e a prestação de contas exige mostrar de qual dinheiro saiu cada real. Dinheiro de edital misturado com doação num pote só é o que faz uma prestação ser recusada. Lance sempre a fonte certa.</p>
+</div>
+<p>Categorias de entrada: Doação, Bazar, Edital, Rifa, Evento e Outro. As de saída aparecem na ficha do lançamento.</p>
+</section>
+
+<!-- ══════════════ 8 ══════════════ -->
+<section class="secao">
+<h2><span class="n">8</span>Gestão</h2>
+<div class="com-tela">
+  <div>
+    <p>O menu da gestão reúne os cadastros e os números do instituto. Cada item mostra um resumo: quantas turmas ativas, quantos alunos, quantas pessoas na equipe, quantos alunos precisam de atenção.</p>
+    <p>No topo, quando há, aparece o aviso de <b>aniversários da semana</b>.</p>
+    <p>Todo mundo que tem acesso ao app entra na gestão. Por isso, os cadastros aqui mexem no instituto inteiro — faça com calma.</p>
+  </div>
+  <figure><img src="img/10-gestao.jpg"><figcaption>Menu da gestão</figcaption></figure>
+</div>
+
+<h3><span class="n">8.1</span>Turmas</h3>
+<p><span class="bt">Criar turma</span> pede só o nome. Dentro de cada turma: a lista de alunos, <span class="bt">Adicionar aluno</span>, <span class="bt">Renomear</span> e <span class="bt">Arquivar</span>.</p>
+<ul>
+  <li><b>Renomear</b> muda o nome em todo lugar, inclusive nas chamadas antigas.</li>
+  <li><b>Arquivar</b> tira a turma da chamada; as chamadas antigas dela continuam guardadas. Para arquivar, a turma não pode ter alunos ativos: mova ou desative antes.</li>
+</ul>
+
+<h3><span class="n">8.2</span>Alunos</h3>
+<p>Todos os alunos, com busca pelo nome ou pela turma, separados em <b>Na chamada</b> e <b>Inativos</b>. Tocar num aluno abre:</p>
+<ul>
+  <li><span class="bt">Editar dados</span> — nascimento, responsável e telefone. O telefone é o que o alerta de faltas usa para chamar a família no WhatsApp.</li>
+  <li><span class="bt">Mudar de turma</span> — escolhe a turma nova (ou cria uma na hora).</li>
+  <li><span class="bt">Desativar</span> — o aluno sai da chamada e o histórico fica. Para trazer de volta: <span class="bt">Voltar para a chamada</span>, na aba Inativos.</li>
+</ul>
+<div class="quadro cuidado">
+  <h4>Dois alunos com o mesmo nome</h4>
+  <p>O app identifica o aluno pelo nome dentro da turma. Se houver duas pessoas com o mesmo nome em turmas diferentes ao mesmo tempo, o certificado conta só a turma escolhida, para não somar as horas de duas crianças. Sempre que possível, cadastre o <b>nome completo</b>.</p>
+</div>
+
+<h3><span class="n">8.3</span>Equipe e acessos</h3>
+<div class="com-tela duas">
+  <div>
+    <p>Quem pode entrar no app. Cada pessoa aparece com o e-mail; uma <b>bolinha amarela</b> indica que ela ainda não fez o primeiro acesso, e <i>sem acesso ao app</i> indica que ainda não tem e-mail cadastrado.</p>
+    <ol class="passos">
+      <li>Toque em <span class="bt">Adicionar professora</span>, preencha <b>nome</b> e <b>e-mail</b> e toque em <span class="bt">Adicionar e gerar senha</span>.</li>
+      <li>Aparece a <b>senha temporária</b>. Toque em <span class="bt">Enviar no WhatsApp</span>: a mensagem já vai com o link do app, o e-mail e a senha.</li>
+      <li>No primeiro acesso, a pessoa cria a própria senha (seção 2).</li>
+    </ol>
+  </div>
+  <figure><img src="img/11-equipe.jpg"><figcaption>Equipe e acessos</figcaption></figure>
+  <figure><img src="img/12-senha-temp.jpg"><figcaption>Senha temporária, mostrada uma vez só</figcaption></figure>
+</div>
+<p>Tocar numa pessoa já cadastrada oferece:</p>
+<table>
+  <thead><tr><th style="width:26%">OPÇÃO</th><th>O QUE ACONTECE</th></tr></thead>
+  <tbody>
+    <tr><td>Dar acesso ao app</td><td>Para quem ainda não tem e-mail: cadastra o e-mail e gera a senha temporária.</td></tr>
+    <tr><td>Gerar senha nova</td><td>Para quem esqueceu a senha. A senha antiga para de valer na hora, inclusive em celulares já conectados.</td></tr>
+    <tr><td>Mudar e-mail</td><td>Troca o e-mail de entrada e gera uma senha temporária nova.</td></tr>
+    <tr><td>Tirar da equipe</td><td>A pessoa sai da escolha na chamada e <b>perde o acesso na hora</b>. As chamadas que ela já fez continuam com o nome dela.</td></tr>
+    <tr><td>Trocar minha senha</td><td>Aparece no seu próprio nome. Ninguém gera senha nova para si mesmo nem tira a si mesmo da equipe — assim sempre sobra alguém com acesso.</td></tr>
+  </tbody>
+</table>
+<div class="quadro cuidado">
+  <h4>A senha temporária aparece uma vez só</h4>
+  <p>Depois que a janela fecha, ninguém consegue ver aquela senha de novo — nem a coordenação, nem a planilha. Se perder, é só usar <span class="bt">Gerar senha nova</span>.</p>
+</div>
+
+<h3><span class="n">8.4</span>QR do app</h3>
+<div class="com-tela">
+  <div>
+    <p><span class="bt">Acessar o app</span> gera o cartaz com o QR do app, para todo mundo. Quem escaneia cai na tela de entrada — o QR é só um atalho, não dá acesso sozinho.</p>
+    <p>O cartaz serve para <b>instalar</b>: escanear uma vez, entrar e adicionar à tela inicial. Turma nova não pede cartaz novo.</p>
+    <p>Para imprimir, abra esta tela no <b>computador</b> e mande imprimir: sai só o cartaz, em A5. <span class="bt">Copiar link</span> copia o endereço do app para mandar por mensagem.</p>
+    <p>Abaixo do QR do app, há também um <b>QR por turma</b>, opcional, que já abre a chamada daquela sala.</p>
+  </div>
+  <figure><img src="img/16-qr.jpg"><figcaption>Cartaz do QR do app</figcaption></figure>
+</div>
+
+<h3><span class="n">8.5</span>Precisam de atenção</h3>
+<div class="com-tela">
+  <div>
+    <p>A lista de quem faltou <b>3 aulas seguidas</b> da própria turma — o mesmo gatilho da busca ativa nas escolas públicas. Para cada aluno: quantas faltas seguidas, desde quando não aparece e o botão <span class="bt">Falar com …</span>, que abre o WhatsApp do responsável com a mensagem já escrita.</p>
+    <p>Se o aluno não tem telefone cadastrado, o cartão vira um atalho para cadastrar na hora.</p>
+    <p>Faltas <b>justificadas</b> não entram na conta.</p>
+  </div>
+  <figure><img src="img/13-risco.jpg"><figcaption>Alunos que precisam de atenção</figcaption></figure>
+</div>
+
+<h3><span class="n">8.6</span>Histórico</h3>
+<div class="com-tela">
+  <div>
+    <p>A frequência mês a mês, só para consulta: a porcentagem de presença do mês, o resumo por turma e a lista de aulas dia a dia. As setas trocam de mês.</p>
+    <p>Chamada salva hoje aparece no histórico em poucos minutos.</p>
+  </div>
+  <figure><img src="img/17-historico.jpg"><figcaption>Histórico do mês</figcaption></figure>
+</div>
+
+<h3><span class="n">8.7</span>Certificados</h3>
+<div class="com-tela">
+  <div>
+    <p>O certificado de participação da aluna: desde quando ela vem, quantas aulas frequentou, em quais turmas e quantas horas isso soma. Serve para currículo de Jovem Aprendiz, atividade complementar na escola e comprovação de vínculo em programa social.</p>
+    <ol class="passos">
+      <li>Escolha a turma. Aparece a lista de alunos com aulas e horas.</li>
+      <li>Toque numa aluna para gerar o <b>certificado individual</b>: o PDF sai com link pronto para mandar no WhatsApp da família.</li>
+      <li>Ou gere a <b>turma inteira</b>, uma página por aluna, para imprimir e entregar (até 60 por vez).</li>
+    </ol>
+    <p>As horas contam as <b>presenças</b> multiplicadas pela <b>duração da aula</b> da turma (cadastrada na aba Turmas da planilha; se não houver, vale 60 minutos).</p>
+  </div>
+  <figure><img src="img/14-cert.jpg"><figcaption>Certificados: escolher a turma</figcaption></figure>
+</div>
+<div class="quadro">
+  <h4>Por que o da turma não tem link aberto</h4>
+  <p>O certificado individual sai com link público, para abrir no celular da família, que não tem conta Google. O da turma inteira fica <b>só no Drive</b> do instituto, para imprimir: teria o nome de 20 crianças num link aberto.</p>
+</div>
+
+<h3><span class="n">8.8</span>Relatório para edital</h3>
+<div class="com-tela">
+  <div>
+    <p>Os números que a prestação de contas pede, para o período que você escolher em <b>De</b> e <b>Até</b>:</p>
+    <ul>
+      <li><b>beneficiários</b> — alunos diferentes atendidos;</li>
+      <li><b>aulas</b> realizadas;</li>
+      <li><b>frequência</b> média;</li>
+      <li><b>faixa etária</b>, no recorte do ECA e do Estatuto da Juventude (crianças até 11, adolescentes de 12 a 17, jovens de 18 a 29), e o resumo por turma.</li>
+    </ul>
+    <p>Um botão copia tudo em texto, pronto para colar no formulário do edital.</p>
+  </div>
+  <figure><img src="img/15-relatorio.jpg"><figcaption>Relatório do período</figcaption></figure>
+</div>
+
+<h3><span class="n">8.9</span>Planilha</h3>
+<p>Abre a planilha do instituto e mostra como compartilhá-la. Quem vai mexer direto na planilha precisa ter acesso dado no botão <b>Compartilhar</b> do próprio Google Planilhas — mandar o link não dá acesso a ninguém.</p>
+</section>
+
+<!-- ══════════════ 9 ══════════════ -->
+<section class="secao">
+<h2><span class="n">9</span>Na planilha — o menu Veridiana</h2>
+<p>A planilha do Google é onde os dados moram. Quem cuida dela vê, no alto, o menu <b>Veridiana</b> (se não aparecer, recarregue a página uma vez).</p>
+<table>
+  <thead><tr><th style="width:32%">ITEM DO MENU</th><th>PARA QUE SERVE</th></tr></thead>
+  <tbody>
+    <tr><td>Criar acesso ao app</td><td>Cria o acesso de alguém (nome e e-mail) e mostra a senha temporária. É como se cadastra a primeira pessoa, e é a saída se todo mundo esquecer a senha.</td></tr>
+    <tr><td>Configurar endereço do app</td><td>Só se o QR avisar que falta o endereço: cole o link do app que termina em <b>/exec</b>.</td></tr>
+    <tr><td>Recontar horas dos certificados</td><td>Depois de corrigir à mão uma chamada antiga, recalcula as horas de todo mundo na hora (sozinho, o app recalcula a cada 30 dias).</td></tr>
+    <tr><td>Arrumar e padronizar a planilha</td><td>Deixa as abas com a mesma cara (cabeçalho, larguras, listas de opção, datas) e monta o <b>Painel</b>, na primeira aba. Pode rodar quantas vezes quiser.</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="n">9.1</span>As abas</h3>
+<table>
+  <thead><tr><th style="width:22%">ABA</th><th>O QUE GUARDA</th><th style="width:30%">PODE EDITAR À MÃO?</th></tr></thead>
+  <tbody>
+    <tr><td>Painel</td><td>Frequência do mês por turma e dos últimos 14 dias por dia. Atualiza sozinho.</td><td>Não precisa: é refeito pelo menu.</td></tr>
+    <tr><td>Alunos</td><td>Turma, aluno, ativo (SIM/NAO), nascimento, responsável, telefone.</td><td>Sim. Aluno que sai vira NAO — nunca apague a linha.</td></tr>
+    <tr><td>Turmas</td><td>Turma, ativa, minutos por aula.</td><td>Sim. Os minutos valem para as horas do certificado.</td></tr>
+    <tr><td>Professores</td><td>Nome e e-mail de quem entra no app.</td><td>Prefira pelo app (Equipe e acessos).</td></tr>
+    <tr><td>Chamadas</td><td>Uma linha por aluno por aula: data, turma, quem deu a aula, aluno e situação.</td><td>Só para corrigir uma célula. <b>Nunca apague linhas.</b></td></tr>
+    <tr><td>Caixa, Agenda, Materiais</td><td>Os lançamentos, eventos e itens.</td><td>Sim, com cuidado.</td></tr>
+    <tr><td>_HorasCertificado</td><td>Aba escondida: o resumo das horas de cada aluna.</td><td>Não. É refeita sempre que preciso.</td></tr>
+  </tbody>
+</table>
+<div class="lado">
+<div class="quadro">
+  <h4>Mexeu direto na planilha? O app demora alguns minutos para ver</h4>
+  <p>Para abrir rápido, o app guarda por alguns minutos o que já leu. Tudo o que é feito <b>pelo app</b> aparece na hora; mudança feita <b>direto na planilha</b> aparece em até 10 minutos. Não é defeito.</p>
+</div>
+<div class="quadro ok">
+  <h4>Errou na planilha? Dá para voltar</h4>
+  <p>O Google Planilhas guarda todas as versões: <span class="bt">Arquivo</span> → <span class="bt">Histórico de versões</span> → <span class="bt">Ver histórico de versões</span>, escolha o momento antes do erro e restaure.</p>
+</div>
+</div>
+</section>
+
+<!-- ══════════════ 10 ══════════════ -->
+<section class="secao">
+<h2><span class="n">10</span>Quando o app avisa ou recusa</h2>
+<p>O app nunca mostra código de erro: cada aviso diz o que houve em português. Os mais comuns:</p>
+<table>
+  <thead><tr><th style="width:34%">MENSAGEM</th><th style="width:33%">O QUE HOUVE</th><th>O QUE FAZER</th></tr></thead>
+  <tbody>
+    <tr><td>"E-mail ou senha não conferem."</td><td>O e-mail não está cadastrado ou a senha está errada.</td><td>Confira a digitação (o olhinho mostra a senha). Se não lembrar, peça senha nova à coordenação.</td></tr>
+    <tr><td>"Muitas tentativas erradas. Espere 15 minutos…"</td><td>Cinco senhas erradas seguidas travam aquele e-mail por 15 minutos.</td><td>Espere e tente de novo, ou peça senha nova.</td></tr>
+    <tr><td>"Sua sessão terminou. Entre de novo."</td><td>A senha foi trocada, o e-mail mudou, a pessoa saiu da equipe ou passaram 30 dias.</td><td>Entre de novo. Depois do login, o app volta para a tela onde você estava.</td></tr>
+    <tr><td>"A senha nova precisa ter pelo menos 6 caracteres." / "…precisa ser diferente da atual."</td><td>A senha escolhida não serve.</td><td>Escolha outra.</td></tr>
+    <tr><td>"Esta turma já teve chamada salva hoje."</td><td>Alguém já salvou a chamada desta turma hoje.</td><td>Só salve de novo se for outra aula de verdade — senão, conta em dobro.</td></tr>
+    <tr><td>"Ninguém presente?"</td><td>Você tentou salvar sem marcar ninguém.</td><td>Marque quem veio, ou confirme se a turma realmente não veio.</td></tr>
+    <tr><td>"Escolha quem está dando a aula"</td><td>O quadro da professora está vazio.</td><td>Toque nele e escolha o nome.</td></tr>
+    <tr><td>"Não salvou. Confira a internet…"</td><td>A internet caiu no meio do envio.</td><td>As marcações continuam na tela: toque em <span class="bt">Tentar de novo</span>.</td></tr>
+    <tr><td>"A internet demorou demais para responder."</td><td>Sinal fraco.</td><td>Aproxime-se do Wi-Fi ou espere e tente de novo.</td></tr>
+    <tr><td>"Esse e-mail já é de …"</td><td>O e-mail já está no cadastro de outra pessoa.</td><td>Confira o e-mail. Cada pessoa tem o seu.</td></tr>
+    <tr><td>"Para a sua própria conta, use 'Trocar senha'…"</td><td>Tentou gerar senha nova para si mesma.</td><td>Use <span class="bt">Trocar senha</span> na tela inicial.</td></tr>
+    <tr><td>"Mova ou desative os alunos antes de arquivar."</td><td>A turma ainda tem alunos ativos.</td><td>Mude os alunos de turma ou desative, depois arquive.</td></tr>
+    <tr><td>"Já existe um aluno com esse nome em …"</td><td>Esse nome já está cadastrado naquela turma.</td><td>Confira se não é a mesma pessoa; use o nome completo.</td></tr>
+    <tr><td>"Valor alto demais. Confira se digitou certo."</td><td>O valor do caixa passou do limite de segurança.</td><td>Confira vírgula e zeros.</td></tr>
+    <tr><td>"Esse evento/item não existe mais…"</td><td>Alguém apagou ou mudou na planilha enquanto a tela estava aberta.</td><td>Volte e abra de novo.</td></tr>
+    <tr><td>"Nenhum desses alunos tem presença registrada ainda."</td><td>Não há presença para gerar certificado.</td><td>O certificado só sai para quem já tem aula registrada.</td></tr>
+    <tr><td>"Não deu para abrir" / "Parte do app não carregou."</td><td>A internet falhou ao abrir uma seção.</td><td>Recarregue a página.</td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ══════════════ 11 ══════════════ -->
+<section class="secao">
+<h2><span class="n">11</span>Glossário</h2>
+<dl class="glossario">
+  <dt>Aula agora</dt><dd>Cartão da tela inicial com a turma que costuma ter aula neste horário. Um toque abre a chamada.</dd>
+  <dt>Ativo / Inativo</dt><dd>Aluno ativo aparece na chamada. Inativo saiu da chamada, mas o histórico dele continua.</dd>
+  <dt>Arquivar turma</dt><dd>Tirar a turma da chamada sem apagar as aulas antigas dela.</dd>
+  <dt>Chamada salva</dt><dd>O registro de uma aula: quem estava presente, quem faltou e quem justificou. Entra no histórico, no certificado e no relatório.</dd>
+  <dt>Falta justificada</dt><dd>Falta com motivo. Não conta no alerta de faltas seguidas.</dd>
+  <dt>Fonte</dt><dd>No caixa, de qual dinheiro veio ou saiu o valor (edital, doação, bazar…). É o que a prestação de contas pede.</dd>
+  <dt>Gestão</dt><dd>A área de cadastros e números do instituto: turmas, alunos, equipe, QR, histórico, caixa, certificados, relatório e planilha.</dd>
+  <dt>Link /exec</dt><dd>O endereço do app. Termina em <b>/exec</b> e é o mesmo para todo mundo.</dd>
+  <dt>Painel</dt><dd>Primeira aba da planilha, com a frequência do mês e dos últimos 14 dias. Atualiza sozinho.</dd>
+  <dt>Planilha</dt><dd>A planilha do Google do instituto, onde ficam todos os dados. O app só lê e escreve nela.</dd>
+  <dt>Precisam de atenção</dt><dd>Alunos com 3 faltas seguidas na própria turma.</dd>
+  <dt>QR do app</dt><dd>O cartaz com o código para abrir o app pela câmera do celular. É atalho, não acesso: quem escaneia precisa entrar com e-mail e senha.</dd>
+  <dt>Senha temporária</dt><dd>A senha gerada no cadastro ou em "Gerar senha nova". Serve só para o primeiro acesso e aparece uma vez só.</dd>
+  <dt>Sessão</dt><dd>O tempo em que o celular fica conectado depois de entrar: até 30 dias, ou até a pessoa sair, trocar a senha ou deixar a equipe.</dd>
+</dl>
+<p class="fim-doc">Instituto Veridiana · Manual do Usuário · versão 3.5 · 27/09/2026. Dúvidas sobre o app: fale com a coordenação.</p>
+</section>
+
+</body>
+</html>

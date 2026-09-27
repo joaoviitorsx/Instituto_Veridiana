@@ -1,8 +1,8 @@
 <h1 align="center">Chamada — Instituto Veridiana</h1>
 
 <p align="center">
-  Registro de frequência para um projeto social de dança no Jangurussu,
-  em Fortaleza (CE).<br>
+  Registro de frequência e gestão para um projeto social de dança no
+  Jangurussu, em Fortaleza (CE).<br>
   Google Apps Script + planilha do Google. Sem servidor, sem build, sem custo.
 </p>
 
@@ -12,6 +12,9 @@
   <img src="assets/relatorio.png" width="240" alt="Relatório para edital">
 </p>
 
+> **Manual do usuário:** [`manual/Veridiana-Manual-do-Usuario.pdf`](manual/Veridiana-Manual-do-Usuario.pdf)
+> — o guia para a equipe, tela por tela. Este README é para quem mantém o código.
+
 ---
 
 ## O problema
@@ -33,9 +36,9 @@ Sem registro confiável, duas coisas aconteciam:
 
 ## O fluxo
 
-Cada turma tem um QR code colado na parede da sala. O professor escaneia,
-a lista abre com **todos em falta**, ele toca em quem veio, confere o
-próprio nome e salva.
+A professora abre o app (pelo ícone na tela inicial ou pelo QR), toca na
+turma — ou no cartão "Aula agora" —, a lista abre com **todos em falta**,
+ela toca em quem veio e salva.
 
 > **Por que falta é o padrão.** A primeira versão abria com todos
 > presentes e o toque marcava falta: menos toques, mas presença dada por
@@ -44,45 +47,9 @@ próprio nome e salva.
 > e salvar sem nenhum presente pede confirmação.
 
 <p align="center">
-  <img src="assets/chamada.png" width="240" alt="Tela de chamada">
-  <img src="assets/evasao.png" width="240" alt="Alunos que faltaram três aulas seguidas">
-  <img src="assets/relatorio.png" width="240" alt="Relatório para edital">
-</p>
-
----
-
-## O problema
-
-O Instituto Veridiana atende crianças e jovens em situação de
-vulnerabilidade social pelos projetos *Sonho de Dançar* (3 a 12 anos) e
-*Cia Corpo Identidade* (13 a 28 anos). Cerca de 20 professores, a maioria
-voluntária. O instituto se mantém com bazar, doações e editais.
-
-A chamada era feita no papel e digitada depois — quando era digitada.
-Sem registro confiável, duas coisas aconteciam:
-
-- O instituto não conseguia **comprovar atendimento em edital**, que é de
-  onde vem o dinheiro.
-- Criança que parava de vir só era notada **semanas depois**, quando
-  faltar já tinha virado hábito.
-
----
-
-## O fluxo
-
-Cada turma tem um QR code colado na parede da sala. O professor escaneia,
-a lista abre com **todos já marcados como presentes**, ele toca só em quem
-faltou, confirma o próprio nome e salva.
-
-> **A métrica que decidiu tudo: uma turma de 20 alunos com 3 faltas em 5
-> toques.** Três nos ausentes, um no professor, um em salvar. Qualquer
-> proposta que aumentasse esse número foi recusada, por mais bonita que
-> fosse.
-
-<p align="center">
   <img src="assets/chamada.png" width="230" alt="Lista da chamada">
   <img src="assets/salvo.png" width="230" alt="Confirmação de chamada salva">
-  <img src="assets/qr.png" width="230" alt="QR code da turma">
+  <img src="assets/qr.png" width="230" alt="QR code do app">
 </p>
 
 Falta é o ponto de partida e fica quieta: selo cinza. Presença se
@@ -95,11 +62,11 @@ marcado.
 
 ## A entrada
 
-O QR da parede continua abrindo **direto** na lista de chamada, sem
-nenhuma tela no meio. A tela inicial só aparece para quem abre o app
-sem `?turma=`: saudação, a data, um cartão com a aula que deve estar
-começando (ou o evento de hoje) e a grade de seções, cada uma com um
-número de verdade — "6 turmas", "próximo: Dia da Dança, 29/04", "127 itens".
+A tela inicial traz saudação, a data, um cartão com a aula que deve
+estar começando (ou o evento de hoje) e a grade de seções, cada uma com
+um número de verdade — "6 turmas", "próximo: Dia da Dança, 29/04", "127
+itens". O QR por turma (opcional) pula a tela inicial e abre direto a
+chamada daquela sala.
 
 A "próxima aula" não depende de grade de horário cadastrada: sai da hora
 em que cada turma costuma ter a chamada salva, no mesmo dia da semana,
@@ -110,7 +77,7 @@ aparece: cartão errado na primeira tela custa mais que cartão nenhum.
 
 **Login.** Cada pessoa da equipe entra com e-mail e senha. O app sabe
 quem está com o celular na mão: a saudação usa o primeiro nome e a
-chamada já vem com a professora escolhida — de 5 para 4 toques. A
+chamada já vem com a professora escolhida. A
 sessão fica guardada no aparelho por 30 dias quando o navegador deixa;
 quando não deixa, o app pede a senha de novo. QR da parede sem sessão
 abre o login e, depois dele, a chamada da turma.
@@ -288,8 +255,8 @@ apps-script/        cole estes 25 arquivos no editor do Apps Script
   Codigo.gs           constantes, doGet, montagem da página e módulos
   Util.gs             planilha, datas, cache e trava
   Inicio.gs           números da tela inicial e "próxima aula"
-  Chamada.gs          o fluxo do QR
-  Acesso.gs           login, senha, sessão e papéis
+  Chamada.gs          abrir a turma e salvar a chamada
+  Acesso.gs           login, senha e sessão
   Gestao.gs           turmas, alunos, professores
   Planilha.gs         link, padronização, Painel e menu
   Historico.gs        leitura do histórico por mês
@@ -312,6 +279,8 @@ apps-script/        cole estes 25 arquivos no editor do Apps Script
   AppMateriais.html   telas de materiais, com o CSS    (sob demanda)
 
 mock.js             mock do google.script.run, só para o navegador
+manual/             manual do usuário: manual.html (fonte), o PDF e o
+                    gerador (python3 manual/gerar-manual.py [pasta-de-prints])
 .clasp.json.exemplo modelo para ligar o clasp (o .clasp.json fica fora do git)
 gerar-preview.py    monta o preview.html
 preview.html        abre no navegador, funciona sem servidor
@@ -585,6 +554,10 @@ O atalho abre em tela cheia, sem barra de endereço.
 > preferir que passe pela casca, use
 > `.../Instituto_Veridiana/?turma=Jazz%20Juvenil` — o `?turma=` é
 > repassado para dentro.
+>
+> O navegador guarda o login **separado para cada endereço de entrada**:
+> quem abre às vezes pelo `/exec` e às vezes pela casca faz login nos
+> dois. Escolha um endereço só para o QR e para o ícone.
 
 ## 4. QR do app
 
