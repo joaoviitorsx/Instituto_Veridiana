@@ -294,11 +294,11 @@ main{padding:0 0 24px}
 }
 
 /* ─────────── esqueleto ─────────── */
-.osso{
-  background:linear-gradient(90deg,#E9E2EF 25%,#F2EDF6 50%,#E9E2EF 75%);
-  background-size:200% 100%;animation:brilho 1.4s linear infinite;border-radius:var(--r-p);
-}
-@keyframes brilho{to{background-position:-200% 0}}
+/* Pulso de opacidade, não brilho correndo: animar background-position
+   repinta cada osso a cada quadro, e num Android fraco isso disputa a
+   CPU com a resposta que está chegando. Opacidade vai para a GPU. */
+.osso{background:#E9E2EF;border-radius:var(--r-p);animation:pulso 1.1s ease-in-out infinite alternate}
+@keyframes pulso{to{opacity:.5}}
 .esq{display:flex;align-items:center;gap:12px;padding:12px 16px;min-height:64px}
 .esq+.esq{border-top:1px solid var(--borda)}
 .esq .c{width:40px;height:40px;border-radius:50%;flex-shrink:0}
@@ -1653,7 +1653,7 @@ main{padding:0 0 24px}
 var VERSAO = '2.0';
 
 var S = {
-  turmaInicial:'', pilha:[], viaQr:false, prof:'',
+  turmaInicial:null, pilha:[], viaQr:false, prof:'',
   turma:'', data:'', alunos:[], professores:[], professor:'', jaRegistrada:false,
   token:'', salvando:false,
   sessao:'', usuario:null, gest:null, filtro:'ativos', busca:''
@@ -1763,8 +1763,19 @@ function vibrar(){ try { if (navigator.vibrate) navigator.vibrate(8); } catch(e)
 function sorteioToken(){
   return String(Date.now()) + '-' + Math.random().toString(36).slice(2, 10);
 }
+/* Com memória: a busca de alunos e materiais chama isto para cada
+   linha a cada tecla, e normalize('NFD') não é de graça. */
+var SEM_AC = {};
 function semAcento(s){
-  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  s = String(s || '');
+  var v = SEM_AC[s];
+  if (v === undefined) v = SEM_AC[s] = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  return v;
+}
+/* Digitação rápida redesenha uma vez, quando o dedo para. */
+function depoisDe(ms, fn){
+  var t;
+  return function(){ var a = this, g = arguments; clearTimeout(t); t = setTimeout(function(){ fn.apply(a, g); }, ms); };
 }
 function plural(n, um, muitos){ return n + ' ' + (n === 1 ? um : muitos); }
 function primeiroNome(n){ return String(n || '').trim().split(/\s+/)[0] || ''; }
@@ -1818,8 +1829,8 @@ function api(fn, args, ok, erro, prazo){
     if (erro) erro({ message:'A internet demorou demais para responder.' });
   }, prazo || 25000);
   function pronto(f){ return function(v){ if (fim) return; fim = true; clearTimeout(t); f(v); }; }
-  /* Escrita que deu certo derruba a memória de leitura. */
-  var okFinal = LEITURAS[fn] || ABERTAS[fn] ? ok : function(v){ MEM = {}; MEM_GEN++; ok(v); };
+  /* Escrita que deu certo derruba da memória o que ela mudou. */
+  var okFinal = LEITURAS[fn] || ABERTAS[fn] ? ok : function(v){ esquecer(fn); ok(v); };
   var r = google.script.run
     .withSuccessHandler(pronto(okFinal))
     .withFailureHandler(pronto(erroFinal));
@@ -1843,6 +1854,34 @@ var LEITURAS = {
   relatorioPeriodo:1, obterUrlApp:1, obterLinkPlanilha:1, listarEquipe:1, quemSou:1
 };
 var MEM = {}, PEND = {}, MEM_GEN = 0;
+
+/* O que cada escrita invalida. Antes toda escrita apagava a memória
+   inteira: salvar uma chamada fazia a lista de turmas, a agenda e os
+   materiais voltarem ao esqueleto e irem ao servidor de novo. Escrita
+   que não está aqui (cadastros da gestão, que mexem em quase tudo)
+   continua apagando tudo. */
+var CHAMADAS_L = ['carregarTurma','resumoInicial','contarRisco','alunosEmRisco','mesesComChamada',
+                  'resumoHistorico','alunosParaCertificado','relatorioPeriodo'];
+var CAIXA_L = ['mesesCaixa','listarCaixa','resumoCaixa','resumoInicial'];
+var MATERIAIS_L = ['listarMateriais','listarCategorias','listarLocais','resumoInicial'];
+var AGENDA_L = ['listarAgenda','listarAgendaAno','datasFixas','resumoInicial'];
+var INVALIDA = {
+  salvarChamada:CHAMADAS_L,
+  lancarCaixa:CAIXA_L, apagarLancamento:CAIXA_L,
+  criarMaterial:MATERIAIS_L, editarMaterial:MATERIAIS_L, ajustarQuantidade:MATERIAIS_L,
+  inativarMaterial:MATERIAIS_L, renomearNaLista:MATERIAIS_L,
+  criarEvento:AGENDA_L, editarEvento:AGENDA_L, excluirEvento:AGENDA_L, precarregarDatas:AGENDA_L,
+  gerarCertificado:[], gerarCalendarioPdf:[], sair:[]
+};
+function esquecer(fn){
+  /* Leitura que saiu antes desta escrita não entra na memória. */
+  MEM_GEN++;
+  var l = INVALIDA[fn];
+  if (!l){ MEM = {}; return; }
+  Object.keys(MEM).forEach(function(k){
+    for (var i = 0; i < l.length; i++) if (k.indexOf(l[i] + '[') === 0){ delete MEM[k]; return; }
+  });
+}
 
 function buscar(fn, args, k, ok, erro){
   if (PEND[k]){ PEND[k].push([ok, erro]); return; }
@@ -1875,7 +1914,13 @@ function ler(fn, args, ok, erro, o){
     if (Date.now() - m.t < o.fresco){ ok(JSON.parse(m.j)); return; }
     m = null;
   }
-  if (m) ok(JSON.parse(m.j));
+  if (m){
+    ok(JSON.parse(m.j));
+    /* Chegou há pouco: não vale outra ida ao servidor. Voltar para uma
+       tela recém-vista não gasta 4G nem repinta. Escrita já apaga o que
+       mudou, então isto nunca mostra dado velho depois de salvar. */
+    if (Date.now() - m.t < 20000) return;
+  }
   buscar(fn, args || [], k, function(j){
     if (viva() && (!m || j !== m.j)) ok(JSON.parse(j));
   }, function(e){ if (viva() && !m && erro) erro(e); });
@@ -2081,9 +2126,20 @@ var TELAS = {};
 var ACOES = {};
 
 function atual(){ return S.pilha[S.pilha.length-1]; }
-function ir(t, p, raiz){ if (raiz) S.pilha = []; S.pilha.push({t:t, p:p||{}}); desenhar(); }
+/* Quem sai de uma tela guarda onde estava na rolagem; voltar devolve.
+   Sem isso, voltar de um aluno no meio de uma lista de 100 caía no topo. */
+function ir(t, p, raiz){
+  var a = atual(); if (a) a.y = window.scrollY;
+  if (raiz) S.pilha = [];
+  S.pilha.push({t:t, p:p||{}}); desenhar();
+}
 function trocar(t, p){ S.pilha[S.pilha.length-1] = {t:t, p:p||{}}; desenhar(); }
-function voltar(){ if (S.pilha.length > 1){ S.pilha.pop(); desenhar(); } }
+function voltar(){
+  if (S.pilha.length < 2) return;
+  S.pilha.pop(); desenhar();
+  var y = atual().y;
+  if (y) window.scrollTo(0, y);
+}
 
 /* ─── módulos sob demanda ───
    A página só traz de saída o que a chamada e a tela inicial usam.
@@ -2098,6 +2154,21 @@ function modPronto(nome){
 }
 function modDaTela(t){
   return /^ag/.test(t) ? 'agenda' : /^mt/.test(t) ? 'materiais' : 'gestao';
+}
+/* O primeiro pedido de cada tela que mora num módulo sob demanda. */
+function primeiraLeitura(a){
+  var h = hojeISO();
+  switch (a.t){
+    case 'gestao':  return ['entrarNaGestao', []];
+    case 'gTurmas': case 'gCert': case 'gQr': return ['listarTurmasCompleto', []];
+    case 'gProfs':  return ['listarEquipe', []];
+    case 'gCaixa':  return ['listarCaixa', [h.slice(0, 7)]];
+    case 'gHistorico': return ['mesesComChamada', []];
+    case 'agenda':  var m = (a.p && a.p.mes) || h.slice(0, 7);
+                    return ['listarAgenda', [+m.slice(0, 4), +m.slice(5, 7)]];
+    case 'mtLista': return ['listarMateriais', [{}]];
+  }
+  return null;
 }
 function carregarModulo(nome, ok, erro){
   ok = ok || function(){}; erro = erro || function(){};
@@ -2139,6 +2210,9 @@ function desenhar(){
     document.body.classList.add('semcapa');
     el('palco').innerHTML = '<div class="corpo">' + esqueleto(4) + '</div>';
     el('barra').hidden = true; medirBarra();
+    /* Os dados da tela saem junto com o código dela, não depois. */
+    var pl = primeiraLeitura(a);
+    if (pl) preler(pl[0], pl[1]);
     carregarModulo(modDaTela(a.t), function(){
       if (atual() === a) desenhar();
     }, function(e){
@@ -2496,6 +2570,7 @@ TELAS.inicio = function(){
       ler('resumoInicial', [], pintarInicio, function(){
         var d = el('destaque'); if (d) d.remove();
       });
+      preCarregarModulos();
     }
   };
 };
@@ -2524,12 +2599,20 @@ function preCarregar(d){
     var h = hojeISO();
     preler('listarAgenda', [+h.slice(0,4), +h.slice(5,7)]);
     preler('listarMateriais', [{}]);
-    carregarModulo('agenda', function(){
-      carregarModulo('materiais', function(){ carregarModulo('gestao'); });
-    });
     /* Dados da gestão NÃO vão por trás: o alerta de faltas lê 60 dias
        de chamadas e o cache dele cai a cada chamada salva. Quem só veio
        fazer chamada não pode pagar isso. O menu da gestão busca sozinho. */
+  }, 300);
+}
+
+/* O código das seções não depende do resumo: sai logo depois da
+   primeira pintura, as três juntas. Em fila, a gestão (a maior, atrás
+   de metade dos blocos) só chegava depois de três idas ao servidor. */
+function preCarregarModulos(){
+  if (S.modulosPedidos) return;
+  S.modulosPedidos = true;
+  setTimeout(function(){
+    carregarModulo('gestao'); carregarModulo('agenda'); carregarModulo('materiais');
   }, 300);
 }
 
@@ -2635,12 +2718,12 @@ TELAS.chamada = function(p){
     voltar: !S.viaQr,
     depois: function(){
       /* Uma resposta só, nunca repintada: repintar a lista apagaria as
-         presenças já marcadas. Serve a pré-carga se tiver menos de 1 min;
+         presenças já marcadas. Serve a pré-carga se tiver menos de 5 min;
          "já teve chamada hoje" o servidor confere de novo ao salvar. */
       ler('carregarTurma', [p.turma], montarChamada, function(e){
         el('palco').querySelector('.corpo').innerHTML =
           estado('alerta','Não deu para carregar', textoErro(e));
-      }, {fresco:60000});
+      }, {fresco:300000});
     }
   };
   return t;
@@ -2700,11 +2783,11 @@ function montarChamada(d){
          ' role="button" tabindex="0" aria-label="' + esc(a.aluno) + ', faltou">' +
          '<span class="ini">' + esc(iniciais(a.aluno)) + '</span>' +
          '<span class="nome">' + esc(a.aluno) + '</span>' +
-         '<span class="marca" id="mk' + i + '"></span></li>';
+         '<span class="marca" id="mk' + i + '"><span class="selo">Faltou</span></span></li>';
   });
+  /* A lista já nasce pintada (todo mundo em falta): repintar aluno por
+     aluno logo depois eram duas buscas no DOM e um innerHTML por linha. */
   el('palco').querySelector('.corpo').innerHTML = h + '</ul>';
-
-  S.alunos.forEach(function(a, i){ pintar(i); });
   atualizarPlacar();
 
   el('barraDentro').innerHTML =
@@ -2868,12 +2951,22 @@ ACOES.outraChamada = function(){
 <script>
 /* Área da gestão: cadastros, acessos, QR, histórico e planilha. */
 /* ══════════════ TELA: menu de gestão ══════════════ */
+/* Os três contadores do menu. Chegam depois da tela e são trocados no
+   lugar: redesenhar o menu refazia todas as buscas dele. */
+function contadoresGestao(g){
+  g = g || {};
+  return {
+    itTurmas: plural(g.turmas || 0, 'turma ativa', 'turmas ativas'),
+    itAlunos: (g.alunosAtivos || 0) + ' ativos, ' + (g.alunosInativos || 0) + ' inativos',
+    itEquipe: plural(g.professores || 0, 'professora', 'professoras') + ', e-mail e senha'
+  };
+}
 TELAS.gestao = function(){
-  var g = S.gest || {};
+  var c = contadoresGestao(S.gest);
   var itens = [
-    {ic:'prancheta', t:'Turmas', s:plural(g.turmas || 0, 'turma ativa', 'turmas ativas'), a:'gTurmas'},
-    {ic:'grupo', t:'Alunos', s:(g.alunosAtivos || 0) + ' ativos, ' + (g.alunosInativos || 0) + ' inativos', a:'gAlunos'},
-    {ic:'pessoa', t:'Equipe e acessos', s:plural(g.professores || 0, 'professora', 'professoras') + ', e-mail e senha', a:'gProfs'},
+    {ic:'prancheta', t:'Turmas', s:c.itTurmas, a:'gTurmas', id:'itTurmas'},
+    {ic:'grupo', t:'Alunos', s:c.itAlunos, a:'gAlunos', id:'itAlunos'},
+    {ic:'pessoa', t:'Equipe e acessos', s:c.itEquipe, a:'gProfs', id:'itEquipe'},
     {ic:'qr', t:'QR do app', s:'cartaz para abrir o app no celular', a:'gQr'},
     {ic:'sino', t:'Precisam de atenção', s:'carregando…', a:'gRisco', id:'itRisco'},
     {ic:'calendario', t:'Histórico', s:'quem veio, por dia e por mês', a:'gHistorico'},
@@ -2884,7 +2977,8 @@ TELAS.gestao = function(){
   ];
   var h = '<ul class="cartoes">';
   itens.forEach(function(i){
-    h += '<li><button type="button" class="item" data-acao="' + i.a + '">' + ico(i.ic, 22) +
+    h += '<li><button type="button" class="item" data-acao="' + i.a + '"' +
+         (i.id ? ' id="' + i.id + '"' : '') + '>' + ico(i.ic, 22) +
          '<span class="txt">' + esc(i.t) + '<small>' + esc(i.s) + '</small></span>' +
          '<span class="seta">' + ico('dir') + '</span></button></li>';
   });
@@ -2894,9 +2988,12 @@ TELAS.gestao = function(){
     depois:function(){
       /* Contadores do menu: chegam por trás e repintam se mudaram. */
       ler('entrarNaGestao', [], function(g2){
-        var mudou = JSON.stringify(g2) !== JSON.stringify(S.gest);
         S.gest = g2;
-        if (mudou && atual() && atual().t === 'gestao') desenhar();
+        var c2 = contadoresGestao(g2);
+        Object.keys(c2).forEach(function(id){
+          var n = el(id), sm = n && n.querySelector('small');
+          if (sm) sm.textContent = c2[id];
+        });
       }, function(){});
       /* Fora do carregamento do menu: ler Chamadas para o alerta custa
          caro e não pode segurar a tela. */
@@ -2936,7 +3033,9 @@ ACOES.gCaixa     = function(){ ir('gCaixa'); };
 
 /* recarrega os contadores depois de qualquer escrita */
 function recontar(){
-  api('entrarNaGestao', [], function(g){ S.gest = g; }, function(){});
+  /* Pela memória: a escrita já apagou o valor velho, e duas escritas
+     seguidas viram uma busca só. */
+  ler('entrarNaGestao', [], function(g){ S.gest = g; }, function(){});
 }
 
 /* ─── escrita na gestão: toast vermelho no erro, tela intacta ─── */
@@ -3109,7 +3208,7 @@ ACOES.acoesAluno = function(b){
   ]);
 };
 function moverAluno(nome, turmaAtual){
-  api('listarTurmasCompleto', [], function(ts){
+  ler('listarTurmasCompleto', [], function(ts){
     var opc = ts.filter(function(t){ return t.nome !== turmaAtual; }).map(function(t){
       return { txt:t.nome, sub:plural(t.ativos, 'aluno', 'alunos'), ini:t.nome, fn:function(){
         escrever('moverAluno', [nome, t.nome, turmaAtual], nome + ' agora está em ' + t.nome, recarregarLista);
@@ -3123,7 +3222,7 @@ function moverAluno(nome, turmaAtual){
       });
     }});
     folhaOpcoes('Mover ' + nome + ' para', opc);
-  }, function(e){ toast(textoErro(e), 'erro'); });
+  }, function(e){ toast(textoErro(e), 'erro'); }, {fresco:60000});   // uma resposta só: abre a folha uma vez
 }
 /* depois de escrever, sempre relê do servidor */
 function recarregarLista(){
@@ -3146,9 +3245,8 @@ TELAS.gAlunos = function(){
       '<button type="button" data-acao="filtro" data-f="inativos" aria-selected="false">Inativos</button>' +
       '</div><div id="listaAlunos">' + esqueleto(5) + '</div>',
     depois:function(){
-      el('campoBusca').addEventListener('input', function(){
-        S.busca = this.value; pintarAlunos();
-      });
+      var pinta = depoisDe(120, pintarAlunos);
+      el('campoBusca').addEventListener('input', function(){ S.busca = this.value; pinta(); });
       carregarAlunos();
     }
   };
@@ -3726,6 +3824,8 @@ TELAS.gHistorico = function(){
   return {
     titulo:'Histórico', html:esqueleto(4),
     depois:function(){
+      /* Quase sempre o mais recente é o mês atual: sai junto com a lista. */
+      preler('resumoHistorico', [hojeISO().slice(0, 7)]);
       ler('mesesComChamada', [], function(meses){
         S.meses = meses || []; S.mesIdx = 0;
         if (!S.meses.length){
@@ -3745,6 +3845,8 @@ function carregarMes(){
   var mes = S.meses[S.mesIdx];
   var alvo = el('palco').querySelector('.corpo');
   alvo.innerHTML = passoMes(mes) + esqueleto(3);
+  /* O próximo toque costuma ser "mês anterior": já vai buscando. */
+  if (S.meses[S.mesIdx + 1]) preler('resumoHistorico', [S.meses[S.mesIdx + 1]]);
   ler('resumoHistorico', [mes], function(r){
     var h = passoMes(mes);
     var t = r.totais;
@@ -3891,6 +3993,9 @@ TELAS.gCaixa = function(){
       '<button type="button" class="bt-saida" data-acao="lancar" data-tipo="Saída">' +
       ico('menos', 18) + ' Saiu</button></div>',
     depois:function(){
+      /* O servidor sempre põe o mês atual primeiro: a busca dele sai junto
+         com a lista de meses, e não uma depois da outra. */
+      preler('listarCaixa', [hojeISO().slice(0, 7)]);
       ler('mesesCaixa', [], function(ms){
         S.mesesCx = ms; S.mesCxIdx = 0;
         carregarCaixa();
@@ -4070,6 +4175,8 @@ function salvarLanc(tipo){
       : ('Saída registrada' + (r.pediuFoto && !r.comFoto ? ' — a foto não subiu' : '')));
     fotoAtual = '';
     S.mesCxIdx = 0;
+    /* As duas buscas saem juntas. */
+    preler('listarCaixa', [hojeISO().slice(0, 7)]);
     api('mesesCaixa', [], function(ms){ S.mesesCx = ms; carregarCaixa(); }, carregarCaixa);
   }, function(e){
     if (bt){ bt.disabled = false; bt.textContent = 'Salvar'; }
@@ -5113,7 +5220,8 @@ TELAS.mtLista = function(){
       '<div id="mtLista">' + esqueleto(5) + '</div>',
     barra:'<button type="button" class="salvar" data-acao="mtNovo">' + ico('mais') + 'Novo item</button>',
     depois:function(){
-      el('mtBusca').addEventListener('input', function(){ S.mtFiltro.busca = this.value; pintarMt(); });
+      var pinta = depoisDe(120, pintarMt);
+      el('mtBusca').addEventListener('input', function(){ S.mtFiltro.busca = this.value; pinta(); });
       if (S.mt) pintarMt();
       carregarMt(function(){ if (atual().t === 'mtLista') pintarMt(); }, function(e){
         if (el('mtLista') && !S.mt) el('mtLista').innerHTML = estado('alerta', 'Não deu para carregar', textoErro(e));
@@ -5587,6 +5695,12 @@ function iniciar(){
      parede: é aí, e só aí, que aparece a tela inicial. Antes de
      qualquer uma das duas, a sessão: sem ela, login. */
   function semParametro(){ S.viaQr = false; retomarSessao({t:'inicio', p:{}}); }
+  /* O servidor já pôs a turma na página (doGet). Sem espera nenhuma. */
+  if (typeof S.turmaInicial === 'string'){
+    if (S.turmaInicial){ S.viaQr = true; retomarSessao({t:'chamada', p:{turma:S.turmaInicial}}); }
+    else semParametro();
+    return;
+  }
   try {
     if (google.script.url && google.script.url.getLocation){
       var respondeu = false;

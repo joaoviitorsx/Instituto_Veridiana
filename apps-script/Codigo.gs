@@ -95,11 +95,20 @@ function modulo(sessao, nome) {
     '\n<script>modPronto(' + JSON.stringify(nome) + ');</script>';
 }
 
-function doGet() {
+function doGet(e) {
   let html = arquivo('Index');
   conferirCasca(html);
   html = inserirAntes(html, '</head>', arquivo('Estilo'));
-  html = inserirAntes(html, '</body>', PARTES.map(arquivo).join('\n'));
+  /* A turma do QR vem pronta na página. Pedir ao cliente para descobrir
+     com getLocation custava uma ida ao frame do Google — e, se ela não
+     respondesse em 4 s, o professor caía na tela inicial em vez da
+     chamada. getLocation fica só como reserva. */
+  const turma = String((e && e.parameter && e.parameter.turma) || '').slice(0, 120);
+  const partida = '<script>S.turmaInicial = ' +
+    JSON.stringify(turma).replace(/</g, '\\u003c') + ';</script>';
+  const partes = PARTES.map(arquivo);
+  partes.splice(PARTES.length - 1, 0, partida);   // antes da AppPartida, que chama iniciar()
+  html = inserirAntes(html, '</body>', partes.join('\n'));
 
   const pagina = HtmlService.createHtmlOutput(html)
     .setTitle('Chamada Veridiana')

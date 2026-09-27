@@ -40,6 +40,12 @@ function mesAno_(iso) {
  * das duas turmas. Documento oficial com dado inventado.
  */
 function historicoCompleto_() {
+  /* Uma leitura para todas as turmas: antes cada turma aberta na tela
+     de certificado relia o histórico inteiro. Continua acompanhando a
+     versão das chamadas, porque é o número que vai no documento. */
+  return doCache('histall_' + versaoResumo_(), TTL_CACHE, historicoCompleto0_);
+}
+function historicoCompleto0_() {
   /* O certificado precisa do histórico INTEIRO da aluna — é o número de
      horas que vai no documento. Lê tudo, com teto de segurança. */
   const lido = lerChamadasDesde_('', LIMITE_HISTORICO);

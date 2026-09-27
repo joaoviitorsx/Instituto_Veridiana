@@ -8,7 +8,7 @@
 var VERSAO = '2.0';
 
 var S = {
-  turmaInicial:'', pilha:[], viaQr:false, prof:'',
+  turmaInicial:null, pilha:[], viaQr:false, prof:'',
   turma:'', data:'', alunos:[], professores:[], professor:'', jaRegistrada:false,
   token:'', salvando:false,
   sessao:'', usuario:null, gest:null, filtro:'ativos', busca:''
@@ -118,8 +118,19 @@ function vibrar(){ try { if (navigator.vibrate) navigator.vibrate(8); } catch(e)
 function sorteioToken(){
   return String(Date.now()) + '-' + Math.random().toString(36).slice(2, 10);
 }
+/* Com memória: a busca de alunos e materiais chama isto para cada
+   linha a cada tecla, e normalize('NFD') não é de graça. */
+var SEM_AC = {};
 function semAcento(s){
-  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  s = String(s || '');
+  var v = SEM_AC[s];
+  if (v === undefined) v = SEM_AC[s] = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  return v;
+}
+/* Digitação rápida redesenha uma vez, quando o dedo para. */
+function depoisDe(ms, fn){
+  var t;
+  return function(){ var a = this, g = arguments; clearTimeout(t); t = setTimeout(function(){ fn.apply(a, g); }, ms); };
 }
 function plural(n, um, muitos){ return n + ' ' + (n === 1 ? um : muitos); }
 function primeiroNome(n){ return String(n || '').trim().split(/\s+/)[0] || ''; }
@@ -173,8 +184,8 @@ function api(fn, args, ok, erro, prazo){
     if (erro) erro({ message:'A internet demorou demais para responder.' });
   }, prazo || 25000);
   function pronto(f){ return function(v){ if (fim) return; fim = true; clearTimeout(t); f(v); }; }
-  /* Escrita que deu certo derruba a memória de leitura. */
-  var okFinal = LEITURAS[fn] || ABERTAS[fn] ? ok : function(v){ MEM = {}; MEM_GEN++; ok(v); };
+  /* Escrita que deu certo derruba da memória o que ela mudou. */
+  var okFinal = LEITURAS[fn] || ABERTAS[fn] ? ok : function(v){ esquecer(fn); ok(v); };
   var r = google.script.run
     .withSuccessHandler(pronto(okFinal))
     .withFailureHandler(pronto(erroFinal));
@@ -198,6 +209,34 @@ var LEITURAS = {
   relatorioPeriodo:1, obterUrlApp:1, obterLinkPlanilha:1, listarEquipe:1, quemSou:1
 };
 var MEM = {}, PEND = {}, MEM_GEN = 0;
+
+/* O que cada escrita invalida. Antes toda escrita apagava a memória
+   inteira: salvar uma chamada fazia a lista de turmas, a agenda e os
+   materiais voltarem ao esqueleto e irem ao servidor de novo. Escrita
+   que não está aqui (cadastros da gestão, que mexem em quase tudo)
+   continua apagando tudo. */
+var CHAMADAS_L = ['carregarTurma','resumoInicial','contarRisco','alunosEmRisco','mesesComChamada',
+                  'resumoHistorico','alunosParaCertificado','relatorioPeriodo'];
+var CAIXA_L = ['mesesCaixa','listarCaixa','resumoCaixa','resumoInicial'];
+var MATERIAIS_L = ['listarMateriais','listarCategorias','listarLocais','resumoInicial'];
+var AGENDA_L = ['listarAgenda','listarAgendaAno','datasFixas','resumoInicial'];
+var INVALIDA = {
+  salvarChamada:CHAMADAS_L,
+  lancarCaixa:CAIXA_L, apagarLancamento:CAIXA_L,
+  criarMaterial:MATERIAIS_L, editarMaterial:MATERIAIS_L, ajustarQuantidade:MATERIAIS_L,
+  inativarMaterial:MATERIAIS_L, renomearNaLista:MATERIAIS_L,
+  criarEvento:AGENDA_L, editarEvento:AGENDA_L, excluirEvento:AGENDA_L, precarregarDatas:AGENDA_L,
+  gerarCertificado:[], gerarCalendarioPdf:[], sair:[]
+};
+function esquecer(fn){
+  /* Leitura que saiu antes desta escrita não entra na memória. */
+  MEM_GEN++;
+  var l = INVALIDA[fn];
+  if (!l){ MEM = {}; return; }
+  Object.keys(MEM).forEach(function(k){
+    for (var i = 0; i < l.length; i++) if (k.indexOf(l[i] + '[') === 0){ delete MEM[k]; return; }
+  });
+}
 
 function buscar(fn, args, k, ok, erro){
   if (PEND[k]){ PEND[k].push([ok, erro]); return; }
@@ -230,7 +269,13 @@ function ler(fn, args, ok, erro, o){
     if (Date.now() - m.t < o.fresco){ ok(JSON.parse(m.j)); return; }
     m = null;
   }
-  if (m) ok(JSON.parse(m.j));
+  if (m){
+    ok(JSON.parse(m.j));
+    /* Chegou há pouco: não vale outra ida ao servidor. Voltar para uma
+       tela recém-vista não gasta 4G nem repinta. Escrita já apaga o que
+       mudou, então isto nunca mostra dado velho depois de salvar. */
+    if (Date.now() - m.t < 20000) return;
+  }
   buscar(fn, args || [], k, function(j){
     if (viva() && (!m || j !== m.j)) ok(JSON.parse(j));
   }, function(e){ if (viva() && !m && erro) erro(e); });
@@ -436,9 +481,20 @@ var TELAS = {};
 var ACOES = {};
 
 function atual(){ return S.pilha[S.pilha.length-1]; }
-function ir(t, p, raiz){ if (raiz) S.pilha = []; S.pilha.push({t:t, p:p||{}}); desenhar(); }
+/* Quem sai de uma tela guarda onde estava na rolagem; voltar devolve.
+   Sem isso, voltar de um aluno no meio de uma lista de 100 caía no topo. */
+function ir(t, p, raiz){
+  var a = atual(); if (a) a.y = window.scrollY;
+  if (raiz) S.pilha = [];
+  S.pilha.push({t:t, p:p||{}}); desenhar();
+}
 function trocar(t, p){ S.pilha[S.pilha.length-1] = {t:t, p:p||{}}; desenhar(); }
-function voltar(){ if (S.pilha.length > 1){ S.pilha.pop(); desenhar(); } }
+function voltar(){
+  if (S.pilha.length < 2) return;
+  S.pilha.pop(); desenhar();
+  var y = atual().y;
+  if (y) window.scrollTo(0, y);
+}
 
 /* ─── módulos sob demanda ───
    A página só traz de saída o que a chamada e a tela inicial usam.
@@ -453,6 +509,21 @@ function modPronto(nome){
 }
 function modDaTela(t){
   return /^ag/.test(t) ? 'agenda' : /^mt/.test(t) ? 'materiais' : 'gestao';
+}
+/* O primeiro pedido de cada tela que mora num módulo sob demanda. */
+function primeiraLeitura(a){
+  var h = hojeISO();
+  switch (a.t){
+    case 'gestao':  return ['entrarNaGestao', []];
+    case 'gTurmas': case 'gCert': case 'gQr': return ['listarTurmasCompleto', []];
+    case 'gProfs':  return ['listarEquipe', []];
+    case 'gCaixa':  return ['listarCaixa', [h.slice(0, 7)]];
+    case 'gHistorico': return ['mesesComChamada', []];
+    case 'agenda':  var m = (a.p && a.p.mes) || h.slice(0, 7);
+                    return ['listarAgenda', [+m.slice(0, 4), +m.slice(5, 7)]];
+    case 'mtLista': return ['listarMateriais', [{}]];
+  }
+  return null;
 }
 function carregarModulo(nome, ok, erro){
   ok = ok || function(){}; erro = erro || function(){};
@@ -494,6 +565,9 @@ function desenhar(){
     document.body.classList.add('semcapa');
     el('palco').innerHTML = '<div class="corpo">' + esqueleto(4) + '</div>';
     el('barra').hidden = true; medirBarra();
+    /* Os dados da tela saem junto com o código dela, não depois. */
+    var pl = primeiraLeitura(a);
+    if (pl) preler(pl[0], pl[1]);
     carregarModulo(modDaTela(a.t), function(){
       if (atual() === a) desenhar();
     }, function(e){

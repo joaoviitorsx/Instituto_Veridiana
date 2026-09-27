@@ -1,12 +1,22 @@
 <script>
 /* Área da gestão: cadastros, acessos, QR, histórico e planilha. */
 /* ══════════════ TELA: menu de gestão ══════════════ */
+/* Os três contadores do menu. Chegam depois da tela e são trocados no
+   lugar: redesenhar o menu refazia todas as buscas dele. */
+function contadoresGestao(g){
+  g = g || {};
+  return {
+    itTurmas: plural(g.turmas || 0, 'turma ativa', 'turmas ativas'),
+    itAlunos: (g.alunosAtivos || 0) + ' ativos, ' + (g.alunosInativos || 0) + ' inativos',
+    itEquipe: plural(g.professores || 0, 'professora', 'professoras') + ', e-mail e senha'
+  };
+}
 TELAS.gestao = function(){
-  var g = S.gest || {};
+  var c = contadoresGestao(S.gest);
   var itens = [
-    {ic:'prancheta', t:'Turmas', s:plural(g.turmas || 0, 'turma ativa', 'turmas ativas'), a:'gTurmas'},
-    {ic:'grupo', t:'Alunos', s:(g.alunosAtivos || 0) + ' ativos, ' + (g.alunosInativos || 0) + ' inativos', a:'gAlunos'},
-    {ic:'pessoa', t:'Equipe e acessos', s:plural(g.professores || 0, 'professora', 'professoras') + ', e-mail e senha', a:'gProfs'},
+    {ic:'prancheta', t:'Turmas', s:c.itTurmas, a:'gTurmas', id:'itTurmas'},
+    {ic:'grupo', t:'Alunos', s:c.itAlunos, a:'gAlunos', id:'itAlunos'},
+    {ic:'pessoa', t:'Equipe e acessos', s:c.itEquipe, a:'gProfs', id:'itEquipe'},
     {ic:'qr', t:'QR do app', s:'cartaz para abrir o app no celular', a:'gQr'},
     {ic:'sino', t:'Precisam de atenção', s:'carregando…', a:'gRisco', id:'itRisco'},
     {ic:'calendario', t:'Histórico', s:'quem veio, por dia e por mês', a:'gHistorico'},
@@ -17,7 +27,8 @@ TELAS.gestao = function(){
   ];
   var h = '<ul class="cartoes">';
   itens.forEach(function(i){
-    h += '<li><button type="button" class="item" data-acao="' + i.a + '">' + ico(i.ic, 22) +
+    h += '<li><button type="button" class="item" data-acao="' + i.a + '"' +
+         (i.id ? ' id="' + i.id + '"' : '') + '>' + ico(i.ic, 22) +
          '<span class="txt">' + esc(i.t) + '<small>' + esc(i.s) + '</small></span>' +
          '<span class="seta">' + ico('dir') + '</span></button></li>';
   });
@@ -27,9 +38,12 @@ TELAS.gestao = function(){
     depois:function(){
       /* Contadores do menu: chegam por trás e repintam se mudaram. */
       ler('entrarNaGestao', [], function(g2){
-        var mudou = JSON.stringify(g2) !== JSON.stringify(S.gest);
         S.gest = g2;
-        if (mudou && atual() && atual().t === 'gestao') desenhar();
+        var c2 = contadoresGestao(g2);
+        Object.keys(c2).forEach(function(id){
+          var n = el(id), sm = n && n.querySelector('small');
+          if (sm) sm.textContent = c2[id];
+        });
       }, function(){});
       /* Fora do carregamento do menu: ler Chamadas para o alerta custa
          caro e não pode segurar a tela. */
@@ -69,7 +83,9 @@ ACOES.gCaixa     = function(){ ir('gCaixa'); };
 
 /* recarrega os contadores depois de qualquer escrita */
 function recontar(){
-  api('entrarNaGestao', [], function(g){ S.gest = g; }, function(){});
+  /* Pela memória: a escrita já apagou o valor velho, e duas escritas
+     seguidas viram uma busca só. */
+  ler('entrarNaGestao', [], function(g){ S.gest = g; }, function(){});
 }
 
 /* ─── escrita na gestão: toast vermelho no erro, tela intacta ─── */
@@ -242,7 +258,7 @@ ACOES.acoesAluno = function(b){
   ]);
 };
 function moverAluno(nome, turmaAtual){
-  api('listarTurmasCompleto', [], function(ts){
+  ler('listarTurmasCompleto', [], function(ts){
     var opc = ts.filter(function(t){ return t.nome !== turmaAtual; }).map(function(t){
       return { txt:t.nome, sub:plural(t.ativos, 'aluno', 'alunos'), ini:t.nome, fn:function(){
         escrever('moverAluno', [nome, t.nome, turmaAtual], nome + ' agora está em ' + t.nome, recarregarLista);
@@ -256,7 +272,7 @@ function moverAluno(nome, turmaAtual){
       });
     }});
     folhaOpcoes('Mover ' + nome + ' para', opc);
-  }, function(e){ toast(textoErro(e), 'erro'); });
+  }, function(e){ toast(textoErro(e), 'erro'); }, {fresco:60000});   // uma resposta só: abre a folha uma vez
 }
 /* depois de escrever, sempre relê do servidor */
 function recarregarLista(){
@@ -279,9 +295,8 @@ TELAS.gAlunos = function(){
       '<button type="button" data-acao="filtro" data-f="inativos" aria-selected="false">Inativos</button>' +
       '</div><div id="listaAlunos">' + esqueleto(5) + '</div>',
     depois:function(){
-      el('campoBusca').addEventListener('input', function(){
-        S.busca = this.value; pintarAlunos();
-      });
+      var pinta = depoisDe(120, pintarAlunos);
+      el('campoBusca').addEventListener('input', function(){ S.busca = this.value; pinta(); });
       carregarAlunos();
     }
   };
@@ -859,6 +874,8 @@ TELAS.gHistorico = function(){
   return {
     titulo:'Histórico', html:esqueleto(4),
     depois:function(){
+      /* Quase sempre o mais recente é o mês atual: sai junto com a lista. */
+      preler('resumoHistorico', [hojeISO().slice(0, 7)]);
       ler('mesesComChamada', [], function(meses){
         S.meses = meses || []; S.mesIdx = 0;
         if (!S.meses.length){
@@ -878,6 +895,8 @@ function carregarMes(){
   var mes = S.meses[S.mesIdx];
   var alvo = el('palco').querySelector('.corpo');
   alvo.innerHTML = passoMes(mes) + esqueleto(3);
+  /* O próximo toque costuma ser "mês anterior": já vai buscando. */
+  if (S.meses[S.mesIdx + 1]) preler('resumoHistorico', [S.meses[S.mesIdx + 1]]);
   ler('resumoHistorico', [mes], function(r){
     var h = passoMes(mes);
     var t = r.totais;

@@ -34,6 +34,9 @@ TELAS.gCaixa = function(){
       '<button type="button" class="bt-saida" data-acao="lancar" data-tipo="Saída">' +
       ico('menos', 18) + ' Saiu</button></div>',
     depois:function(){
+      /* O servidor sempre põe o mês atual primeiro: a busca dele sai junto
+         com a lista de meses, e não uma depois da outra. */
+      preler('listarCaixa', [hojeISO().slice(0, 7)]);
       ler('mesesCaixa', [], function(ms){
         S.mesesCx = ms; S.mesCxIdx = 0;
         carregarCaixa();
@@ -213,6 +216,8 @@ function salvarLanc(tipo){
       : ('Saída registrada' + (r.pediuFoto && !r.comFoto ? ' — a foto não subiu' : '')));
     fotoAtual = '';
     S.mesCxIdx = 0;
+    /* As duas buscas saem juntas. */
+    preler('listarCaixa', [hojeISO().slice(0, 7)]);
     api('mesesCaixa', [], function(ms){ S.mesesCx = ms; carregarCaixa(); }, carregarCaixa);
   }, function(e){
     if (bt){ bt.disabled = false; bt.textContent = 'Salvar'; }

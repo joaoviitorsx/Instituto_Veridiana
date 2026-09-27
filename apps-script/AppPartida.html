@@ -10,6 +10,12 @@ function iniciar(){
      parede: é aí, e só aí, que aparece a tela inicial. Antes de
      qualquer uma das duas, a sessão: sem ela, login. */
   function semParametro(){ S.viaQr = false; retomarSessao({t:'inicio', p:{}}); }
+  /* O servidor já pôs a turma na página (doGet). Sem espera nenhuma. */
+  if (typeof S.turmaInicial === 'string'){
+    if (S.turmaInicial){ S.viaQr = true; retomarSessao({t:'chamada', p:{turma:S.turmaInicial}}); }
+    else semParametro();
+    return;
+  }
   try {
     if (google.script.url && google.script.url.getLocation){
       var respondeu = false;

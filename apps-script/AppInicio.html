@@ -50,6 +50,7 @@ TELAS.inicio = function(){
       ler('resumoInicial', [], pintarInicio, function(){
         var d = el('destaque'); if (d) d.remove();
       });
+      preCarregarModulos();
     }
   };
 };
@@ -78,12 +79,20 @@ function preCarregar(d){
     var h = hojeISO();
     preler('listarAgenda', [+h.slice(0,4), +h.slice(5,7)]);
     preler('listarMateriais', [{}]);
-    carregarModulo('agenda', function(){
-      carregarModulo('materiais', function(){ carregarModulo('gestao'); });
-    });
     /* Dados da gestão NÃO vão por trás: o alerta de faltas lê 60 dias
        de chamadas e o cache dele cai a cada chamada salva. Quem só veio
        fazer chamada não pode pagar isso. O menu da gestão busca sozinho. */
+  }, 300);
+}
+
+/* O código das seções não depende do resumo: sai logo depois da
+   primeira pintura, as três juntas. Em fila, a gestão (a maior, atrás
+   de metade dos blocos) só chegava depois de três idas ao servidor. */
+function preCarregarModulos(){
+  if (S.modulosPedidos) return;
+  S.modulosPedidos = true;
+  setTimeout(function(){
+    carregarModulo('gestao'); carregarModulo('agenda'); carregarModulo('materiais');
   }, 300);
 }
 

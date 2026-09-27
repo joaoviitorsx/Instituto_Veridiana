@@ -55,12 +55,12 @@ TELAS.chamada = function(p){
     voltar: !S.viaQr,
     depois: function(){
       /* Uma resposta só, nunca repintada: repintar a lista apagaria as
-         presenças já marcadas. Serve a pré-carga se tiver menos de 1 min;
+         presenças já marcadas. Serve a pré-carga se tiver menos de 5 min;
          "já teve chamada hoje" o servidor confere de novo ao salvar. */
       ler('carregarTurma', [p.turma], montarChamada, function(e){
         el('palco').querySelector('.corpo').innerHTML =
           estado('alerta','Não deu para carregar', textoErro(e));
-      }, {fresco:60000});
+      }, {fresco:300000});
     }
   };
   return t;
@@ -120,11 +120,11 @@ function montarChamada(d){
          ' role="button" tabindex="0" aria-label="' + esc(a.aluno) + ', faltou">' +
          '<span class="ini">' + esc(iniciais(a.aluno)) + '</span>' +
          '<span class="nome">' + esc(a.aluno) + '</span>' +
-         '<span class="marca" id="mk' + i + '"></span></li>';
+         '<span class="marca" id="mk' + i + '"><span class="selo">Faltou</span></span></li>';
   });
+  /* A lista já nasce pintada (todo mundo em falta): repintar aluno por
+     aluno logo depois eram duas buscas no DOM e um innerHTML por linha. */
   el('palco').querySelector('.corpo').innerHTML = h + '</ul>';
-
-  S.alunos.forEach(function(a, i){ pintar(i); });
   atualizarPlacar();
 
   el('barraDentro').innerHTML =

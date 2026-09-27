@@ -5,7 +5,9 @@
 /** Meses que já tiveram chamada, do mais novo para o mais velho. */
 function mesesComChamada(sessao) {
   exigirSessao(sessao);
-  return doCache('meses_' + versaoResumo_(), TTL_CACHE, function () { return mesesComChamada_(sessao); });
+  /* A lista de meses só muda quando o mês vira: não precisa cair a cada
+     chamada salva (antes, cada queda relia a coluna inteira). */
+  return doCache('meses_' + hoje().slice(0, 7), TTL_CACHE, function () { return mesesComChamada_(sessao); });
 }
 function mesesComChamada_(sessao) {
   const aba = abaChamadas();
@@ -71,7 +73,10 @@ function lerMes_(mes) {
 /** Resumo de um mês: cada aula dada e o total por turma. */
 function resumoHistorico(sessao, mes) {
   exigirSessao(sessao);
-  return doCache('hist_' + mes + '_' + versaoResumo_(), TTL_CACHE, function () { return resumoHistorico_(sessao, mes); });
+  /* Mês que já passou não muda com chamada nova: só o mês corrente
+     acompanha a versão das chamadas. */
+  const ver = String(mes) === hoje().slice(0, 7) ? versaoResumo_() : 'fechado';
+  return doCache('hist_' + mes + '_' + ver, TTL_CACHE, function () { return resumoHistorico_(sessao, mes); });
 }
 function resumoHistorico_(sessao, mes) {
   if (!/^[0-9]{4}-[0-9]{2}$/.test(String(mes || ''))) throw new Error('Mês inválido.');

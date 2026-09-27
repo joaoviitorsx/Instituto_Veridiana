@@ -2,10 +2,15 @@
  * Tela inicial: os números da grade e o cartão de destaque.
  *
  * Roda em toda abertura do app sem QR. Por isso lê só as colunas que
- * usa, lê Chamadas de trás para frente só até 5 semanas atrás (nunca a
- * aba inteira), e guarda o resultado 10 minutos no cache. Qualquer
- * escrita da gestão derruba esse cache (versaoDados), e chamada salva
- * também (tocarResumo_), porque muda a "próxima aula".
+ * usa e guarda quase tudo no cache, em três pedaços com vidas diferentes:
+ *   - números da grade e eventos: 10 min, iguais para todo mundo
+ *   - padrão de horário das turmas (5 semanas de Chamadas): o dia todo,
+ *     porque o passado não muda durante o dia
+ *   - "já teve chamada hoje": o mapa de Chamada.gs, que a própria
+ *     chamada salva atualiza
+ * O cartão de destaque é montado a cada pedido a partir desses três, o
+ * que custa só leituras de cache. Antes, cada chamada salva derrubava o
+ * resumo de cada pessoa, e cada uma relia 5 semanas de Chamadas.
  *
  * Cada número é calculado dentro de um try: aba que ainda não existe ou
  * dado torto some da tela, em vez de derrubar a tela inteira. A tela
@@ -29,28 +34,29 @@ const DIAS_EVENTO_DESTAQUE = 14;   // evento só vira destaque se estiver perto
 
 function resumoInicial(sessao) {
   const p = exigirSessao(sessao).nome;
-  const hora = Utilities.formatDate(new Date(), FUSO, 'HH');
-  /* A hora entra na chave porque "próxima aula" depende do relógio. */
-  const k = 'ini_' + hoje() + '_' + hora + '_' + versaoResumo_() + '_' +
-            Utilities.base64EncodeWebSafe(chave(p)).slice(0, 60);
+  const hj = hoje();
 
-  return doCache(k, TTL_RESUMO, function () {
-    const r = { turmas: 0, proximo: null, saldo: null, materiais: null, destaque: null };
-    const hj = hoje();
-
-    try { r.turmas = listarTurmas_().length; } catch (e) {}
-
+  const base = doCache('ini_' + hj, TTL_RESUMO, function () {
+    const b = { turmas: 0, proximo: null, saldo: null, materiais: null, eventos: [] };
+    try { b.turmas = listarTurmas_().length; } catch (e) {}
     let eventos = [];
     try {
       eventos = eventosDaquiPraFrente_(hj).filter(function (ev) { return ev.status !== 'Cancelado'; });
     } catch (e) {}
-    if (eventos.length) r.proximo = { titulo: eventos[0].titulo, data: eventos[0].data };
-
-    if (MOSTRAR_SALDO_NA_ENTRADA) { try { r.saldo = saldoCaixa_(hj); } catch (e) {} }
-    try { r.materiais = contarMateriais_(); } catch (e) {}
-    try { r.destaque = destaque_(p, eventos, hj); } catch (e) {}
-    return r;
+    if (eventos.length) b.proximo = { titulo: eventos[0].titulo, data: eventos[0].data };
+    /* Só o que o destaque pode usar: hoje até 14 dias. */
+    const limite = somarDias_(hj, DIAS_EVENTO_DESTAQUE);
+    b.eventos = eventos.filter(function (ev) { return ev.data <= limite; })
+      .map(function (ev) { return { titulo: ev.titulo, data: ev.data, fim: ev.fim, tipo: ev.tipo }; });
+    if (MOSTRAR_SALDO_NA_ENTRADA) { try { b.saldo = saldoCaixa_(hj); } catch (e) {} }
+    try { b.materiais = contarMateriais_(); } catch (e) {}
+    return b;
   });
+
+  let destaque = null;
+  try { destaque = destaque_(p, base.eventos, hj); } catch (e) {}
+  return { turmas: base.turmas, proximo: base.proximo, saldo: base.saldo,
+           materiais: base.materiais, destaque: destaque };
 }
 
 /* Eventos que ainda não terminaram, do mais próximo para o mais longe.
@@ -130,43 +136,11 @@ function eventoCurto_(ev, deHoje) {
  * também é o que desempata duas turmas no mesmo horário.
  */
 function proximaAula_(prof, hj) {
-  const aba = planilha().getSheetByName(ABA_CHAMADAS);
-  if (!aba || aba.getLastRow() < 2) return null;
-
-  const limite = diasAtras_(SEMANAS_PADRAO_AULA * 7);
-  const dia = diaDaSemana_(hj);
+  const aulas = padraoAulas_(hj);
+  const feitasHoje = mapaRecentes_().hoje;
   const hm = Utilities.formatDate(new Date(), FUSO, 'HH:mm').split(':');
   const agora = Number(hm[0]) * 60 + Number(hm[1]);
   const ativas = listarTurmas_();
-
-  const aulas = {}, feitasHoje = {};
-  const BLOCO = 2000, TETO = 12000;
-  let fim = aba.getLastRow(), lidas = 0;
-  while (fim >= 2 && lidas < TETO) {
-    const ini = Math.max(2, fim - BLOCO + 1);
-    const vals = aba.getRange(ini, 1, fim - ini + 1, 4).getValues();   // Registro, Data, Turma, Professor
-    lidas += vals.length;
-    let passou = false;
-    for (let i = vals.length - 1; i >= 0; i--) {
-      const data = textoData(vals[i][1]);
-      if (!data) continue;
-      if (data < limite) { passou = true; break; }
-      const turma = String(vals[i][2] || '').trim();
-      if (!turma) continue;
-      if (data === hj) { feitasHoje[turma] = 1; continue; }
-      if (diaDaSemana_(data) !== dia) continue;
-      const a = aulas[turma] || (aulas[turma] = { dias: {}, minutos: [], profs: {} });
-      a.profs[chave(vals[i][3])] = 1;
-      if (a.dias[data]) continue;           // uma linha por aula basta para a hora
-      a.dias[data] = 1;
-      if (vals[i][0] instanceof Date) {
-        const h = Utilities.formatDate(vals[i][0], FUSO, 'HH:mm').split(':');
-        a.minutos.push(Number(h[0]) * 60 + Number(h[1]));
-      }
-    }
-    if (passou || ini === 2) break;
-    fim = ini - 1;
-  }
 
   let candidatas = Object.keys(aulas).filter(function (t) { return ativas.indexOf(t) !== -1; });
   /* Quem abriu pelo próprio link e tem turmas conhecidas vê só as suas —
@@ -213,6 +187,50 @@ function proximaAula_(prof, hj) {
     /* Salva às 15h07 é aula das 15h: arredonda para baixo, de meia em meia hora. */
     hora: textoHora_(Math.floor(melhor.tipico / 30) * 30)
   };
+}
+
+/**
+ * Por turma, nas últimas 5 semanas, no mesmo dia da semana de hoje: a
+ * hora em que a chamada costuma ser salva e quem costuma dar a aula.
+ * Olha só para o passado, então vale o dia inteiro no cache.
+ */
+function padraoAulas_(hj) {
+  return doCache('pad_' + hj, 21600, function () {
+    const aba = planilha().getSheetByName(ABA_CHAMADAS);
+    if (!aba || aba.getLastRow() < 2) return {};
+    const limite = diasAtras_(SEMANAS_PADRAO_AULA * 7);
+    const dia = diaDaSemana_(hj);
+    const aulas = {};
+    const BLOCO = 2000, TETO = 12000;
+    let fim = aba.getLastRow(), lidas = 0;
+    while (fim >= 2 && lidas < TETO) {
+      const ini = Math.max(2, fim - BLOCO + 1);
+      const vals = aba.getRange(ini, 1, fim - ini + 1, 4).getValues();   // Registro, Data, Turma, Professor
+      lidas += vals.length;
+      let passou = false;
+      for (let i = vals.length - 1; i >= 0; i--) {
+        const data = textoData(vals[i][1]);
+        if (!data) continue;
+        if (data < limite) { passou = true; break; }
+        const turma = String(vals[i][2] || '').trim();
+        if (!turma) continue;
+        if (data === hj) continue;             // hoje vem de mapaRecentes_
+        if (diaDaSemana_(data) !== dia) continue;
+        const a = aulas[turma] || (aulas[turma] = { dias: {}, minutos: [], profs: {} });
+        a.profs[chave(vals[i][3])] = 1;
+        if (a.dias[data]) continue;           // uma linha por aula basta para a hora
+        a.dias[data] = 1;
+        if (vals[i][0] instanceof Date) {
+          const h = Utilities.formatDate(vals[i][0], FUSO, 'HH:mm').split(':');
+          a.minutos.push(Number(h[0]) * 60 + Number(h[1]));
+        }
+      }
+      if (passou || ini === 2) break;
+      fim = ini - 1;
+    }
+    Object.keys(aulas).forEach(function (t) { delete aulas[t].dias; });
+    return aulas;
+  });
 }
 
 /* 0 = domingo. Calculado na data escrita, sem fuso no meio. */

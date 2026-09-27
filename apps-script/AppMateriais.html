@@ -91,7 +91,8 @@ TELAS.mtLista = function(){
       '<div id="mtLista">' + esqueleto(5) + '</div>',
     barra:'<button type="button" class="salvar" data-acao="mtNovo">' + ico('mais') + 'Novo item</button>',
     depois:function(){
-      el('mtBusca').addEventListener('input', function(){ S.mtFiltro.busca = this.value; pintarMt(); });
+      var pinta = depoisDe(120, pintarMt);
+      el('mtBusca').addEventListener('input', function(){ S.mtFiltro.busca = this.value; pinta(); });
       if (S.mt) pintarMt();
       carregarMt(function(){ if (atual().t === 'mtLista') pintarMt(); }, function(e){
         if (el('mtLista') && !S.mt) el('mtLista').innerHTML = estado('alerta', 'Não deu para carregar', textoErro(e));

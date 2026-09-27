@@ -38,7 +38,9 @@ function carregarTurma(sessao, turma) {
   exigirSessao(sessao);
   /* Elenco muda so pela gestao, entao vale cache. Ja "chamada de hoje"
      e "ultimo professor" tem que vir frescos a cada abertura. */
-  const fixo = doCache('elenco_' + turma, TTL_CACHE, function () {
+  /* Aniversário de hoje entra no mesmo cache (daí o dia na chave): era
+     uma leitura inteira da aba Alunos a cada abertura de chamada. */
+  const fixo = doCache('elenco_' + turma + '_' + hoje(), TTL_CACHE, function () {
     const ss = planilha();
     const abaAlunos = ss.getSheetByName(ABA_ALUNOS);
     if (!abaAlunos) throw new Error('A aba "Alunos" não foi encontrada na planilha.');
@@ -61,7 +63,8 @@ function carregarTurma(sessao, turma) {
       });
       professores.sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); });
     }
-    return { alunos: alunos, professores: professores };
+    return { alunos: alunos, professores: professores,
+             aniversarios: aniversariantesEntre_(0, 0, turma) };
   });
 
   const alunos = fixo.alunos, professores = fixo.professores;
@@ -80,7 +83,7 @@ function carregarTurma(sessao, turma) {
     /* Zero toque a mais na chamada, mas o professor vê antes da aula
        começar. Para uma criança daqui, o instituto lembrar do
        aniversário dela não é enfeite. */
-    aniversarios: aniversariantesEntre_(0, 0, turma)
+    aniversarios: fixo.aniversarios
   };
 }
 
@@ -99,27 +102,17 @@ function abaChamadas() {
 }
 
 /**
- * Chamadas dos últimos DIAS_RECENTES dias.
- *
- * Serve para duas coisas: saber se a turma já teve chamada hoje, e qual
- * professora deu essa turma da última vez. Antes eram 500 linhas fixas —
- * com 10 turmas isso é uns 2 dias, então numa turma semanal a sugestão
- * de professora simplesmente não achava nada.
- */
-function lerRecentes() {
-  return lerChamadasDesde_(diasAtras_(DIAS_RECENTES), 20000).linhas
-    .map(function (r) { return [null, r.data, r.turma, r.professor]; });
-}
-
-/**
  * Quem deu cada turma por último e quais turmas já têm chamada hoje —
  * calculado uma vez para TODAS as turmas e guardado no cache.
  *
  * Antes, cada abertura de chamada lia 60 dias da aba Chamadas só para
  * responder essas duas perguntas sobre uma turma. Agora a primeira
- * abertura do dia paga a leitura e as outras saem do cache. Chamada
- * salva troca a versão (tocarResumo_), então "já teve chamada hoje"
- * nunca fica velho por causa do cache.
+ * abertura do dia paga a leitura e as outras saem do cache.
+ *
+ * Chamada salva NÃO derruba este cache: salvarChamada atualiza o mapa
+ * guardado ali mesmo (atualizarRecentes_). Derrubar fazia a próxima
+ * professora a abrir uma turma — justo na troca de aula — pagar de novo
+ * a leitura de 60 dias.
  *
  * Também corrige a ordem: lerChamadasDesde_ devolve da linha mais nova
  * para a mais velha, e o código antigo percorria de trás para frente —
@@ -127,7 +120,7 @@ function lerRecentes() {
  */
 function mapaRecentes_() {
   const data = hoje();
-  return doCache('rec_' + data + '_' + versaoResumo_(), TTL_CACHE, function () {
+  return doCache(chaveRecentes_(data), TTL_CACHE, function () {
     const ultimos = {}, hojeTem = {};
     lerChamadasDesde_(diasAtras_(DIAS_RECENTES), 20000).linhas.forEach(function (r) {
       if (r.data === data) hojeTem[r.turma] = 1;
@@ -138,9 +131,30 @@ function mapaRecentes_() {
   });
 }
 
+function chaveRecentes_(data) { return 'rec_' + data; }
+
+/* Depois de salvar: a turma passa a ter chamada hoje e quem deu a aula
+   vira a sugestão. Se o mapa não estiver no cache, nada a fazer — a
+   próxima leitura já vem da planilha com esta chamada. */
+function atualizarRecentes_(data, turma, professor) {
+  try {
+    const c = CacheService.getScriptCache(), k = chaveRecentes_(data) + '_' + versaoDados();
+    const v = c.get(k);
+    if (!v) return;
+    const m = JSON.parse(v);
+    m.hoje[turma] = 1;
+    const l = (m.ultimos[turma] || []).filter(function (n) { return n !== professor; });
+    l.unshift(professor);
+    m.ultimos[turma] = l.slice(0, 6);
+    c.put(k, JSON.stringify(m), TTL_CACHE);
+  } catch (e) {}
+}
+
+/* Só as linhas de hoje, que ficam no fim da aba: dezenas, não os 60 dias
+   que se liam antes. Roda dentro da trava, então precisa ser curta. */
 function chamadaJaExiste(turma, data) {
-  return lerRecentes().some(function (l) {
-    return textoData(l[1]) === data && String(l[2]).trim() === turma;
+  return lerChamadasDesde_(data, 3000).linhas.some(function (r) {
+    return r.data === data && r.turma === turma;
   });
 }
 
@@ -211,7 +225,8 @@ function salvarChamada(sessao, dados) {
     };
 
     if (dados.token) cache.put(chave, JSON.stringify(resposta), TTL_TOKEN);
-    tocarResumo_();   // a "próxima aula" da tela inicial já não é esta
+    atualizarRecentes_(data, dados.turma, dados.professor);
+    tocarResumo_();   // histórico, risco e certificado passam a contar esta aula
     return resposta;
   } finally {
     trava.releaseLock();

@@ -33,7 +33,9 @@ const DIAS_RISCO = 120;
  */
 function alunosEmRisco(sessao, minimo) {
   exigirSessao(sessao);
-  return doCache('risco_' + minimo + '_' + hoje() + '_' + versaoResumo_(), TTL_CACHE, function () { return alunosEmRisco_(sessao, minimo); });
+  /* Sem versaoResumo_ na chave: o alerta lê 120 dias de chamadas, e
+     refazer isso a cada chamada salva não vale. Fica até 5 min atrás. */
+  return doCache('risco_' + minimo + '_' + hoje(), TTL_CACHE, function () { return alunosEmRisco_(sessao, minimo); });
 }
 function alunosEmRisco_(sessao, minimo) {
   const alvo = Math.max(2, Number(minimo) || 3);
@@ -98,6 +100,11 @@ function relatorioPeriodo(sessao, inicio, fim) {
   if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(de) || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(ate))
     throw new Error('Escolha as duas datas do período.');
   if (de > ate) throw new Error('A data de início vem depois da data de fim.');
+  return doCache('rel_' + de + '_' + ate + '_' + versaoResumo_(), TTL_CACHE, function () {
+    return relatorioPeriodo_(de, ate);
+  });
+}
+function relatorioPeriodo_(de, ate) {
 
   /* Lê exatamente o período pedido, não uma quantidade fixa de linhas. */
   const lido = lerChamadasDesde_(de);
