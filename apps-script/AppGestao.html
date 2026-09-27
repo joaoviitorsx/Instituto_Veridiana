@@ -747,10 +747,10 @@ TELAS.gRelatorio = function(){
     titulo:'Relatório para edital',
     html:'<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
       'Os números que a prestação de contas pede: beneficiários atendidos, aulas realizadas e frequência.</p>' +
-      '<div class="duplo" style="margin-bottom:12px">' +
-      '<div class="campo" style="flex:1;margin:0"><label for="dtIni">De</label>' +
+      '<div class="periodo">' +
+      '<div class="campo"><label for="dtIni">De</label>' +
       '<input id="dtIni" type="date" value="' + ini + '"></div>' +
-      '<div class="campo" style="flex:1;margin:0"><label for="dtFim">Até</label>' +
+      '<div class="campo"><label for="dtFim">Até</label>' +
       '<input id="dtFim" type="date" value="' + fim + '"></div></div>' +
       '<button type="button" class="botao-cheio" data-acao="gerarRel">' +
       ico('documento', 18) + ' Gerar relatório</button>' +

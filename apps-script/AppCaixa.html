@@ -274,10 +274,10 @@ TELAS.gCaixaResumo = function(){
     titulo:'Resumo do caixa',
     html:'<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
       'Totais por categoria e por fonte, para colar na prestação de contas.</p>' +
-      '<div class="duplo" style="margin-bottom:12px">' +
-      '<div class="campo" style="flex:1;margin:0"><label for="cxIni">De</label>' +
+      '<div class="periodo">' +
+      '<div class="campo"><label for="cxIni">De</label>' +
       '<input id="cxIni" type="date" value="' + ini + '"></div>' +
-      '<div class="campo" style="flex:1;margin:0"><label for="cxFim">Até</label>' +
+      '<div class="campo"><label for="cxFim">Até</label>' +
       '<input id="cxFim" type="date" value="' + fim + '"></div></div>' +
       '<button type="button" class="botao-cheio" data-acao="gerarCx">' +
       ico('documento', 18) + ' Gerar resumo</button><div id="saidaCx"></div>',

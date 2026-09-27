@@ -530,6 +530,20 @@ main{padding:0 0 24px}
   background:var(--papel);border:1px solid var(--borda);border-radius:var(--r-m);
 }
 .campo input:focus{outline:none;border-color:var(--roxo);box-shadow:0 0 0 3px var(--roxo-fraco)}
+/* input date nativo tem largura minima propria e, no iOS, ignora altura
+   e centraliza o texto. appearance:none devolve o controle ao CSS; o
+   seletor do sistema continua abrindo ao tocar. */
+.campo input[type=date]{
+  -webkit-appearance:none;appearance:none;display:block;min-width:0;
+  padding-right:12px;text-align:left;
+}
+.campo input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
+.campo input[type=date]::-webkit-calendar-picker-indicator{margin-left:4px;opacity:.6}
+
+/* par De/Ate: lado a lado enquanto couber, um embaixo do outro em tela
+   estreita. min-width:0 impede o flex de empurrar o segundo pra fora. */
+.periodo{display:flex;flex-wrap:wrap;gap:8px 12px;margin-bottom:12px}
+.periodo .campo{flex:1 1 140px;min-width:0;margin:0}
 
 .busca{position:relative;margin-bottom:16px}
 .busca svg{position:absolute;left:16px;top:50%;margin-top:-10px;color:var(--apagado);pointer-events:none}
