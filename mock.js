@@ -338,7 +338,8 @@
       else if (prox[0]) destaque = {tipo:'evento', hoje:false, titulo:prox[0].titulo, data:prox[0].data, tipoEvento:prox[0].tipo};
       return { turmas: API.listarTurmas().length,
                proximo: prox[0] ? {titulo:prox[0].titulo, data:prox[0].data} : null,
-               saldo: Math.round(saldo * 100) / 100, materiais: lerMt().length, destaque: destaque };
+               /* MOSTRAR_SALDO_NA_ENTRADA = false no servidor */
+               saldo: null, materiais: lerMt().length, destaque: destaque };
     },
     listarAgenda: function(ano, mes){
       var mm = String(mes).padStart(2,'0'), ini = ano + '-' + mm + '-01', fim = ano + '-' + mm + '-31';

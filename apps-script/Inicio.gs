@@ -12,14 +12,19 @@
  * mostra linha vazia no lugar de zero ou traço.
  */
 
-/* O saldo do caixa aparece na tela inicial, que abre SEM código.
-   Qualquer pessoa com o link do app (sem ?turma=) vê o número.
-   Se a coordenação preferir que o saldo fique só dentro do Caixa,
-   troque para false: a linha some e nada mais muda. */
-const MOSTRAR_SALDO_NA_ENTRADA = true;
+/* Desligado por decisão da coordenação. A tela inicial abre SEM código,
+   o QR fica na parede de uma sala com adolescentes, e tirar o ?turma=
+   da URL é trivial: saldo de caixa não fica exposto por engano. O saldo
+   continua dentro do Caixa, atrás do PIN. */
+const MOSTRAR_SALDO_NA_ENTRADA = false;
 
 const TTL_RESUMO = 600;            // 10 min
 const SEMANAS_PADRAO_AULA = 5;     // janela para descobrir o dia de cada turma
+/* Confiança mínima para sugerir uma aula. Card errado na primeira tela
+   destrói a confiança no sistema inteiro; card ausente não custa nada.
+   Nas primeiras semanas de uso, então, o card simplesmente não aparece. */
+const MIN_AULAS_PADRAO = 3;        // aulas no mesmo dia da semana, dentro da janela
+const FOLGA_HORARIO = 45;          // min em volta da hora típica que contam como "mesma hora"
 const DIAS_EVENTO_DESTAQUE = 14;   // evento só vira destaque se estiver perto
 
 function resumoInicial(prof) {
@@ -117,7 +122,12 @@ function eventoCurto_(ev, deHoje) {
  * mesmo dia da semana nas últimas 5 semanas, na hora em que costumam
  * ser salvas, e que ainda não têm chamada hoje.
  *
- * Com ?prof=, prefere as turmas que essa pessoa costuma dar.
+ * Isso é circular no começo: depende de chamadas que ainda não foram
+ * salvas. Por isso só sugere com padrão firme (MIN_AULAS_PADRAO aulas na
+ * mesma hora) e sem empate. Na dúvida, devolve null e o card não aparece.
+ *
+ * Com ?prof=, prefere as turmas que essa pessoa costuma dar — e isso
+ * também é o que desempata duas turmas no mesmo horário.
  */
 function proximaAula_(prof, hj) {
   const aba = planilha().getSheetByName(ABA_CHAMADAS);
@@ -158,34 +168,50 @@ function proximaAula_(prof, hj) {
     fim = ini - 1;
   }
 
-  let candidatas = Object.keys(aulas).filter(function (t) {
-    return ativas.indexOf(t) !== -1 && !feitasHoje[t];
-  });
-  if (!candidatas.length) return null;
+  let candidatas = Object.keys(aulas).filter(function (t) { return ativas.indexOf(t) !== -1; });
+  /* Quem abriu pelo próprio link e tem turmas conhecidas vê só as suas —
+     mesmo que já tenha feito todas hoje. A turma de outra professora na
+     tela de quem acabou de dar aula seria só ruído. */
   const k = chave(prof);
   if (k) {
     const minhas = candidatas.filter(function (t) { return aulas[t].profs[k]; });
     if (minhas.length) candidatas = minhas;
   }
+  candidatas = candidatas.filter(function (t) { return !feitasHoje[t]; });
+  if (!candidatas.length) return null;
+
+  /* Hora típica só com padrão firme: pelo menos MIN_AULAS_PADRAO
+     chamadas salvas perto da mesma hora. Sem hora conhecida, sem card. */
+  const firmes = [];
+  candidatas.forEach(function (t) {
+    const ms = aulas[t].minutos.slice().sort(function (a, b) { return a - b; });
+    if (ms.length < MIN_AULAS_PADRAO) return;
+    const tipico = ms[Math.floor(ms.length / 2)];
+    const perto = ms.filter(function (m) { return Math.abs(m - tipico) <= FOLGA_HORARIO; }).length;
+    if (perto < MIN_AULAS_PADRAO) return;
+    firmes.push({ turma: t, tipico: tipico });
+  });
 
   /* Chamada costuma ser salva no começo da aula. Até 90 min depois do
      horário de costume ainda é "agora"; mais que isso, a aula passou. */
-  let melhor = null;
-  candidatas.forEach(function (t) {
-    const ms = aulas[t].minutos.slice().sort(function (a, b) { return a - b; });
-    const tipico = ms.length ? ms[Math.floor(ms.length / 2)] : null;
-    let nota;
-    if (tipico === null) nota = 5000;                        // sem hora: último recurso
-    else if (tipico < agora - 90) return;                    // já passou
-    else if (tipico <= agora + 30) nota = Math.abs(tipico - agora);   // agora
-    else nota = 1000 + tipico - agora;                       // mais tarde hoje
-    if (!melhor || nota < melhor.nota) melhor = { nota: nota, turma: t, tipico: tipico };
-  });
-  if (!melhor) return null;
+  const ordem = firmes
+    .filter(function (c) { return c.tipico >= agora - 90; })
+    .map(function (c) {
+      c.nota = c.tipico <= agora + 30 ? Math.abs(c.tipico - agora) : 1000 + c.tipico - agora;
+      return c;
+    })
+    .sort(function (a, b) { return a.nota - b.nota; });
+  if (!ordem.length) return null;
+  const melhor = ordem[0];
+
+  /* Duas turmas no mesmo horário (salas diferentes) e ninguém para
+     desempatar: qualquer escolha erra metade das vezes. Melhor calar. */
+  if (ordem[1] && Math.abs(ordem[1].tipico - melhor.tipico) <= 30) return null;
+
   return {
     tipo: 'aula', turma: melhor.turma, agora: melhor.nota < 1000,
     /* Salva às 15h07 é aula das 15h: arredonda para baixo, de meia em meia hora. */
-    hora: melhor.tipico === null ? '' : textoHora_(Math.floor(melhor.tipico / 30) * 30)
+    hora: textoHora_(Math.floor(melhor.tipico / 30) * 30)
   };
 }
 

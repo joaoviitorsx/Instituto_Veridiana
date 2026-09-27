@@ -60,11 +60,14 @@ O QR da parede continua abrindo **direto** na lista de chamada, sem
 nenhuma tela no meio. A tela inicial só aparece para quem abre o app
 sem `?turma=`: saudação, a data, um cartão com a aula que deve estar
 começando (ou o evento de hoje) e a grade de seções, cada uma com um
-número de verdade — "6 turmas", "R$ 1.288,20 em caixa", "127 itens".
+número de verdade — "6 turmas", "próximo: Dia da Dança, 29/04", "127 itens".
 
 A "próxima aula" não depende de grade de horário cadastrada: sai da hora
 em que cada turma costuma ter a chamada salva, no mesmo dia da semana,
-nas últimas 5 semanas.
+nas últimas 5 semanas. Isso é circular no começo — depende de chamadas
+que ainda não existem —, então o cartão só aparece com padrão firme
+(3 aulas na mesma hora) e sem empate entre turmas. Na dúvida, não
+aparece: cartão errado na primeira tela custa mais que cartão nenhum.
 
 **Link por professor.** O iframe do Apps Script não guarda nada entre
 uma visita e outra, então o app sabe quem é a pessoa pelo endereço:
@@ -254,6 +257,7 @@ apps-script/        cole estes 23 arquivos no editor do Apps Script
   AppMateriais.html   telas de materiais, com o CSS    (sob demanda)
 
 mock.js             mock do google.script.run, só para o navegador
+.clasp.json.exemplo modelo para ligar o clasp (o .clasp.json fica fora do git)
 gerar-preview.py    monta o preview.html
 preview.html        abre no navegador, funciona sem servidor
 assets/             telas do app
@@ -294,43 +298,121 @@ módulos chegam pelo mock, para testar o carregamento sob demanda.
 
 ---
 
-## 1. Colar no Apps Script
+## 1. Mandar o código para o Apps Script
 
-São 23 arquivos. No editor, o botão **+** ao lado de "Arquivos" cria cada um.
+> **Isto é tarefa de desenvolvedor, e só quando o código muda.** O
+> instituto nunca faz nada desta seção: a manutenção dele é a planilha e
+> o app. Cadastro, agenda, materiais, caixa — tudo pelo celular ou
+> direto na planilha, sem abrir editor de script nenhum.
 
-**Arquivos de script** (`+` → **Script**). Digite o nome sem `.gs`:
+São 23 arquivos. Colar isso à mão é caminho garantido para erro (um
+arquivo esquecido, um colado no lugar do outro). Use o
+[`clasp`](https://github.com/google/clasp), a ferramenta de linha de
+comando do próprio Google.
 
+### Ligar o clasp (uma vez por máquina)
+
+```bash
+npm install -g @google/clasp
+clasp login                       # abre o navegador, entre com a conta dona do script
+```
+
+No [painel do Apps Script](https://script.google.com/home/usersettings),
+ligue **API do Google Apps Script**.
+
+O ID do projeto está no editor, em **Configurações do projeto → ID do
+script**. Copie o exemplo e cole o ID:
+
+```bash
+cp .clasp.json.exemplo .clasp.json   # e troque SEU_ID_DO_SCRIPT
+```
+
+O manifesto (`appsscript.json`: fuso, modo de app da Web) vem do projeto
+que já existe. Baixe **numa pasta à parte** e traga só ele:
+
+```bash
+clasp clone SEU_ID_DO_SCRIPT --rootDir /tmp/veridiana-manifesto
+cp /tmp/veridiana-manifesto/appsscript.json apps-script/
+```
+
+> **Nunca rode `clasp clone` ou `clasp pull` dentro deste repositório.**
+> Eles sobrescrevem `apps-script/` com o que está no editor — ou seja,
+> com o código velho.
+
+Versione o `appsscript.json` depois disso. O `.clasp.json` fica fora do
+git (cada máquina aponta para o seu projeto).
+
+### Enviar
+
+```bash
+clasp push
+```
+
+O `push` troca **todos** os arquivos do projeto pelos de `apps-script/`,
+e arquivo que só existe no editor é apagado. Ele atualiza a versão de
+teste (`/dev`), **não** o link que os professores usam (`/exec`): o
+`/exec` continua servindo a última versão implantada até alguém
+publicar uma nova.
+
+### Publicar com segurança
+
+Autorização no Apps Script é **do projeto inteiro, não da função**. Se
+o código novo usa um serviço que o dono ainda não autorizou (como o
+`DocumentApp` do calendário, na v2), **toda execução** passa a exigir a
+autorização nova — inclusive a chamada, que não tem nada a ver com
+calendário. Publicar sem autorizar antes pode derrubar a chamada dos
+professores por causa de um recurso que ninguém usou ainda.
+
+A sequência:
+
+1. `clasp push` (ou colar no editor e salvar)
+2. Abrir a URL `/dev` do app, logado como dono — ela força o pedido de
+   autorização
+3. Aceitar o escopo novo
+4. **Testar a chamada na `/dev`.** É essa a verificação que importa
+5. Testar o recurso novo (na v2: gerar o calendário em PDF e conferir
+   que saiu em A4 deitado)
+6. Só então: **Implantar → Gerenciar implantações → ✏️ → Versão: Nova
+   versão → Implantar**. Editar a implantação existente mantém o mesmo
+   link `/exec` — e os QR impressos continuam valendo
+
+> **Se o Docs der trabalho:** o plano B é montar o calendário numa aba
+> temporária da própria planilha e exportar pela URL de exportação do
+> Sheets (`portrait=false&size=A4`). Só que isso puxa o `UrlFetchApp`,
+> que também é escopo novo. Só vale se o Docs realmente resistir.
+
+### Sem clasp
+
+Dá para colar à mão: no editor, **+** ao lado de "Arquivos" cria cada um.
+
+**Script** (`+` → **Script**, nome sem `.gs`):
 `Codigo` · `Util` · `Inicio` · `Chamada` · `Gestao` · `Planilha` · `Historico` · `Impacto` · `Certificado` · `Caixa` · `Agenda` · `Materiais`
 
-**Arquivos de HTML** (`+` → **HTML**). Digite o nome sem `.html`:
-
+**HTML** (`+` → **HTML**, nome sem `.html`):
 `Index` · `Estilo` · `AppNucleo` · `AppInicio` · `AppChamada` · `AppPartida` · `AppGestao` · `AppCaixa` · `AppQr` · `AppAgenda` · `AppMateriais`
 
-Em cada um: `Ctrl+A`, `Delete`, cole o conteúdo do arquivo de mesmo nome
-da pasta `apps-script/`, `Ctrl+S`.
+Em cada um: `Ctrl+A`, `Delete`, cole o arquivo de mesmo nome, `Ctrl+S`.
+Depois, a mesma sequência de publicação acima.
 
-> A ordem dos arquivos na lista não importa. Os `.gs` dividem o mesmo
-> escopo global, e o `doGet` monta o HTML chamando cada parte pelo nome.
+> A ordem dos arquivos na lista não importa, **desde que** nenhum `.gs`
+> use, no topo do arquivo (fora de função), constante de outro `.gs`. O
+> Apps Script roda os arquivos na ordem da lista; referência cruzada no
+> topo quebra o script inteiro quando a ordem muda.
 
-Depois: **Implantar → Gerenciar implantações → ✏️ → Versão: Nova
-versão → Implantar**. Sem isso o link continua servindo o código antigo.
+### Primeira implantação
 
-> `Certificado.gs` e `Caixa.gs` usam o Drive para salvar PDF e comprovante. Na primeira vez que
-> você gerar um certificado, o Google vai pedir autorização de novo —
-> é o escopo do Drive entrando. Autorize e siga.
->
-> O calendário para imprimir (`Agenda.gs`) monta a página num Google
-> Docs temporário, porque o conversor de HTML do certificado não sabe
-> fazer folha deitada. Na primeira vez o Google pede autorização para
-> **Documentos**. O Docs temporário vai para a lixeira logo depois.
-
-Na primeira vez, em **Implantar → Nova implantação → Tipo: App da Web**:
+Em **Implantar → Nova implantação → Tipo: App da Web**:
 
 - Executar como: **Eu**
 - Quem pode acessar: **Qualquer pessoa**
 
 "Executar como: eu" é o que permite o professor fazer chamada sem ter
-acesso de edição à planilha.
+acesso de edição à planilha. É também por isso que a autorização é só
+do dono: professor nenhum vê tela de permissão.
+
+Autorizações que o dono aceita ao longo do tempo: planilha (sempre),
+Drive (certificado e comprovante do caixa), Documentos (calendário da
+agenda — o Docs temporário vai para a lixeira logo depois).
 
 ---
 
@@ -446,9 +528,17 @@ cartaz, no tamanho A5.
 `Chamadas`, `Turmas`, `Agenda` e `Materiais` nascem sozinhas no primeiro uso.
 Linha digitada direto na planilha, sem ID, ganha um na primeira leitura.
 
-> **Saldo na tela inicial.** A tela inicial abre sem código, e mostra o
-> saldo do caixa. Se a coordenação preferir que o número fique só dentro
-> do Caixa, troque `MOSTRAR_SALDO_NA_ENTRADA` para `false` em `Inicio.gs`.
+> **Mexeu direto na planilha? A tela inicial demora até 10 minutos para
+> ver.** Os números da entrada (turmas, próximo evento, materiais) ficam
+> guardados 10 minutos para o app abrir rápido. Qualquer mudança feita
+> **pelo app** atualiza na hora; mudança feita na planilha — ou pelo menu
+> Veridiana — só aparece quando esse prazo vence. Não é bug.
+> As telas de dentro (Agenda, Materiais, Gestão) leem a planilha na hora.
+
+> **Saldo fora da tela inicial.** A tela inicial abre sem código e o QR
+> fica numa parede por onde passam adolescentes, então o saldo do caixa
+> não aparece nela (`MOSTRAR_SALDO_NA_ENTRADA = false` em `Inicio.gs`).
+> Continua dentro do Caixa, atrás do PIN.
 
 `Turmas` foi acrescentada porque turma criada sem nenhum aluno não tinha
 onde existir nas três abas originais, e "arquivar turma" precisa guardar
