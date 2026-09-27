@@ -34,12 +34,12 @@ TELAS.gCaixa = function(){
       '<button type="button" class="bt-saida" data-acao="lancar" data-tipo="Saída">' +
       ico('menos', 18) + ' Saiu</button></div>',
     depois:function(){
-      api('mesesCaixa', [S.pin], function(ms){
+      ler('mesesCaixa', [S.pin], function(ms){
         S.mesesCx = ms; S.mesCxIdx = 0;
         carregarCaixa();
       }, function(e){
         el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
-      });
+      }, {fresco:300000});
     }
   };
 };
@@ -52,7 +52,7 @@ function carregarCaixa(){
   var alvo = el('palco').querySelector('.corpo');
   if (!alvo) return;
   alvo.innerHTML = passoCaixa(mes) + esqueleto(3);
-  api('listarCaixa', [S.pin, mes], function(r){
+  ler('listarCaixa', [S.pin, mes], function(r){
     if (!noCaixa() || !el('palco').querySelector('.corpo')) return;
     S.caixa = r;
     var h = passoCaixa(mes);

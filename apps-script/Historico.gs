@@ -5,6 +5,9 @@
 /** Meses que já tiveram chamada, do mais novo para o mais velho. */
 function mesesComChamada(pin) {
   exigirPin(pin);
+  return doCache('meses_' + versaoResumo_(), TTL_CACHE, function () { return mesesComChamada_(pin); });
+}
+function mesesComChamada_(pin) {
   const aba = abaChamadas();
   const ultima = aba.getLastRow();
   if (ultima < 2) return [];
@@ -68,6 +71,9 @@ function lerMes_(mes) {
 /** Resumo de um mês: cada aula dada e o total por turma. */
 function resumoHistorico(pin, mes) {
   exigirPin(pin);
+  return doCache('hist_' + mes + '_' + versaoResumo_(), TTL_CACHE, function () { return resumoHistorico_(pin, mes); });
+}
+function resumoHistorico_(pin, mes) {
   if (!/^[0-9]{4}-[0-9]{2}$/.test(String(mes || ''))) throw new Error('Mês inválido.');
 
   const linhas = lerMes_(mes);

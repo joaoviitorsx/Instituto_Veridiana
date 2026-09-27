@@ -111,8 +111,8 @@ function textoTurmas(ts){
 function comListas(fn){
   if (S.agListas){ fn(); return; }
   var h = hojeISO();
-  api('listarAgenda', [+h.slice(0,4), +h.slice(5,7)], function(r){ S.agListas = r; S.agCores = r.cores; fn(); },
-      function(e){ toast(textoErro(e), 'erro'); });
+  ler('listarAgenda', [+h.slice(0,4), +h.slice(5,7)], function(r){ S.agListas = r; S.agCores = r.cores; fn(); },
+      function(e){ toast(textoErro(e), 'erro'); }, {fresco:300000});
 }
 
 /* ══════════════ AGENDA: mês ══════════════ */
@@ -135,10 +135,15 @@ TELAS.agenda = function(p){
 };
 
 function carregarAgMes(mes){
-  api('listarAgenda', [+mes.slice(0,4), +mes.slice(5,7)], function(r){
+  ler('listarAgenda', [+mes.slice(0,4), +mes.slice(5,7)], function(r){
     var a = atual();
     if (!a || a.t !== 'agenda' || a.p.mes !== mes || !el('agLista')) return;
     S.agListas = r; S.agCores = r.cores; S.agEventos = r.eventos;
+    /* Quem olha um mês costuma passar para o lado: os vizinhos já vêm. */
+    [-1, 1].forEach(function(n){
+      var v = somarMes(mes, n);
+      preler('listarAgenda', [+v.slice(0,4), +v.slice(5,7)]);
+    });
     if (!r.eventos.length){
       el('agLista').innerHTML = estado('calendario', 'Nada marcado em ' + MESES[+mes.slice(5,7) - 1],
         'Toque em "Novo evento" aqui embaixo para colocar a primeira data do mês.');
@@ -389,7 +394,7 @@ TELAS.agAno = function(p){
         '<span class="txt">Calendário para imprimir<small>PDF em A4 deitado, com espaço para escrever</small></span>' +
         '<span class="seta">' + ico('dir') + '</span></button></li></ul>',
     depois:function(){
-      api('listarAgendaAno', [ano], function(r){
+      ler('listarAgendaAno', [ano], function(r){
         var a = atual();
         if (!a || a.t !== 'agAno' || a.p.ano !== ano || !el('agMeses')) return;
         S.agCores = r.cores;
@@ -432,7 +437,7 @@ TELAS.agDatas = function(p){
     html:esqueleto(3),
     barra:'<button type="button" class="salvar" id="btDatas" data-acao="agPrecarregar" disabled>Colocar na agenda</button>',
     depois:function(){
-      api('datasFixas', [p.ano], function(r){
+      ler('datasFixas', [p.ano], function(r){
         var a = atual();
         if (!a || a.t !== 'agDatas' || a.p.ano !== p.ano) return;
         var h = '<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
@@ -453,7 +458,7 @@ TELAS.agDatas = function(p){
         if (bt) bt.disabled = !livres;
       }, function(e){
         el('palco').querySelector('.corpo').innerHTML = estado('alerta', 'Não deu para carregar', textoErro(e));
-      });
+      }, {fresco:300000});
     }
   };
 };
@@ -497,7 +502,7 @@ TELAS.agImprimir = function(p){
         ico('documento', 18) + ' Gerar o PDF</button>' +
       '<p class="dica" id="agPdfEspera" role="status" aria-live="polite" style="text-align:center;min-height:3em"></p>',
     depois:function(){
-      api('listarAgendaAno', [p.ano], function(r){
+      ler('listarAgendaAno', [p.ano], function(r){
         var n = el('agImpConta');
         if (n && atual().p.ano === p.ano)
           n.textContent = r.total ? plural(r.total, 'evento marcado', 'eventos marcados') + ' no ano'

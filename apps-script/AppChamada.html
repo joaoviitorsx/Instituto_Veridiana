@@ -9,7 +9,7 @@ TELAS.turmas = function(){
          '</div></div></div>',
     html: esqueleto(4),
     depois: function(){
-      api('listarTurmas', [], function(turmas){
+      ler('listarTurmas', [], function(turmas){
         if (!turmas.length){
           el('palco').querySelector('.corpo').innerHTML =
             estado('grupo','Nenhuma turma ainda',
@@ -23,6 +23,10 @@ TELAS.turmas = function(){
                '<span class="seta">' + ico('dir') + '</span></button></li>';
         });
         el('palco').querySelector('.corpo').innerHTML = h + '</ul>';
+        /* Quem abriu a lista vai tocar numa turma. Com elenco e histórico
+           em cache no servidor, cada busca é barata: vão todas por trás,
+           e a chamada abre sem espera. Teto de 8 para não enfileirar. */
+        turmas.slice(0, 8).forEach(function(t){ preler('carregarTurma', [t]); });
       }, function(e){
         el('palco').querySelector('.corpo').innerHTML =
           estado('alerta','Não deu para carregar', textoErro(e));
@@ -30,6 +34,12 @@ TELAS.turmas = function(){
     }
   };
 };
+/* O dedo encosta na turma e a busca já sai: os ~150 ms entre encostar e
+   soltar são adiantados de graça. */
+document.addEventListener('pointerdown', function(e){
+  var b = e.target.closest && e.target.closest('[data-acao="abrirTurma"]');
+  if (b) preler('carregarTurma', [b.getAttribute('data-t')]);
+}, {passive:true});
 ACOES.abrirTurma = function(b){ ir('chamada', {turma:b.getAttribute('data-t')}); };
 
 /* ══════════════ TELA: chamada ══════════════ */
@@ -44,10 +54,13 @@ TELAS.chamada = function(p){
     html: esqueleto(6),
     voltar: !S.viaQr,
     depois: function(){
-      api('carregarTurma', [p.turma], montarChamada, function(e){
+      /* Uma resposta só, nunca repintada: repintar a lista apagaria as
+         faltas já marcadas. Serve a pré-carga se tiver menos de 1 min;
+         "já teve chamada hoje" o servidor confere de novo ao salvar. */
+      ler('carregarTurma', [p.turma], montarChamada, function(e){
         el('palco').querySelector('.corpo').innerHTML =
           estado('alerta','Não deu para carregar', textoErro(e));
-      });
+      }, {fresco:60000});
     }
   };
   return t;

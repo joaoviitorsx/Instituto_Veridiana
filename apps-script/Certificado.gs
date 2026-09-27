@@ -110,6 +110,9 @@ function listaTurmas_(mapa) {
 /** Quem da turma já tem histórico suficiente para receber certificado. */
 function alunosParaCertificado(pin, turma) {
   exigirPin(pin);
+  return doCache('cert_' + turma + '_' + versaoResumo_(), TTL_CACHE, function () { return alunosParaCertificado_(pin, turma); });
+}
+function alunosParaCertificado_(pin, turma) {
   const hist = historicoCompleto_();
   const ambiguos = nomesAmbiguos_();
   return lerAlunos_()

@@ -44,7 +44,7 @@ TELAS.inicio = function(){
          '<p class="data">' + esc(dia.charAt(0).toUpperCase() + dia.slice(1)) + '</p></div></div></div>',
     html:h,
     depois:function(){
-      api('resumoInicial', [S.prof], pintarInicio, function(){
+      ler('resumoInicial', [S.prof], pintarInicio, function(){
         var d = el('destaque'); if (d) d.remove();
       });
     }
@@ -60,13 +60,25 @@ function pintarInicio(r){
   if (r.materiais) linha('apMateriais', plural(r.materiais, 'item', 'itens'));
   S.destaque = r.destaque || null;
   pintarDestaque(r.destaque);
-  /* Tela já pintada: agora sim vale baixar o resto em segundo plano,
-     para Agenda e Materiais abrirem sem espera. Via QR isto nunca roda. */
+  preCarregar(r.destaque);
+}
+
+/* Tela já pintada: agora sim vale buscar o resto em segundo plano, para
+   a próxima tela abrir sem espera — o código das seções e os dados das
+   mais usadas. Uma vez por visita. Via QR isto nunca roda. */
+function preCarregar(d){
+  if (S.preCarregou) return;
+  S.preCarregou = true;
   setTimeout(function(){
+    if (d && d.tipo === 'aula') preler('carregarTurma', [d.turma]);   // o cartão é o atalho mais tocado
+    preler('listarTurmas', []);
+    var h = hojeISO();
+    preler('listarAgenda', [+h.slice(0,4), +h.slice(5,7)]);
+    preler('listarMateriais', [{}]);
     carregarModulo('agenda', function(){
       carregarModulo('materiais', function(){ carregarModulo('gestao'); });
     });
-  }, 400);
+  }, 300);
 }
 
 /* O atalho mais usado do sistema: a aula que deve estar começando, ou o

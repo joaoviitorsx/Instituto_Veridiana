@@ -69,8 +69,12 @@ function bateFinalidade(item, f){
 function ehBazar(i){ return i.finalidade === 'Bazar' || i.finalidade === 'Ambos'; }
 function mtItem(id){ return ((S.mt && S.mt.itens) || []).filter(function(i){ return i.id === id; })[0]; }
 
-function carregarMt(fn, falhou){
-  api('listarMateriais', [{}], function(r){ S.mt = r; fn(r); }, falhou || function(e){ toast(textoErro(e), 'erro'); });
+/* repintavel: a tela aguenta ser desenhada duas vezes (memória, depois
+   o dado novo). Formulário e caminho depois de salvar não aguentam. */
+function carregarMt(fn, falhou, repintavel){
+  ler('listarMateriais', [{}], function(r){ S.mt = r; fn(r); },
+      falhou || function(e){ toast(textoErro(e), 'erro'); },
+      repintavel ? null : {fresco:300000});
 }
 
 /* ══════════════ MATERIAIS: lista ══════════════ */
@@ -91,7 +95,7 @@ TELAS.mtLista = function(){
       if (S.mt) pintarMt();
       carregarMt(function(){ if (atual().t === 'mtLista') pintarMt(); }, function(e){
         if (el('mtLista') && !S.mt) el('mtLista').innerHTML = estado('alerta', 'Não deu para carregar', textoErro(e));
-      });
+      }, true);
     }
   };
 };
@@ -471,7 +475,7 @@ TELAS.mtResumo = function(){
     titulo:'Resumo dos materiais', html:esqueleto(4),
     depois:function(){
       if (S.mt) pintarResumoMt();
-      carregarMt(function(){ if (atual().t === 'mtResumo') pintarResumoMt(); });
+      carregarMt(function(){ if (atual().t === 'mtResumo') pintarResumoMt(); }, null, true);
     }
   };
 };

@@ -33,6 +33,9 @@ const DIAS_RISCO = 120;
  */
 function alunosEmRisco(pin, minimo) {
   exigirPin(pin);
+  return doCache('risco_' + minimo + '_' + hoje() + '_' + versaoResumo_(), TTL_CACHE, function () { return alunosEmRisco_(pin, minimo); });
+}
+function alunosEmRisco_(pin, minimo) {
   const alvo = Math.max(2, Number(minimo) || 3);
   const linhas = lerChamadasDesde_(diasAtras_(DIAS_RISCO)).linhas;
 
@@ -155,6 +158,9 @@ function relatorioPeriodo(pin, inicio, fim) {
 /** Aniversariantes de hoje até daqui a 6 dias. */
 function aniversariantesSemana(pin) {
   exigirPin(pin);
+  return doCache('aniv_' + hoje(), TTL_CACHE, function () { return aniversariantesSemana_(pin); });
+}
+function aniversariantesSemana_(pin) {
   return aniversariantesEntre_(0, 6, '');
 }
 

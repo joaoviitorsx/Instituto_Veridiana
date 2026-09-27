@@ -147,6 +147,9 @@ function listasAgenda_() {
 
 /** Eventos que tocam o mês, inclusive os de vários dias que começaram antes. */
 function listarAgenda(ano, mes) {
+  return doCache('ag_' + hoje() + '_' + ano + '_' + mes, TTL_CACHE, function () { return listarAgenda_(ano, mes); });
+}
+function listarAgenda_(ano, mes) {
   const a = anoValido_(ano), m = Number(mes);
   if (!(m >= 1 && m <= 12)) throw new Error('Mês inválido.');
   const mm = String(m).padStart(2, '0');
@@ -162,6 +165,9 @@ function listarAgenda(ano, mes) {
 
 /** Os doze meses com a contagem de cada um. Cancelado não conta. */
 function listarAgendaAno(ano) {
+  return doCache('aga_' + hoje() + '_' + ano, TTL_CACHE, function () { return listarAgendaAno_(ano); });
+}
+function listarAgendaAno_(ano) {
   const a = anoValido_(ano);
   const meses = [];
   for (let m = 1; m <= 12; m++) meses.push({ mes: m, total: 0, tipos: {} });
@@ -268,6 +274,9 @@ function excluirEvento(pin, id) {
 
 /** A lista de datas fixas, dizendo quais já estão na agenda do ano. */
 function datasFixas(ano) {
+  return doCache('df_' + ano, TTL_CACHE, function () { return datasFixas_(ano); });
+}
+function datasFixas_(ano) {
   const a = anoValido_(ano);
   const evs = lerAgenda_();
   return {

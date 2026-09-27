@@ -113,6 +113,9 @@ function listarLocais() {
  * aqui para quem chamar de outro lugar.
  */
 function listarMateriais(filtros) {
+  return doCache('mt_' + Utilities.base64EncodeWebSafe(JSON.stringify(filtros || {})).slice(0, 200), TTL_CACHE, function () { return listarMateriais_(filtros); });
+}
+function listarMateriais_(filtros) {
   const f = filtros || {};
   const todos = lerMateriaisComIds_();
   const b = chave(f.busca);

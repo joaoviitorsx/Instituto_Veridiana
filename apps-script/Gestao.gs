@@ -99,6 +99,9 @@ function entrarNaGestao(pin){
 
 function listarTurmasCompleto(pin){
   exigirPin(pin);
+  return doCache('tc', TTL_CACHE, function () { return listarTurmasCompleto_(pin); });
+}
+function listarTurmasCompleto_(pin){
   const contas = contarAlunos();
   return turmasRegistradas()
     .filter(function (t){ return t.ativa; })
@@ -227,6 +230,9 @@ function acharAluno_(nome, turma){
 
 function listarAlunos(pin, turma, incluirInativos){
   exigirPin(pin);
+  return doCache('al_' + turma + '_' + !!incluirInativos, TTL_CACHE, function () { return listarAlunos_(pin, turma, incluirInativos); });
+}
+function listarAlunos_(pin, turma, incluirInativos){
   return lerAlunos_()
     .filter(function (a){
       if (turma && a.turma !== turma) return false;
@@ -332,6 +338,9 @@ function lerProfessores(){
 
 function listarProfessores(pin){
   exigirPin(pin);
+  return doCache('pf', TTL_CACHE, function () { return listarProfessores_(pin); });
+}
+function listarProfessores_(pin){
   return lerProfessores()
     .map(function (p){ return p.nome; })
     .sort(function (a, b){ return a.localeCompare(b, 'pt-BR'); });

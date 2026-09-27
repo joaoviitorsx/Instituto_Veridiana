@@ -42,6 +42,11 @@ function validaPin(){
   var destino = (atual() && atual().p) || {};
   api('entrarNaGestao', [tentativa], function(g){
     S.pin = tentativa; S.gest = g;
+    /* Código certo: as listas da gestão já saem buscadas por trás. */
+    preler('listarTurmasCompleto', [S.pin]);
+    preler('listarProfessores', [S.pin]);
+    preler('contarRisco', [S.pin]);
+    preler('aniversariantesSemana', [S.pin]);
     if (!atual() || atual().t !== 'pin') return;
     /* Ação na própria tela (mudar situação de um evento, ajustar
        quantidade): volta para onde estava, que agora já tem o código. */
@@ -88,7 +93,7 @@ TELAS.gestao = function(){
     depois:function(){
       /* Fora do carregamento do menu: ler Chamadas para o alerta custa
          caro e não pode segurar a tela. */
-      api('contarRisco', [S.pin], function(n){
+      ler('contarRisco', [S.pin], function(n){
         var i = el('itRisco');
         if (!i) return;
         i.querySelector('small').textContent = n === 0
@@ -96,7 +101,7 @@ TELAS.gestao = function(){
           : plural(n, 'aluno some há 3 aulas', 'alunos somem há 3 aulas');
         if (n > 0) i.querySelector('small').style.color = 'var(--falta)';
       }, function(){});
-      api('aniversariantesSemana', [S.pin], function(lista){
+      ler('aniversariantesSemana', [S.pin], function(lista){
         if (!lista || !lista.length) return;
         var c = el('caixaBolo');
         if (!c) return;
@@ -147,7 +152,7 @@ TELAS.gTurmas = function(){
   };
 };
 function listarTurmasGestao(){
-  api('listarTurmasCompleto', [S.pin], function(ts){
+  ler('listarTurmasCompleto', [S.pin], function(ts){
     var alvo = el('palco').querySelector('.corpo');
     if (!ts.length){
       alvo.innerHTML = estado('prancheta','Nenhuma turma ainda',
@@ -183,7 +188,7 @@ TELAS.gTurma = function(p){
   };
 };
 function carregarFicha(turma){
-  api('listarAlunos', [S.pin, turma, true], function(as){
+  ler('listarAlunos', [S.pin, turma, true], function(as){
     S.todosAlunos = as;
     var ativos = as.filter(function(a){ return a.ativo; });
     var inativos = as.filter(function(a){ return !a.ativo; });
@@ -342,7 +347,7 @@ TELAS.gAlunos = function(){
   };
 };
 function carregarAlunos(){
-  api('listarAlunos', [S.pin, '', true], function(as){
+  ler('listarAlunos', [S.pin, '', true], function(as){
     S.todosAlunos = as; pintarAlunos();
   }, function(e){
     if (el('listaAlunos')) el('listaAlunos').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
@@ -384,7 +389,7 @@ TELAS.gProfs = function(){
   };
 };
 function carregarProfs(){
-  api('listarProfessores', [S.pin], function(ps){
+  ler('listarProfessores', [S.pin], function(ps){
     var alvo = el('palco').querySelector('.corpo');
     if (!ps.length){
       alvo.innerHTML = estado('pessoa','Ninguém na equipe ainda',
@@ -433,7 +438,7 @@ TELAS.gQr = function(){
       '</div><div id="qrLista">' + esqueleto(4) + '</div>',
     depois:function(){
       function falhou(e){ if (el('qrLista')) el('qrLista').innerHTML = estado('alerta','Não deu para carregar', textoErro(e)); }
-      api('obterUrlApp', [S.pin], function(url){
+      ler('obterUrlApp', [S.pin], function(url){
         S.urlApp = url || '';
         if (!el('qrLista')) return;
         if (!S.urlApp){
@@ -442,14 +447,14 @@ TELAS.gQr = function(){
           return;
         }
         if (aba === 'profs') listarLinksProf(falhou); else listarQrTurmas(falhou);
-      }, falhou);
+      }, falhou, {fresco:600000});
     }
   };
 };
 ACOES.qrAba = function(b){ S.qrAba = b.getAttribute('data-f'); vibrar(); trocar('gQr'); };
 
 function listarQrTurmas(falhou){
-  api('listarTurmasCompleto', [S.pin], function(ts){
+  ler('listarTurmasCompleto', [S.pin], function(ts){
     var alvo = el('qrLista');
     if (!alvo) return;
     if (!ts.length){
@@ -468,7 +473,7 @@ function listarQrTurmas(falhou){
 }
 
 function listarLinksProf(falhou){
-  api('listarProfessores', [S.pin], function(ps){
+  ler('listarProfessores', [S.pin], function(ps){
     var alvo = el('qrLista');
     if (!alvo) return;
     if (!ps.length){
@@ -542,7 +547,7 @@ TELAS.gCert = function(){
   return {
     titulo:'Certificados', html:esqueleto(4),
     depois:function(){
-      api('listarTurmasCompleto', [S.pin], function(ts){
+      ler('listarTurmasCompleto', [S.pin], function(ts){
         var alvo = el('palco').querySelector('.corpo');
         if (!ts.length){
           alvo.innerHTML = estado('prancheta','Nenhuma turma ainda','Crie uma turma para emitir certificados.');
@@ -575,7 +580,7 @@ TELAS.gCertTurma = function(p){
           'data-acao="certTodos" data-t="' + esc(p.turma) + '">' +
           ico('medalha') + 'Gerar da turma inteira</button>',
     depois:function(){
-      api('alunosParaCertificado', [S.pin, p.turma], function(as){
+      ler('alunosParaCertificado', [S.pin, p.turma], function(as){
         if (atual().t !== 'gCertTurma' || atual().p.turma !== p.turma) return;
         S.certAlunos = as;
         S.certTurma = p.turma;
@@ -683,7 +688,7 @@ TELAS.gRisco = function(){
   return {
     titulo:'Precisam de atenção', html:esqueleto(3),
     depois:function(){
-      api('alunosEmRisco', [S.pin, 3], function(r){
+      ler('alunosEmRisco', [S.pin, 3], function(r){
         var alvo = el('palco').querySelector('.corpo');
         if (!r.alunos.length){
           alvo.innerHTML = estado('cheque', 'Ninguém sumido',
@@ -833,7 +838,7 @@ TELAS.gHistorico = function(){
   return {
     titulo:'Histórico', html:esqueleto(4),
     depois:function(){
-      api('mesesComChamada', [S.pin], function(meses){
+      ler('mesesComChamada', [S.pin], function(meses){
         S.meses = meses || []; S.mesIdx = 0;
         if (!S.meses.length){
           el('palco').querySelector('.corpo').innerHTML = estado('calendario',
@@ -843,7 +848,7 @@ TELAS.gHistorico = function(){
         carregarMes();
       }, function(e){
         el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
-      });
+      }, {fresco:300000});
     }
   };
 };
@@ -852,7 +857,7 @@ function carregarMes(){
   var mes = S.meses[S.mesIdx];
   var alvo = el('palco').querySelector('.corpo');
   alvo.innerHTML = passoMes(mes) + esqueleto(3);
-  api('resumoHistorico', [S.pin, mes], function(r){
+  ler('resumoHistorico', [S.pin, mes], function(r){
     var h = passoMes(mes);
     var t = r.totais;
 
@@ -910,7 +915,7 @@ TELAS.gPlanilha = function(){
   return {
     titulo:'Planilha', html:esqueleto(2),
     depois:function(){
-      api('obterLinkPlanilha', [S.pin], function(d){
+      ler('obterLinkPlanilha', [S.pin], function(d){
         var podeCompartilhar = !!navigator.share;
         var h = '<div class="cartao-info">' + ico('tabela', 26) +
           '<b>' + esc(d.nome) + '</b>' +

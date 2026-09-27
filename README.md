@@ -274,6 +274,21 @@ Gestão, caixa, agenda e materiais chegam por `modulo()` na primeira vez
 que alguém abre a seção — e a tela inicial já os baixa em segundo plano.
 Quem escaneia o QR nunca baixa nenhum deles.
 
+**Espera entre telas.** Cada ida ao Apps Script custa de meio a dois
+segundos, e isso não se otimiza. O app evita esperar por ela:
+
+- a tela inicial, já pintada, busca por trás os dados de Chamada,
+  Agenda, Materiais e da turma do cartão; a lista de turmas busca as
+  chamadas de cada turma antes do toque;
+- tela já vista aparece na hora com o que tinha e repinta sozinha se o
+  dado mudou; formulário e lista de chamada nunca são repintados (não
+  apagam o que foi digitado ou marcado);
+- qualquer gravação pelo app apaga essa memória; resposta de uma tela
+  que a pessoa já deixou é descartada.
+
+No preview (servidor simulado com 0,4–0,7 s), abrir Chamada, a turma,
+Agenda e Materiais caiu de 0,5–0,7 s para o tempo do toque.
+
 ---
 
 ## Rodar sem instalar nada
@@ -536,12 +551,13 @@ cartaz, no tamanho A5.
 `Chamadas`, `Turmas`, `Agenda` e `Materiais` nascem sozinhas no primeiro uso.
 Linha digitada direto na planilha, sem ID, ganha um na primeira leitura.
 
-> **Mexeu direto na planilha? A tela inicial demora até 10 minutos para
-> ver.** Os números da entrada (turmas, próximo evento, materiais) ficam
-> guardados 10 minutos para o app abrir rápido. Qualquer mudança feita
-> **pelo app** atualiza na hora; mudança feita na planilha — ou pelo menu
-> Veridiana — só aparece quando esse prazo vence. Não é bug.
-> As telas de dentro (Agenda, Materiais, Gestão) leem a planilha na hora.
+> **Mexeu direto na planilha? O app demora alguns minutos para ver.**
+> Para abrir rápido, o servidor guarda o que leu: 10 minutos para os
+> números da tela inicial, 5 minutos para as listas de dentro (turmas,
+> alunos, agenda, materiais, histórico). Qualquer mudança feita **pelo
+> app** — inclusive chamada salva — atualiza na hora. Mudança feita
+> direto na planilha, ou pelo menu Veridiana, só aparece quando esse
+> prazo vence. Não é bug.
 
 > **Saldo fora da tela inicial.** A tela inicial abre sem código e o QR
 > fica numa parede por onde passam adolescentes, então o saldo do caixa

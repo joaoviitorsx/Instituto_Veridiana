@@ -2,15 +2,22 @@
  * Utilidades compartilhadas: planilha, datas, cache e trava.
  */
 
-/* ─── cache com versão: qualquer escrita da gestão derruba tudo ─── */
+/* ─── cache com versão: qualquer escrita da gestão derruba tudo ───
+   As leituras das telas (turmas, alunos, agenda, materiais, histórico,
+   certificado) passam por aqui por 5 min. Escrita pelo app derruba na
+   hora; mudança feita direto na planilha aparece em até 5 min. As que
+   dependem de chamadas levam versaoResumo_() na chave, que muda a cada
+   chamada salva. */
 function versaoDados() {
   const c = CacheService.getScriptCache();
   let v = c.get('ver');
-  if (!v) { v = String(Date.now()); c.put('ver', v, 21600); }
+  if (!v) { v = Utilities.getUuid().slice(0, 8); c.put('ver', v, 21600); }
   return v;
 }
+/* Valor único, não Date.now(): leitura e escrita no mesmo milissegundo
+   deixavam a versão igual, e a tela seguia mostrando o dado de antes. */
 function invalidarCache() {
-  CacheService.getScriptCache().put('ver', String(Date.now()), 21600);
+  CacheService.getScriptCache().put('ver', Utilities.getUuid().slice(0, 8), 21600);
 }
 function doCache(chave, prazo, calcular) {
   const c = CacheService.getScriptCache();

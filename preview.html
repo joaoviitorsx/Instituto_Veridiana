@@ -1692,10 +1692,73 @@ function api(fn, args, ok, erro, prazo){
     if (erro) erro({ message:'A internet demorou demais para responder.' });
   }, prazo || 25000);
   function pronto(f){ return function(v){ if (fim) return; fim = true; clearTimeout(t); f(v); }; }
+  /* Escrita que deu certo derruba a memória de leitura. */
+  var okFinal = LEITURAS[fn] ? ok : function(v){ MEM = {}; MEM_GEN++; ok(v); };
   var r = google.script.run
-    .withSuccessHandler(pronto(ok))
+    .withSuccessHandler(pronto(okFinal))
     .withFailureHandler(pronto(erro || function(){}));
   r[fn].apply(r, args || []);
+}
+
+/* ─── leitura com memória ───
+   Cada ida ao Apps Script custa de meio a dois segundos, e isso não
+   se otimiza do lado de cá. O que dá para fazer é não esperar por ela:
+   tela já vista aparece na hora com o dado que tinha, e o dado novo
+   chega por trás e repinta só se mudou. Qualquer escrita apaga a
+   memória inteira: depois de salvar, nada velho aparece. */
+var LEITURAS = {
+  listarTurmas:1, carregarTurma:1, resumoInicial:1, modulo:1,
+  listarAgenda:1, listarAgendaAno:1, datasFixas:1,
+  listarMateriais:1, listarCategorias:1, listarLocais:1,
+  entrarNaGestao:1, listarTurmasCompleto:1, listarAlunos:1, listarProfessores:1,
+  mesesCaixa:1, listarCaixa:1, resumoCaixa:1, mesesComChamada:1, resumoHistorico:1,
+  alunosParaCertificado:1, alunosEmRisco:1, contarRisco:1, aniversariantesSemana:1,
+  relatorioPeriodo:1, obterUrlApp:1, obterLinkPlanilha:1
+};
+var MEM = {}, PEND = {}, MEM_GEN = 0;
+
+function buscar(fn, args, k, ok, erro){
+  if (PEND[k]){ PEND[k].push([ok, erro]); return; }
+  PEND[k] = [[ok, erro]];
+  var gen = MEM_GEN;
+  api(fn, args, function(v){
+    var j = JSON.stringify(v);
+    /* Resposta que saiu antes de uma escrita não entra na memória. */
+    if (gen === MEM_GEN) MEM[k] = {j:j, t:Date.now()};
+    var l = PEND[k] || []; delete PEND[k];
+    l.forEach(function(x){ x[0](j); });
+  }, function(e){
+    var l = PEND[k] || []; delete PEND[k];
+    l.forEach(function(x){ if (x[1]) x[1](e); });
+  });
+}
+
+/* o.fresco (ms): usa a memória só se for mais nova que isso, e responde
+   uma vez só. Para quem não aguenta ser repintado — a chamada, que
+   apagaria as faltas marcadas, e formulário, que apagaria o digitado. */
+function ler(fn, args, ok, erro, o){
+  o = o || {};
+  var k = fn + JSON.stringify(args || []), m = MEM[k];
+  /* Resposta de uma tela que a pessoa já deixou não pinta nada. Sem
+     isto, voltar rápido da lista de turmas e entrar na Agenda fazia a
+     lista chegar atrasada e ser desenhada por cima da agenda. */
+  var tela = atual();
+  function viva(){ return atual() === tela; }
+  if (m && o.fresco){
+    if (Date.now() - m.t < o.fresco){ ok(JSON.parse(m.j)); return; }
+    m = null;
+  }
+  if (m) ok(JSON.parse(m.j));
+  buscar(fn, args || [], k, function(j){
+    if (viva() && (!m || j !== m.j)) ok(JSON.parse(j));
+  }, function(e){ if (viva() && !m && erro) erro(e); });
+}
+
+/* Busca antes de a pessoa pedir. Não repete o que chegou há pouco. */
+function preler(fn, args){
+  var k = fn + JSON.stringify(args || []), m = MEM[k];
+  if (m && Date.now() - m.t < 30000) return;
+  buscar(fn, args || [], k, function(){}, null);
 }
 
 /* O Apps Script embrulha o erro e chega "Error: ...". Ninguem no
@@ -2106,7 +2169,7 @@ TELAS.inicio = function(){
          '<p class="data">' + esc(dia.charAt(0).toUpperCase() + dia.slice(1)) + '</p></div></div></div>',
     html:h,
     depois:function(){
-      api('resumoInicial', [S.prof], pintarInicio, function(){
+      ler('resumoInicial', [S.prof], pintarInicio, function(){
         var d = el('destaque'); if (d) d.remove();
       });
     }
@@ -2122,13 +2185,25 @@ function pintarInicio(r){
   if (r.materiais) linha('apMateriais', plural(r.materiais, 'item', 'itens'));
   S.destaque = r.destaque || null;
   pintarDestaque(r.destaque);
-  /* Tela já pintada: agora sim vale baixar o resto em segundo plano,
-     para Agenda e Materiais abrirem sem espera. Via QR isto nunca roda. */
+  preCarregar(r.destaque);
+}
+
+/* Tela já pintada: agora sim vale buscar o resto em segundo plano, para
+   a próxima tela abrir sem espera — o código das seções e os dados das
+   mais usadas. Uma vez por visita. Via QR isto nunca roda. */
+function preCarregar(d){
+  if (S.preCarregou) return;
+  S.preCarregou = true;
   setTimeout(function(){
+    if (d && d.tipo === 'aula') preler('carregarTurma', [d.turma]);   // o cartão é o atalho mais tocado
+    preler('listarTurmas', []);
+    var h = hojeISO();
+    preler('listarAgenda', [+h.slice(0,4), +h.slice(5,7)]);
+    preler('listarMateriais', [{}]);
     carregarModulo('agenda', function(){
       carregarModulo('materiais', function(){ carregarModulo('gestao'); });
     });
-  }, 400);
+  }, 300);
 }
 
 /* O atalho mais usado do sistema: a aula que deve estar começando, ou o
@@ -2183,7 +2258,7 @@ TELAS.turmas = function(){
          '</div></div></div>',
     html: esqueleto(4),
     depois: function(){
-      api('listarTurmas', [], function(turmas){
+      ler('listarTurmas', [], function(turmas){
         if (!turmas.length){
           el('palco').querySelector('.corpo').innerHTML =
             estado('grupo','Nenhuma turma ainda',
@@ -2197,6 +2272,10 @@ TELAS.turmas = function(){
                '<span class="seta">' + ico('dir') + '</span></button></li>';
         });
         el('palco').querySelector('.corpo').innerHTML = h + '</ul>';
+        /* Quem abriu a lista vai tocar numa turma. Com elenco e histórico
+           em cache no servidor, cada busca é barata: vão todas por trás,
+           e a chamada abre sem espera. Teto de 8 para não enfileirar. */
+        turmas.slice(0, 8).forEach(function(t){ preler('carregarTurma', [t]); });
       }, function(e){
         el('palco').querySelector('.corpo').innerHTML =
           estado('alerta','Não deu para carregar', textoErro(e));
@@ -2204,6 +2283,12 @@ TELAS.turmas = function(){
     }
   };
 };
+/* O dedo encosta na turma e a busca já sai: os ~150 ms entre encostar e
+   soltar são adiantados de graça. */
+document.addEventListener('pointerdown', function(e){
+  var b = e.target.closest && e.target.closest('[data-acao="abrirTurma"]');
+  if (b) preler('carregarTurma', [b.getAttribute('data-t')]);
+}, {passive:true});
 ACOES.abrirTurma = function(b){ ir('chamada', {turma:b.getAttribute('data-t')}); };
 
 /* ══════════════ TELA: chamada ══════════════ */
@@ -2218,10 +2303,13 @@ TELAS.chamada = function(p){
     html: esqueleto(6),
     voltar: !S.viaQr,
     depois: function(){
-      api('carregarTurma', [p.turma], montarChamada, function(e){
+      /* Uma resposta só, nunca repintada: repintar a lista apagaria as
+         faltas já marcadas. Serve a pré-carga se tiver menos de 1 min;
+         "já teve chamada hoje" o servidor confere de novo ao salvar. */
+      ler('carregarTurma', [p.turma], montarChamada, function(e){
         el('palco').querySelector('.corpo').innerHTML =
           estado('alerta','Não deu para carregar', textoErro(e));
-      });
+      }, {fresco:60000});
     }
   };
   return t;
@@ -2478,6 +2566,11 @@ function validaPin(){
   var destino = (atual() && atual().p) || {};
   api('entrarNaGestao', [tentativa], function(g){
     S.pin = tentativa; S.gest = g;
+    /* Código certo: as listas da gestão já saem buscadas por trás. */
+    preler('listarTurmasCompleto', [S.pin]);
+    preler('listarProfessores', [S.pin]);
+    preler('contarRisco', [S.pin]);
+    preler('aniversariantesSemana', [S.pin]);
     if (!atual() || atual().t !== 'pin') return;
     /* Ação na própria tela (mudar situação de um evento, ajustar
        quantidade): volta para onde estava, que agora já tem o código. */
@@ -2524,7 +2617,7 @@ TELAS.gestao = function(){
     depois:function(){
       /* Fora do carregamento do menu: ler Chamadas para o alerta custa
          caro e não pode segurar a tela. */
-      api('contarRisco', [S.pin], function(n){
+      ler('contarRisco', [S.pin], function(n){
         var i = el('itRisco');
         if (!i) return;
         i.querySelector('small').textContent = n === 0
@@ -2532,7 +2625,7 @@ TELAS.gestao = function(){
           : plural(n, 'aluno some há 3 aulas', 'alunos somem há 3 aulas');
         if (n > 0) i.querySelector('small').style.color = 'var(--falta)';
       }, function(){});
-      api('aniversariantesSemana', [S.pin], function(lista){
+      ler('aniversariantesSemana', [S.pin], function(lista){
         if (!lista || !lista.length) return;
         var c = el('caixaBolo');
         if (!c) return;
@@ -2583,7 +2676,7 @@ TELAS.gTurmas = function(){
   };
 };
 function listarTurmasGestao(){
-  api('listarTurmasCompleto', [S.pin], function(ts){
+  ler('listarTurmasCompleto', [S.pin], function(ts){
     var alvo = el('palco').querySelector('.corpo');
     if (!ts.length){
       alvo.innerHTML = estado('prancheta','Nenhuma turma ainda',
@@ -2619,7 +2712,7 @@ TELAS.gTurma = function(p){
   };
 };
 function carregarFicha(turma){
-  api('listarAlunos', [S.pin, turma, true], function(as){
+  ler('listarAlunos', [S.pin, turma, true], function(as){
     S.todosAlunos = as;
     var ativos = as.filter(function(a){ return a.ativo; });
     var inativos = as.filter(function(a){ return !a.ativo; });
@@ -2778,7 +2871,7 @@ TELAS.gAlunos = function(){
   };
 };
 function carregarAlunos(){
-  api('listarAlunos', [S.pin, '', true], function(as){
+  ler('listarAlunos', [S.pin, '', true], function(as){
     S.todosAlunos = as; pintarAlunos();
   }, function(e){
     if (el('listaAlunos')) el('listaAlunos').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
@@ -2820,7 +2913,7 @@ TELAS.gProfs = function(){
   };
 };
 function carregarProfs(){
-  api('listarProfessores', [S.pin], function(ps){
+  ler('listarProfessores', [S.pin], function(ps){
     var alvo = el('palco').querySelector('.corpo');
     if (!ps.length){
       alvo.innerHTML = estado('pessoa','Ninguém na equipe ainda',
@@ -2869,7 +2962,7 @@ TELAS.gQr = function(){
       '</div><div id="qrLista">' + esqueleto(4) + '</div>',
     depois:function(){
       function falhou(e){ if (el('qrLista')) el('qrLista').innerHTML = estado('alerta','Não deu para carregar', textoErro(e)); }
-      api('obterUrlApp', [S.pin], function(url){
+      ler('obterUrlApp', [S.pin], function(url){
         S.urlApp = url || '';
         if (!el('qrLista')) return;
         if (!S.urlApp){
@@ -2878,14 +2971,14 @@ TELAS.gQr = function(){
           return;
         }
         if (aba === 'profs') listarLinksProf(falhou); else listarQrTurmas(falhou);
-      }, falhou);
+      }, falhou, {fresco:600000});
     }
   };
 };
 ACOES.qrAba = function(b){ S.qrAba = b.getAttribute('data-f'); vibrar(); trocar('gQr'); };
 
 function listarQrTurmas(falhou){
-  api('listarTurmasCompleto', [S.pin], function(ts){
+  ler('listarTurmasCompleto', [S.pin], function(ts){
     var alvo = el('qrLista');
     if (!alvo) return;
     if (!ts.length){
@@ -2904,7 +2997,7 @@ function listarQrTurmas(falhou){
 }
 
 function listarLinksProf(falhou){
-  api('listarProfessores', [S.pin], function(ps){
+  ler('listarProfessores', [S.pin], function(ps){
     var alvo = el('qrLista');
     if (!alvo) return;
     if (!ps.length){
@@ -2978,7 +3071,7 @@ TELAS.gCert = function(){
   return {
     titulo:'Certificados', html:esqueleto(4),
     depois:function(){
-      api('listarTurmasCompleto', [S.pin], function(ts){
+      ler('listarTurmasCompleto', [S.pin], function(ts){
         var alvo = el('palco').querySelector('.corpo');
         if (!ts.length){
           alvo.innerHTML = estado('prancheta','Nenhuma turma ainda','Crie uma turma para emitir certificados.');
@@ -3011,7 +3104,7 @@ TELAS.gCertTurma = function(p){
           'data-acao="certTodos" data-t="' + esc(p.turma) + '">' +
           ico('medalha') + 'Gerar da turma inteira</button>',
     depois:function(){
-      api('alunosParaCertificado', [S.pin, p.turma], function(as){
+      ler('alunosParaCertificado', [S.pin, p.turma], function(as){
         if (atual().t !== 'gCertTurma' || atual().p.turma !== p.turma) return;
         S.certAlunos = as;
         S.certTurma = p.turma;
@@ -3119,7 +3212,7 @@ TELAS.gRisco = function(){
   return {
     titulo:'Precisam de atenção', html:esqueleto(3),
     depois:function(){
-      api('alunosEmRisco', [S.pin, 3], function(r){
+      ler('alunosEmRisco', [S.pin, 3], function(r){
         var alvo = el('palco').querySelector('.corpo');
         if (!r.alunos.length){
           alvo.innerHTML = estado('cheque', 'Ninguém sumido',
@@ -3269,7 +3362,7 @@ TELAS.gHistorico = function(){
   return {
     titulo:'Histórico', html:esqueleto(4),
     depois:function(){
-      api('mesesComChamada', [S.pin], function(meses){
+      ler('mesesComChamada', [S.pin], function(meses){
         S.meses = meses || []; S.mesIdx = 0;
         if (!S.meses.length){
           el('palco').querySelector('.corpo').innerHTML = estado('calendario',
@@ -3279,7 +3372,7 @@ TELAS.gHistorico = function(){
         carregarMes();
       }, function(e){
         el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
-      });
+      }, {fresco:300000});
     }
   };
 };
@@ -3288,7 +3381,7 @@ function carregarMes(){
   var mes = S.meses[S.mesIdx];
   var alvo = el('palco').querySelector('.corpo');
   alvo.innerHTML = passoMes(mes) + esqueleto(3);
-  api('resumoHistorico', [S.pin, mes], function(r){
+  ler('resumoHistorico', [S.pin, mes], function(r){
     var h = passoMes(mes);
     var t = r.totais;
 
@@ -3346,7 +3439,7 @@ TELAS.gPlanilha = function(){
   return {
     titulo:'Planilha', html:esqueleto(2),
     depois:function(){
-      api('obterLinkPlanilha', [S.pin], function(d){
+      ler('obterLinkPlanilha', [S.pin], function(d){
         var podeCompartilhar = !!navigator.share;
         var h = '<div class="cartao-info">' + ico('tabela', 26) +
           '<b>' + esc(d.nome) + '</b>' +
@@ -3434,12 +3527,12 @@ TELAS.gCaixa = function(){
       '<button type="button" class="bt-saida" data-acao="lancar" data-tipo="Saída">' +
       ico('menos', 18) + ' Saiu</button></div>',
     depois:function(){
-      api('mesesCaixa', [S.pin], function(ms){
+      ler('mesesCaixa', [S.pin], function(ms){
         S.mesesCx = ms; S.mesCxIdx = 0;
         carregarCaixa();
       }, function(e){
         el('palco').querySelector('.corpo').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
-      });
+      }, {fresco:300000});
     }
   };
 };
@@ -3452,7 +3545,7 @@ function carregarCaixa(){
   var alvo = el('palco').querySelector('.corpo');
   if (!alvo) return;
   alvo.innerHTML = passoCaixa(mes) + esqueleto(3);
-  api('listarCaixa', [S.pin, mes], function(r){
+  ler('listarCaixa', [S.pin, mes], function(r){
     if (!noCaixa() || !el('palco').querySelector('.corpo')) return;
     S.caixa = r;
     var h = passoCaixa(mes);
@@ -4110,8 +4203,8 @@ function textoTurmas(ts){
 function comListas(fn){
   if (S.agListas){ fn(); return; }
   var h = hojeISO();
-  api('listarAgenda', [+h.slice(0,4), +h.slice(5,7)], function(r){ S.agListas = r; S.agCores = r.cores; fn(); },
-      function(e){ toast(textoErro(e), 'erro'); });
+  ler('listarAgenda', [+h.slice(0,4), +h.slice(5,7)], function(r){ S.agListas = r; S.agCores = r.cores; fn(); },
+      function(e){ toast(textoErro(e), 'erro'); }, {fresco:300000});
 }
 
 /* ══════════════ AGENDA: mês ══════════════ */
@@ -4134,10 +4227,15 @@ TELAS.agenda = function(p){
 };
 
 function carregarAgMes(mes){
-  api('listarAgenda', [+mes.slice(0,4), +mes.slice(5,7)], function(r){
+  ler('listarAgenda', [+mes.slice(0,4), +mes.slice(5,7)], function(r){
     var a = atual();
     if (!a || a.t !== 'agenda' || a.p.mes !== mes || !el('agLista')) return;
     S.agListas = r; S.agCores = r.cores; S.agEventos = r.eventos;
+    /* Quem olha um mês costuma passar para o lado: os vizinhos já vêm. */
+    [-1, 1].forEach(function(n){
+      var v = somarMes(mes, n);
+      preler('listarAgenda', [+v.slice(0,4), +v.slice(5,7)]);
+    });
     if (!r.eventos.length){
       el('agLista').innerHTML = estado('calendario', 'Nada marcado em ' + MESES[+mes.slice(5,7) - 1],
         'Toque em "Novo evento" aqui embaixo para colocar a primeira data do mês.');
@@ -4388,7 +4486,7 @@ TELAS.agAno = function(p){
         '<span class="txt">Calendário para imprimir<small>PDF em A4 deitado, com espaço para escrever</small></span>' +
         '<span class="seta">' + ico('dir') + '</span></button></li></ul>',
     depois:function(){
-      api('listarAgendaAno', [ano], function(r){
+      ler('listarAgendaAno', [ano], function(r){
         var a = atual();
         if (!a || a.t !== 'agAno' || a.p.ano !== ano || !el('agMeses')) return;
         S.agCores = r.cores;
@@ -4431,7 +4529,7 @@ TELAS.agDatas = function(p){
     html:esqueleto(3),
     barra:'<button type="button" class="salvar" id="btDatas" data-acao="agPrecarregar" disabled>Colocar na agenda</button>',
     depois:function(){
-      api('datasFixas', [p.ano], function(r){
+      ler('datasFixas', [p.ano], function(r){
         var a = atual();
         if (!a || a.t !== 'agDatas' || a.p.ano !== p.ano) return;
         var h = '<p style="color:var(--apagado);font-size:14px;margin:0 0 16px 4px">' +
@@ -4452,7 +4550,7 @@ TELAS.agDatas = function(p){
         if (bt) bt.disabled = !livres;
       }, function(e){
         el('palco').querySelector('.corpo').innerHTML = estado('alerta', 'Não deu para carregar', textoErro(e));
-      });
+      }, {fresco:300000});
     }
   };
 };
@@ -4496,7 +4594,7 @@ TELAS.agImprimir = function(p){
         ico('documento', 18) + ' Gerar o PDF</button>' +
       '<p class="dica" id="agPdfEspera" role="status" aria-live="polite" style="text-align:center;min-height:3em"></p>',
     depois:function(){
-      api('listarAgendaAno', [p.ano], function(r){
+      ler('listarAgendaAno', [p.ano], function(r){
         var n = el('agImpConta');
         if (n && atual().p.ano === p.ano)
           n.textContent = r.total ? plural(r.total, 'evento marcado', 'eventos marcados') + ' no ano'
@@ -4630,8 +4728,12 @@ function bateFinalidade(item, f){
 function ehBazar(i){ return i.finalidade === 'Bazar' || i.finalidade === 'Ambos'; }
 function mtItem(id){ return ((S.mt && S.mt.itens) || []).filter(function(i){ return i.id === id; })[0]; }
 
-function carregarMt(fn, falhou){
-  api('listarMateriais', [{}], function(r){ S.mt = r; fn(r); }, falhou || function(e){ toast(textoErro(e), 'erro'); });
+/* repintavel: a tela aguenta ser desenhada duas vezes (memória, depois
+   o dado novo). Formulário e caminho depois de salvar não aguentam. */
+function carregarMt(fn, falhou, repintavel){
+  ler('listarMateriais', [{}], function(r){ S.mt = r; fn(r); },
+      falhou || function(e){ toast(textoErro(e), 'erro'); },
+      repintavel ? null : {fresco:300000});
 }
 
 /* ══════════════ MATERIAIS: lista ══════════════ */
@@ -4652,7 +4754,7 @@ TELAS.mtLista = function(){
       if (S.mt) pintarMt();
       carregarMt(function(){ if (atual().t === 'mtLista') pintarMt(); }, function(e){
         if (el('mtLista') && !S.mt) el('mtLista').innerHTML = estado('alerta', 'Não deu para carregar', textoErro(e));
-      });
+      }, true);
     }
   };
 };
@@ -5032,7 +5134,7 @@ TELAS.mtResumo = function(){
     titulo:'Resumo dos materiais', html:esqueleto(4),
     depois:function(){
       if (S.mt) pintarResumoMt();
-      carregarMt(function(){ if (atual().t === 'mtResumo') pintarResumoMt(); });
+      carregarMt(function(){ if (atual().t === 'mtResumo') pintarResumoMt(); }, null, true);
     }
   };
 };

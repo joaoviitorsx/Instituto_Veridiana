@@ -60,18 +60,18 @@ function carregarTurma(turma) {
   });
 
   const alunos = fixo.alunos, professores = fixo.professores;
-  const recentes = lerRecentes();
-  const data = hoje();
+  const rec = mapaRecentes_();
 
   return {
     turma: turma,
     alunos: alunos,
     professores: professores,
-    professorSugerido: ultimoProfessor(recentes, turma, professores),
-    data: data,
-    jaRegistrada: recentes.some(function (l) {
-      return textoData(l[1]) === data && String(l[2]).trim() === turma;
-    }),
+    /* A mais recente que ainda está na equipe. */
+    professorSugerido: (rec.ultimos[turma] || []).filter(function (n) {
+      return professores.indexOf(n) !== -1;
+    })[0] || '',
+    data: hoje(),
+    jaRegistrada: !!rec.hoje[turma],
     /* Zero toque a mais na chamada, mas o professor vê antes da aula
        começar. Para uma criança daqui, o instituto lembrar do
        aniversário dela não é enfeite. */
@@ -106,15 +106,31 @@ function lerRecentes() {
     .map(function (r) { return [null, r.data, r.turma, r.professor]; });
 }
 
-/** Quem deu essa turma da última vez. Some da sugestão se saiu da equipe. */
-function ultimoProfessor(recentes, turma, professores) {
-  for (let i = recentes.length - 1; i >= 0; i--) {
-    if (String(recentes[i][2]).trim() === turma) {
-      const nome = String(recentes[i][3]).trim();
-      if (nome && professores.indexOf(nome) !== -1) return nome;
-    }
-  }
-  return '';
+/**
+ * Quem deu cada turma por último e quais turmas já têm chamada hoje —
+ * calculado uma vez para TODAS as turmas e guardado no cache.
+ *
+ * Antes, cada abertura de chamada lia 60 dias da aba Chamadas só para
+ * responder essas duas perguntas sobre uma turma. Agora a primeira
+ * abertura do dia paga a leitura e as outras saem do cache. Chamada
+ * salva troca a versão (tocarResumo_), então "já teve chamada hoje"
+ * nunca fica velho por causa do cache.
+ *
+ * Também corrige a ordem: lerChamadasDesde_ devolve da linha mais nova
+ * para a mais velha, e o código antigo percorria de trás para frente —
+ * sugeria a professora mais ANTIGA dos 60 dias, não a da última aula.
+ */
+function mapaRecentes_() {
+  const data = hoje();
+  return doCache('rec_' + data + '_' + versaoResumo_(), TTL_CACHE, function () {
+    const ultimos = {}, hojeTem = {};
+    lerChamadasDesde_(diasAtras_(DIAS_RECENTES), 20000).linhas.forEach(function (r) {
+      if (r.data === data) hojeTem[r.turma] = 1;
+      const l = ultimos[r.turma] || (ultimos[r.turma] = []);
+      if (r.professor && l.indexOf(r.professor) === -1 && l.length < 6) l.push(r.professor);
+    });
+    return { hoje: hojeTem, ultimos: ultimos };
+  });
 }
 
 function chamadaJaExiste(turma, data) {

@@ -163,10 +163,73 @@ function api(fn, args, ok, erro, prazo){
     if (erro) erro({ message:'A internet demorou demais para responder.' });
   }, prazo || 25000);
   function pronto(f){ return function(v){ if (fim) return; fim = true; clearTimeout(t); f(v); }; }
+  /* Escrita que deu certo derruba a memória de leitura. */
+  var okFinal = LEITURAS[fn] ? ok : function(v){ MEM = {}; MEM_GEN++; ok(v); };
   var r = google.script.run
-    .withSuccessHandler(pronto(ok))
+    .withSuccessHandler(pronto(okFinal))
     .withFailureHandler(pronto(erro || function(){}));
   r[fn].apply(r, args || []);
+}
+
+/* ─── leitura com memória ───
+   Cada ida ao Apps Script custa de meio a dois segundos, e isso não
+   se otimiza do lado de cá. O que dá para fazer é não esperar por ela:
+   tela já vista aparece na hora com o dado que tinha, e o dado novo
+   chega por trás e repinta só se mudou. Qualquer escrita apaga a
+   memória inteira: depois de salvar, nada velho aparece. */
+var LEITURAS = {
+  listarTurmas:1, carregarTurma:1, resumoInicial:1, modulo:1,
+  listarAgenda:1, listarAgendaAno:1, datasFixas:1,
+  listarMateriais:1, listarCategorias:1, listarLocais:1,
+  entrarNaGestao:1, listarTurmasCompleto:1, listarAlunos:1, listarProfessores:1,
+  mesesCaixa:1, listarCaixa:1, resumoCaixa:1, mesesComChamada:1, resumoHistorico:1,
+  alunosParaCertificado:1, alunosEmRisco:1, contarRisco:1, aniversariantesSemana:1,
+  relatorioPeriodo:1, obterUrlApp:1, obterLinkPlanilha:1
+};
+var MEM = {}, PEND = {}, MEM_GEN = 0;
+
+function buscar(fn, args, k, ok, erro){
+  if (PEND[k]){ PEND[k].push([ok, erro]); return; }
+  PEND[k] = [[ok, erro]];
+  var gen = MEM_GEN;
+  api(fn, args, function(v){
+    var j = JSON.stringify(v);
+    /* Resposta que saiu antes de uma escrita não entra na memória. */
+    if (gen === MEM_GEN) MEM[k] = {j:j, t:Date.now()};
+    var l = PEND[k] || []; delete PEND[k];
+    l.forEach(function(x){ x[0](j); });
+  }, function(e){
+    var l = PEND[k] || []; delete PEND[k];
+    l.forEach(function(x){ if (x[1]) x[1](e); });
+  });
+}
+
+/* o.fresco (ms): usa a memória só se for mais nova que isso, e responde
+   uma vez só. Para quem não aguenta ser repintado — a chamada, que
+   apagaria as faltas marcadas, e formulário, que apagaria o digitado. */
+function ler(fn, args, ok, erro, o){
+  o = o || {};
+  var k = fn + JSON.stringify(args || []), m = MEM[k];
+  /* Resposta de uma tela que a pessoa já deixou não pinta nada. Sem
+     isto, voltar rápido da lista de turmas e entrar na Agenda fazia a
+     lista chegar atrasada e ser desenhada por cima da agenda. */
+  var tela = atual();
+  function viva(){ return atual() === tela; }
+  if (m && o.fresco){
+    if (Date.now() - m.t < o.fresco){ ok(JSON.parse(m.j)); return; }
+    m = null;
+  }
+  if (m) ok(JSON.parse(m.j));
+  buscar(fn, args || [], k, function(j){
+    if (viva() && (!m || j !== m.j)) ok(JSON.parse(j));
+  }, function(e){ if (viva() && !m && erro) erro(e); });
+}
+
+/* Busca antes de a pessoa pedir. Não repete o que chegou há pouco. */
+function preler(fn, args){
+  var k = fn + JSON.stringify(args || []), m = MEM[k];
+  if (m && Date.now() - m.t < 30000) return;
+  buscar(fn, args || [], k, function(){}, null);
 }
 
 /* O Apps Script embrulha o erro e chega "Error: ...". Ninguem no
