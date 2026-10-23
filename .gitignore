@@ -9,3 +9,4 @@ __pycache__/
 
 # clasp: cada máquina aponta para o seu projeto. Modelo em .clasp.json.exemplo
 .clasp.json
+.clasp.*.json
