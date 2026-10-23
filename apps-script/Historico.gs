@@ -37,8 +37,9 @@ function mesesComChamada_(sessao) {
 
 /**
  * Lê Chamadas de trás para frente e para assim que passa do mês pedido.
- * A aba só recebe append, então a ordem é cronológica e dá para parar
- * cedo em vez de varrer anos de linha.
+ * A aba só recebe append, então a ordem é quase cronológica e dá para
+ * parar cedo em vez de varrer anos de linha. "Quase": chamada feita sem
+ * internet chega depois, até ATRASO_MAX_DIAS fora do lugar.
  */
 function lerMes_(mes) {
   const aba = abaChamadas();
@@ -46,6 +47,7 @@ function lerMes_(mes) {
   if (ultima < 2) return [];
   const BLOCO = 2000;
   const achadas = [];
+  const parada = antesDoAtraso_(mes + '-01');
   let fim = ultima;
   while (fim >= 2) {
     const inicio = Math.max(2, fim - BLOCO + 1);
@@ -56,7 +58,10 @@ function lerMes_(mes) {
       if (!d || d.length < 7) continue;
       const m = d.slice(0, 7);
       if (m > mes) continue;
-      if (m < mes) { passou = true; break; }
+      if (m < mes) {
+        if (d < parada) { passou = true; break; }
+        continue;
+      }
       achadas.push({
         data: d,
         turma: String(vals[i][1] || '').trim(),

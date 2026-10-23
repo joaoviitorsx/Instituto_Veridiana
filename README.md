@@ -15,6 +15,11 @@
 > **Manual do usuário:** [`manual/Veridiana-Manual-do-Usuario.pdf`](manual/Veridiana-Manual-do-Usuario.pdf)
 > — o guia para a equipe, tela por tela. Este README é para quem mantém o código.
 
+> **Duas interfaces, um backend.** O mesmo `/exec` serve o app HTML (este
+> README) e uma API JSON para o PWA em React no Vercel, que funciona sem
+> internet: ver [`frontend/README.md`](frontend/README.md). As funções de
+> negócio são as mesmas — o `Api.gs` é só transporte.
+
 ---
 
 ## O problema
@@ -251,8 +256,9 @@ mínimo 44px.
 ## Estrutura
 
 ```
-apps-script/        cole estes 25 arquivos no editor do Apps Script
-  Codigo.gs           constantes, doGet, montagem da página e módulos
+apps-script/        cole estes 26 arquivos no editor do Apps Script
+  Codigo.gs           constantes, doGet/doPost (modo duplo), montagem da página e módulos
+  Api.gs              API JSON do PWA: roteador {fn, args} sobre as mesmas funções
   Util.gs             planilha, datas, cache e trava
   Inicio.gs           números da tela inicial e "próxima aula"
   Chamada.gs          abrir a turma e salvar a chamada
@@ -278,6 +284,8 @@ apps-script/        cole estes 25 arquivos no editor do Apps Script
   AppAgenda.html      telas da agenda, com o CSS dela  (sob demanda)
   AppMateriais.html   telas de materiais, com o CSS    (sob demanda)
 
+frontend/           PWA em React (Vercel) — ver frontend/README.md
+testes/             testes de servidor no Node (node testes/teste-api.js)
 mock.js             mock do google.script.run, só para o navegador
 manual/             manual do usuário: manual.html (fonte), o PDF e o
                     gerador (python3 manual/gerar-manual.py [pasta-de-prints])
@@ -346,7 +354,7 @@ módulos chegam pelo mock, para testar o carregamento sob demanda.
 > o app. Cadastro, agenda, materiais, caixa — tudo pelo celular ou
 > direto na planilha, sem abrir editor de script nenhum.
 
-São 23 arquivos. Colar isso à mão é caminho garantido para erro (um
+São 26 arquivos. Colar isso à mão é caminho garantido para erro (um
 arquivo esquecido, um colado no lugar do outro). Use o
 [`clasp`](https://github.com/google/clasp), a ferramenta de linha de
 comando do próprio Google.
@@ -397,6 +405,13 @@ publicar uma nova.
 
 ### Publicar com segurança
 
+> **Modo duplo.** Desde a v3 o mesmo `/exec` atende o app HTML e o PWA
+> (`frontend/`). Toda publicação confere as **duas** entradas: o app HTML
+> abrindo e fazendo chamada, e `/dev?fn=ping` (depois `/exec?fn=ping`)
+> devolvendo JSON. O quebrado costuma ser o que ninguém abriu naquele dia.
+> E é sempre **Nova versão** na implantação existente: implantação nova
+> muda a URL e derruba o PWA.
+
 Autorização no Apps Script é **do projeto inteiro, não da função**. Se
 o código novo usa um serviço que o dono ainda não autorizou (como o
 `DocumentApp` do calendário, na v2), **toda execução** passa a exigir a
@@ -406,6 +421,8 @@ professores por causa de um recurso que ninguém usou ainda.
 
 A sequência:
 
+0. `node testes/teste-api.js` — testes de servidor no Node, com planilha
+   falsa (API, app HTML, chamada atrasada, duplicidade). Tudo `ok`
 1. `clasp push` (ou colar no editor e salvar)
 2. Abrir a URL `/dev` do app, logado como dono — ela força o pedido de
    autorização
@@ -435,7 +452,7 @@ Saiba disso antes de publicar, não durante o problema.
 Dá para colar à mão: no editor, **+** ao lado de "Arquivos" cria cada um.
 
 **Script** (`+` → **Script**, nome sem `.gs`):
-`Codigo` · `Util` · `Acesso` · `Inicio` · `Chamada` · `Gestao` · `Planilha` · `Historico` · `Impacto` · `Certificado` · `Caixa` · `Agenda` · `Materiais`
+`Codigo` · `Api` · `Util` · `Acesso` · `Inicio` · `Chamada` · `Gestao` · `Planilha` · `Historico` · `Impacto` · `Certificado` · `Caixa` · `Agenda` · `Materiais`
 
 **HTML** (`+` → **HTML**, nome sem `.html`):
 `Index` · `Estilo` · `AppNucleo` · `AppEntrada` · `AppInicio` · `AppChamada` · `AppPartida` · `AppGestao` · `AppCaixa` · `AppQr` · `AppAgenda` · `AppMateriais`

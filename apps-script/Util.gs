@@ -121,6 +121,11 @@ function garantirLinhas_(aba, precisa) {
  * Devolve { linhas, completo }. Se completo for false, a leitura bateu
  * no teto de segurança e o número está por baixo — quem chama precisa
  * dizer isso na tela.
+ *
+ * Linha mais velha que dataMin é pulada, não encerra a leitura: pode ser
+ * chamada feita sem internet que chegou depois (ATRASO_MAX_DIAS). Só
+ * uma linha mais velha que dataMin MENOS esse atraso garante que tudo
+ * acima dela também é mais velho, e aí sim a leitura para.
  */
 function lerChamadasDesde_(dataMin, tetoLinhas) {
   const aba = abaChamadas();
@@ -129,6 +134,7 @@ function lerChamadasDesde_(dataMin, tetoLinhas) {
 
   const teto = tetoLinhas || 60000;
   const BLOCO = 3000;
+  const parada = dataMin ? antesDoAtraso_(dataMin) : '';
   const linhas = [];
   let fim = ultima, completo = false;
 
@@ -140,7 +146,10 @@ function lerChamadasDesde_(dataMin, tetoLinhas) {
     for (let i = vals.length - 1; i >= 0; i--) {
       const data = textoData(vals[i][0]);
       if (!data) continue;
-      if (dataMin && data < dataMin) { passou = true; break; }
+      if (dataMin && data < dataMin) {
+        if (data < parada) { passou = true; break; }
+        continue;
+      }
       linhas.push({
         data: data,
         turma: String(vals[i][1] || '').trim(),
@@ -154,6 +163,13 @@ function lerChamadasDesde_(dataMin, tetoLinhas) {
     fim = inicio - 1;
   }
   return { linhas: linhas.filter(function (r) { return r.turma && r.aluno; }), completo: completo };
+}
+
+/* Até onde uma linha que chegou atrasada pode estar fora de ordem. */
+function antesDoAtraso_(iso) {
+  const p = String(iso).split('-').map(Number);
+  return Utilities.formatDate(new Date(Date.UTC(p[0], p[1] - 1, p[2] - ATRASO_MAX_DIAS, 12)),
+    'UTC', 'yyyy-MM-dd');
 }
 
 /** aaaa-mm-dd de N dias atrás, no fuso do instituto. */
