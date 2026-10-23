@@ -1,0 +1,76 @@
+@import "tailwindcss";
+@import "./fontes.css";
+
+/* Celular deitado (ou tela baixa): capa e barras encolhem para sobrar
+   lista. Na chamada em paisagem, só cabiam dois alunos. */
+@custom-variant baixo (@media (max-height: 480px));
+
+/* Tokens do app (os mesmos de apps-script/Estilo.html). As duas interfaces
+   têm a mesma cara: mudou lá, mude aqui. */
+@theme {
+  --color-roxo: #4A1D6E;
+  --color-roxo-fundo: #3A1556;
+  --color-roxo-fraco: #EDE4F3;
+  --color-roxo-claro: #D6C3E8;
+  --color-roxo-apagado: #AC9BBA;
+
+  --color-tinta: #1B1020;
+  --color-fundo: #F4F1F7;
+  --color-papel: #FFFFFF;
+  --color-borda: #E5DCEC;
+  --color-apagado: #6B5E78;
+  --color-osso: #E9E2EF;
+
+  --color-presente: #16704A;
+  --color-presente-fundo: #115A3B;
+  --color-presente-fraco: #E8F3ED;
+  --color-falta: #AF2338;
+  --color-falta-fundo: #8E1B2C;
+  --color-falta-fraco: #FBEAEE;
+  --color-justif: #8A6314;
+  --color-justif-fraco: #FAF2E1;
+  --color-justif-borda: #E7D4A8;
+  --color-justif-tinta: #6B4E12;
+
+  --radius-p: 10px;
+  --radius-m: 14px;
+  --radius-g: 22px;
+
+  --shadow-cartao: 0 1px 2px rgba(27, 16, 32, .05), 0 8px 24px rgba(27, 16, 32, .06);
+  --shadow-toast: 0 12px 32px rgba(27, 16, 32, .32);
+
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ease-curva: cubic-bezier(.32, .72, 0, 1);
+
+  --animate-pulso: pulso 1.1s ease-in-out infinite alternate;
+  --animate-risca: risca 420ms cubic-bezier(.32, .72, 0, 1) 120ms both;
+  @keyframes pulso { to { opacity: .5 } }
+  @keyframes risca { from { stroke-dashoffset: 32 } to { stroke-dashoffset: 0 } }
+}
+
+@layer base {
+  html { background: var(--color-fundo); overflow-x: clip; -webkit-tap-highlight-color: transparent; color-scheme: only light; }
+  /* Sem a espera de 300 ms do toque duplo: o toque na lista responde na hora. */
+  button, a, [role=button], [role=tab], input, label { touch-action: manipulation; }
+  body {
+    @apply bg-fundo text-tinta font-sans antialiased;
+    font-size: 16px; line-height: 1.45; min-height: 100dvh;
+    overscroll-behavior-y: contain;
+    /* O toque aqui é controle, não parágrafo: sem seleção nem menu de
+       long-press. Campos de digitação reativam abaixo. */
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  input, textarea, select { -webkit-user-select: text; user-select: text; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--color-roxo); outline-offset: 2px; border-radius: var(--radius-p); }
+  .sobre-roxo :focus-visible { outline-color: #fff; }
+  /* input date nativo: no iOS ignora altura e centraliza o texto. */
+  input[type=date] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; text-align: left; }
+  input[type=date]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+}
+
+/* Altura da barra de ação fixa: o conteúdo e o toast sobem por ela. */
+:root { --barra-h: 0px; }

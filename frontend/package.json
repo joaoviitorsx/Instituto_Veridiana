@@ -1,0 +1,41 @@
+{
+  "name": "veridiana-pwa",
+  "private": true,
+  "version": "4.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:mock": "vite --mode mock",
+    "build": "tsr generate && tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsr generate && tsc -b"
+  },
+  "dependencies": {
+    "@tanstack/query-async-storage-persister": "^5.104.5",
+    "@tanstack/react-query": "^5.104.5",
+    "@tanstack/react-query-persist-client": "^5.104.5",
+    "@tanstack/react-router": "^1.170.46",
+    "clsx": "^2.1.1",
+    "idb-keyval": "^6.3.0",
+    "lucide-react": "^1.61.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/router-cli": "^1.167.46",
+    "@tanstack/router-plugin": "^1.168.48",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vite-plugin-pwa": "^2.0.0",
+    "workbox-core": "^7.4.1",
+    "workbox-precaching": "^7.4.1",
+    "workbox-routing": "^7.4.1",
+    "workbox-window": "^7.4.1"
+  }
+}
