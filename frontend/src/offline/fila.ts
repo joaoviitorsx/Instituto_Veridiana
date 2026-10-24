@@ -24,6 +24,8 @@ export type ItemFila = {
   presencas: Presenca[];
   registro: number;
   forcar: boolean;
+  /* Correção da chamada de hoje: troca a que já está na planilha. */
+  substituir?: boolean;
   tentativas: number;
   /* pendente: vai sozinho. As outras esperam a pessoa decidir. */
   situacao: 'pendente' | 'duplicada' | 'antiga' | 'recusada';
@@ -82,7 +84,8 @@ export function reativarItem(token: string) {
 
 /* O que mandar ao servidor: os mesmos dados do app HTML, mais o registro. */
 export function dadosDoItem(i: ItemFila) {
-  return { turma: i.turma, professor: i.professor, token: i.token, presencas: i.presencas, forcar: i.forcar, registro: i.registro };
+  return { turma: i.turma, professor: i.professor, token: i.token, presencas: i.presencas, forcar: i.forcar,
+    registro: i.registro, substituir: i.substituir || undefined };
 }
 
 export type Envio = (dados: ReturnType<typeof dadosDoItem>) => Promise<Resposta>;

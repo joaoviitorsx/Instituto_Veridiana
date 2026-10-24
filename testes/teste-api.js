@@ -209,5 +209,56 @@ caso('API: funções da grade estão na lista', () => {
   const { c } = montar();
   ['listarGrade', 'criarHorario', 'editarHorario', 'excluirHorario'].forEach(f => assert.strictEqual(typeof c.funcoesDaApi_()[f], 'function', f));
 });
+
+const igual = (a, b, m) => assert.deepStrictEqual(JSON.parse(JSON.stringify(a)), JSON.parse(JSON.stringify(b)), m);
+/* ─── corrigir a chamada de hoje ─── */
+caso('correção: reabrir traz a chamada salva hoje', () => {
+  const { c, tok } = montar();
+  c.salvarChamada(tok, { turma: 'Ballet', professor: 'Vera', token: 'k1', presencas: pres });
+  const t = c.carregarTurma(tok, 'Ballet');
+  assert.strictEqual(t.jaRegistrada, true);
+  assert.strictEqual(t.chamadaDeHoje.professor, 'Vera');
+  igual(t.chamadaDeHoje.presencas.map(p => p.status), ['Presente', 'Falta', 'Presente']);
+  assert.match(t.chamadaDeHoje.hora, /^\d\d:\d\d$/);
+  assert.strictEqual(c.carregarTurma(tok, 'Jazz').chamadaDeHoje, null);
+});
+caso('correção: substituir troca as linhas, não soma', () => {
+  const { g, c, tok } = montar();
+  const ch = c.abaChamadas();
+  ch.appendRow([new Date(Date.now() - 3 * 86400000), fmt(new Date(Date.now() - 3 * 86400000), 'America/Fortaleza', 'yyyy-MM-dd'), 'Jazz', 'Vera', 'Davi', 'Presente']);
+  c.salvarChamada(tok, { turma: 'Ballet', professor: 'Vera', token: 'k2', presencas: pres });
+  ch.appendRow([new Date(), c.hoje(), 'Jazz', 'Vera', 'Davi', 'Falta']);
+  const nova = [{ aluno: 'Ana', status: 'Falta' }, { aluno: 'Bia', status: 'Justificada' }, { aluno: 'Caio', status: 'Presente' }];
+  const r = c.salvarChamada(tok, { turma: 'Ballet', professor: 'Vera', token: 'k3', presencas: nova, substituir: true });
+  assert.strictEqual(r.corrigida, true); assert.strictEqual(r.presentes, 1);
+  const ballet = g.sheets.Chamadas.rows.slice(1).filter(l => l[2] === 'Ballet');
+  igual(ballet.map(l => l[5]), ['Falta', 'Justificada', 'Presente']);
+  assert.strictEqual(g.sheets.Chamadas.rows.slice(1).filter(l => l[2] === 'Jazz').length, 2, 'Jazz intacto');
+  igual(c.carregarTurma(tok, 'Ballet').chamadaDeHoje.presencas.map(p => p.status), ['Falta', 'Justificada', 'Presente']);
+});
+caso('correção: com duas chamadas no dia, troca só a mais nova', () => {
+  const { g, c, tok } = montar();
+  c.salvarChamada(tok, { turma: 'Ballet', professor: 'Vera', token: 'm1', registro: Date.now() - 3600000, presencas: pres });
+  c.salvarChamada(tok, { turma: 'Ballet', professor: 'Vera', token: 'm2', forcar: true, presencas: pres });
+  assert.strictEqual(c.carregarTurma(tok, 'Ballet').chamadaDeHoje.varias, true);
+  c.salvarChamada(tok, { turma: 'Ballet', professor: 'Vera', token: 'm3', substituir: true,
+    presencas: pres.map(p => ({ aluno: p.aluno, status: 'Falta' })) });
+  const st = g.sheets.Chamadas.rows.slice(1).map(l => l[5]);
+  igual(st, ['Presente', 'Falta', 'Presente', 'Falta', 'Falta', 'Falta']);
+});
+caso('correção: certificado conta a correção, sem dobrar', () => {
+  const { c, tok } = montar();
+  c.salvarChamada(tok, { turma: 'Ballet', professor: 'Vera', token: 'n1', presencas: pres });
+  assert.strictEqual(c.historicoCompleto0_()['Ballet|Ana'].aulas, 1);
+  c.salvarChamada(tok, { turma: 'Ballet', professor: 'Vera', token: 'n2', substituir: true,
+    presencas: [{ aluno: 'Ana', status: 'Falta' }, { aluno: 'Bia', status: 'Presente' }, { aluno: 'Caio', status: 'Presente' }] });
+  const h = c.historicoCompleto0_();
+  assert.strictEqual(h['Ballet|Ana'].aulas, 0); assert.strictEqual(h['Ballet|Bia'].aulas, 1);
+});
+caso('correção: dia passado é recusado', () => {
+  const { post, tok } = montar();
+  const r = post('salvarChamada', [tok, { turma: 'Ballet', professor: 'Vera', token: 'p1', registro: Date.now() - 2 * 86400000, substituir: true, presencas: pres }]);
+  assert.strictEqual(r.ok, false); assert.match(r.erro, /Só dá para corrigir a chamada de hoje/);
+});
 console.log(`\n${n - falhas}/${n} casos`);
 process.exit(falhas ? 1 : 0);

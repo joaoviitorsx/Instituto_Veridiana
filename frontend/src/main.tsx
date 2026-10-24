@@ -38,7 +38,7 @@ declare module '@tanstack/react-router' {
   interface Register { router: typeof router }
   interface HistoryState {
     /* Resultado da chamada, da lista para a tela de "salva". */
-    chamada?: { turma: string; offline: boolean; resposta?: Resposta; presentes: number; total: number; justificadas?: number; viaQr: boolean };
+    chamada?: { turma: string; offline: boolean; resposta?: Resposta; presentes: number; total: number; justificadas?: number; viaQr: boolean; corrigida?: boolean };
   }
 }
 

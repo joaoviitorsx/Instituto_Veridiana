@@ -331,6 +331,8 @@ function abrirFolha(titulo, corpoHtml, aoFechar){
      explodia num campo que não existe mais. */
   el('folhaCorpo').onclick = null;
   el('folhaCorpo').onkeydown = null;
+  /* Toast por cima da folha escondia as opções dela. */
+  fecharToast();
   el('folha').hidden = false;
   el('folhaTitulo').textContent = titulo;
   el('folhaCorpo').innerHTML = corpoHtml;

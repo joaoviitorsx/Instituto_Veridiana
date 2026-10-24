@@ -30,6 +30,7 @@ class Sheet {
   appendRow(l) { const r = this.getLastRow() + 1; if (r > this.maxRows) this.maxRows = r; l.forEach((x, j) => this.set(r, j + 1, x)); }
   insertRowsAfter(_, n) { this.maxRows += n; }
   deleteRow(r) { this.rows.splice(r - 1, 1); }
+  deleteRows(r, n) { this.rows.splice(r - 1, n); }
   clearContents() { this.rows = []; } setFrozenRows() {} hideSheet() {} getName() { return this.name; }
 }
 

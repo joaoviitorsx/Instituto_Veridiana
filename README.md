@@ -65,6 +65,14 @@ marcado.
 
 ---
 
+**Corrigir a chamada do dia.** Errou uma marcação? Reabrir a turma no
+mesmo dia traz a chamada já salva, marcada como estava, com o aviso
+"Corrigindo a chamada de hoje". Salvar troca as linhas daquela chamada na
+aba `Chamadas` em vez de somar outra — relatório, histórico e certificado
+não contam a aula duas vezes. Duas aulas de verdade no mesmo dia: "É outra
+aula? Começar uma chamada nova". Dia que já passou se corrige na planilha,
+com a coordenação.
+
 ## A entrada
 
 A tela inicial traz saudação, a data, um cartão com a aula que deve

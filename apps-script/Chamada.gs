@@ -80,11 +80,80 @@ function carregarTurma(sessao, turma) {
     })[0] || '',
     data: hoje(),
     jaRegistrada: !!rec.hoje[turma],
+    /* A chamada que já foi salva hoje, para quem reabre a turma poder
+       conferir e corrigir em vez de salvar outra por cima. Só lê a aba
+       quando o mapa diz que existe. */
+    chamadaDeHoje: rec.hoje[turma] ? chamadaPublica_(chamadaDoDia_(turma, hoje())) : null,
     /* Zero toque a mais na chamada, mas o professor vê antes da aula
        começar. Para uma criança daqui, o instituto lembrar do
        aniversário dela não é enfeite. */
     aniversarios: fixo.aniversarios
   };
+}
+
+/**
+ * As linhas de uma turma num dia, com o número da linha na aba, de trás
+ * para frente. Para na mesma regra das outras leituras (linha atrasada
+ * até ATRASO_MAX_DIAS fora do lugar). Agrupa por Registro: cada chamada
+ * salva tem o seu. Devolve a mais recente, ou null.
+ */
+function chamadaDoDia_(turma, data) {
+  const aba = abaChamadas();
+  const ultima = aba.getLastRow();
+  if (ultima < 2) return null;
+  const parada = antesDoAtraso_(data);
+  const BLOCO = 2000;
+  const linhas = [];
+  let fim = ultima;
+  while (fim >= 2) {
+    const ini = Math.max(2, fim - BLOCO + 1);
+    const vals = aba.getRange(ini, 1, fim - ini + 1, 6).getValues();
+    let passou = false;
+    for (let i = vals.length - 1; i >= 0; i--) {
+      const d = textoData(vals[i][1]);
+      if (!d) continue;
+      if (d < parada) { passou = true; break; }
+      if (d === data && String(vals[i][2] || '').trim() === turma) {
+        const r = vals[i][0];
+        linhas.push({ linha: ini + i, registro: r instanceof Date ? r.getTime() : 0,
+          professor: String(vals[i][3] || '').trim(), aluno: String(vals[i][4] || '').trim(),
+          status: String(vals[i][5] || '').trim() });
+      }
+    }
+    if (passou || ini === 2) break;
+    fim = ini - 1;
+  }
+  if (!linhas.length) return null;
+  /* Duas chamadas no mesmo dia (salva "mesmo assim"): vale a mais nova. */
+  const maisNovo = Math.max.apply(null, linhas.map(function (l) { return l.registro; }));
+  const desta = linhas.filter(function (l) { return l.registro === maisNovo; });
+  return { registro: maisNovo, professor: desta[0].professor, linhas: desta,
+           todas: linhas, varias: desta.length !== linhas.length };
+}
+
+function chamadaPublica_(c) {
+  if (!c) return null;
+  return {
+    professor: c.professor,
+    hora: c.registro ? Utilities.formatDate(new Date(c.registro), FUSO, 'HH:mm') : '',
+    presencas: c.linhas.map(function (l) { return { aluno: l.aluno, status: l.status }; })
+      .sort(function (a, b) { return a.aluno.localeCompare(b.aluno, 'pt-BR'); }),
+    /* Há mais de uma chamada hoje: a correção troca só a mais nova. */
+    varias: c.varias
+  };
+}
+
+/* Tira as linhas da chamada que vai ser corrigida. De baixo para cima,
+   em blocos contíguos: deleteRows é uma ida ao Sheets por bloco. */
+function apagarLinhas_(aba, numeros) {
+  const ns = numeros.slice().sort(function (a, b) { return b - a; });
+  let i = 0;
+  while (i < ns.length) {
+    let j = i;
+    while (j + 1 < ns.length && ns[j + 1] === ns[j] - 1) j++;
+    aba.deleteRows(ns[j], i === j ? 1 : ns[i] - ns[j] + 1);
+    i = j + 1;
+  }
 }
 
 function abaChamadas() {
@@ -162,7 +231,7 @@ function chamadaJaExiste(turma, data) {
  * Grava a chamada. Uma linha por aluno, que é o formato que a Tabela
  * Dinâmica do Planilhas entende sem nenhuma fórmula.
  * dados = { turma, professor, token, presencas: [{aluno, status}],
- *           forcar?, registro? }
+ *           forcar?, registro?, substituir? }
  *
  * registro (ms) só vem do PWA, que guarda a chamada no celular quando
  * está sem internet e envia depois. Neles vai a hora REAL da aula: se o
@@ -214,7 +283,16 @@ function salvarChamada(sessao, dados) {
     /* O token cobre repetição da MESMA sessão. Não cobre a professora
        reabrir o app às 16h e salvar de novo a aula das 15h: token novo,
        turma inteira duplicada. O cliente confirma antes e manda forcar. */
-    if (!dados.forcar && chamadaJaExiste(dados.turma, data)) {
+    /* Correção da chamada de hoje: troca as linhas da última chamada
+       salva desta turma, não soma outra. Só no mesmo dia — corrigir dia
+       passado é com a coordenação, na planilha. */
+    let corrigida = null;
+    if (dados.substituir) {
+      if (data !== hoje()) throw new Error('Só dá para corrigir a chamada de hoje. Para outro dia, fale com a coordenação.');
+      corrigida = chamadaDoDia_(dados.turma, data);
+    }
+
+    if (!corrigida && !dados.forcar && chamadaJaExiste(dados.turma, data)) {
       throw new Error('DUPLICADA: já existe chamada de ' + dados.turma +
         (data === hoje() ? ' hoje.' : ' em ' + data.split('-').reverse().join('/') + '.'));
     }
@@ -225,11 +303,22 @@ function salvarChamada(sessao, dados) {
     });
 
     const aba = abaChamadas();
+    if (corrigida) {
+      const nums = corrigida.linhas.map(function (l) { return l.linha; });
+      apagarLinhas_(aba, nums);
+      /* Linha já somada no resumo de horas do certificado saiu da aba: o
+         resumo não pode confiar mais na marca "contado até aqui" (ela
+         pode até coincidir por acaso). Refaz na próxima vez. */
+      const pr = PropertiesService.getScriptProperties();
+      const ate = Number(pr.getProperty('HIST_ATE') || 0);
+      if (ate && Math.min.apply(null, nums) <= ate) pr.deleteProperty('HIST_ATE');
+    }
     const primeira = aba.getLastRow() + 1;
     garantirLinhas_(aba, primeira + linhas.length - 1);
     aba.getRange(primeira, 1, linhas.length, 6).setValues(linhas);
 
     const resposta = respostaChamada_(dados, data);
+    if (corrigida) resposta.corrigida = true;
 
     if (dados.token) cache.put(chave, JSON.stringify(resposta), TTL_TOKEN);
     atualizarRecentes_(data, dados.turma, dados.professor);

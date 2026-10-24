@@ -24,6 +24,13 @@ function Salva() {
   const justificadas = c.justificadas ?? 0;
   const faltas = total - presentes - justificadas;
 
+  /* Correção só depois que chegou na planilha: offline, a cópia do
+     celular ainda não tem esta chamada para abrir marcada. */
+  const corrigida = !c.offline && !!c.corrigida;
+  function corrigir() {
+    navigate({ to: '/chamada/$turma', params: { turma: c!.turma }, search: c!.viaQr ? { qr: 1 } : {}, replace: true });
+  }
+
   function outra() {
     if (c!.viaQr) navigate({ to: '/chamada/$turma', params: { turma: c!.turma }, search: { qr: 1 }, replace: true });
     else navigate({ to: '/chamada', replace: true });
@@ -45,16 +52,16 @@ function Salva() {
           )}
         </div>
         <h1 className="text-[26px] leading-tight font-extrabold tracking-tight">
-          {c.offline ? 'Chamada guardada no celular.' : 'Chamada salva'}
+          {c.offline ? 'Chamada guardada no celular.' : corrigida ? 'Chamada corrigida' : 'Chamada salva'}
         </h1>
         <p className="mt-2 max-w-[320px] text-base leading-normal text-roxo-claro">
-          {c.offline ? 'Vai enviar sozinha quando a internet voltar.' : 'Já está na planilha.'}
+          {c.offline ? 'Vai enviar sozinha quando a internet voltar.' : corrigida ? 'A chamada de antes foi trocada por esta na planilha.' : 'Já está na planilha.'}
         </p>
 
         <div className="mt-7 w-full max-w-[340px] rounded-2xl bg-white/10 px-5 py-4 text-left">
           <b className="block truncate text-lg leading-tight">{c.turma}</b>
           <span className="mt-0.5 block text-sm text-roxo-claro">{presentes < total ? plural(total, 'aluno na lista', 'alunos na lista') : 'Turma completa'}</span>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-wrap gap-2 [&>span]:whitespace-nowrap">
             <span className="rounded-full bg-presente px-3 py-1 text-sm font-bold">{presentes} {presentes === 1 ? 'presente' : 'presentes'}</span>
             {faltas > 0 && <span className="rounded-full bg-white/15 px-3 py-1 text-sm font-bold">{faltas} {faltas === 1 ? 'falta' : 'faltas'}</span>}
             {justificadas > 0 && <span className="rounded-full bg-white/15 px-3 py-1 text-sm font-bold">{justificadas} {justificadas === 1 ? 'justificada' : 'justificadas'}</span>}
@@ -67,6 +74,13 @@ function Salva() {
           className="min-h-13 w-full rounded-m bg-white px-6 py-4 text-base font-bold text-roxo active:bg-roxo-claro">
           Fazer outra chamada
         </button>
+        {/* Errou alguém? Reabre a turma com o que foi salvo, para corrigir. */}
+        {!c.offline && (
+          <button type="button" onClick={corrigir}
+            className="mt-2 min-h-12 w-full rounded-m border border-white/35 text-base font-bold text-white active:bg-white/10">
+            Corrigir esta chamada
+          </button>
+        )}
         {!c.viaQr && (
           <button type="button" onClick={() => navigate({ to: '/', replace: true })}
             className="mt-2 min-h-12 w-full rounded-m text-base font-semibold text-white active:bg-white/10">Ir para o início</button>

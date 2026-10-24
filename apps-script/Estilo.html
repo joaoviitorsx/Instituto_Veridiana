@@ -135,6 +135,10 @@ main{padding:0 0 24px}
   padding:12px 16px;border-radius:var(--r-m);font-size:14px;margin-bottom:16px;
 }
 .aviso svg{flex-shrink:0;margin-top:2px}
+/* Informativo, não alerta: corrigir a chamada de hoje não é problema. */
+.aviso.info{background:var(--roxo-fraco);border-color:#D9C8E8;color:var(--roxo)}
+.aviso .acao-texto{display:block;margin:4px 0 -8px -8px;min-height:44px;padding:0 8px;
+  font-size:14px;font-weight:700;color:var(--roxo);text-decoration:underline;text-align:left}
 
 /* ─────────── lista agrupada ─────────── */
 /* Uma superficie so, com fios internos. Vinte cartoes flutuando cada um
@@ -327,6 +331,7 @@ main{padding:0 0 24px}
   transition:background 160ms var(--curva);
 }
 .fim .botao:active{background:rgba(255,255,255,.14)}
+.fim .botao.leve{margin-top:8px;border-color:transparent;color:var(--roxo-claro);font-weight:600}
 
 /* ─────────── cartoes de navegacao ─────────── */
 .cartoes{list-style:none;margin:0;padding:0}

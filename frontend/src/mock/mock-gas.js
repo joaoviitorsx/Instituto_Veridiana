@@ -573,6 +573,17 @@
         turma:turma, alunos:alunos, professores:PROFS.slice().sort(pt),
         professorSugerido:ult, data:hoje(),
         jaRegistrada: CHAMADAS.some(function(c){ return c.data===hoje() && c.turma===turma; }),
+        /* Como o servidor: a chamada salva hoje, para corrigir. */
+        chamadaDeHoje: (function(){
+          var h = hoje(), ls = REGISTROS.filter(function(r){ return r.data === h && r.turma === turma; });
+          if (!ls.length) return null;
+          var rg = Math.max.apply(null, ls.map(function(r){ return r.rg || 0; }));
+          var desta = ls.filter(function(r){ return (r.rg || 0) === rg; });
+          var d = new Date(rg || Date.now());
+          return { professor: desta[0].professor, hora: String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'),
+                   presencas: desta.map(function(r){ return { aluno:r.aluno, status:r.status }; }).sort(function(a,b){ return pt(a.aluno,b.aluno); }),
+                   varias: desta.length !== ls.length };
+        })(),
         aniversarios: aniversariosEntre(0, 0, turma)
       };
     },
@@ -593,16 +604,30 @@
         if (Date.now() - rg.getTime() > 14 * 86400000)
           throw new Error('ANTIGA: esta chamada é de ' + dia.split('-').reverse().join('/') + ', mais de 14 dias atrás. Passe para a coordenação lançar na planilha.');
       }
-      if (!d.forcar && CHAMADAS.some(function(c){ return c.data===dia && c.turma===d.turma; }))
+      var corrigida = false;
+      if (d.substituir){
+        if (dia !== hoje()) throw new Error('Só dá para corrigir a chamada de hoje. Para outro dia, fale com a coordenação.');
+        var doDia = REGISTROS.filter(function(r){ return r.data === dia && r.turma === d.turma; });
+        if (doDia.length){
+          var rgMax = Math.max.apply(null, doDia.map(function(r){ return r.rg || 0; }));
+          REGISTROS = REGISTROS.filter(function(r){ return !(r.data === dia && r.turma === d.turma && (r.rg || 0) === rgMax); });
+          var ic = -1; CHAMADAS.forEach(function(c, i){ if (c.data === dia && c.turma === d.turma) ic = i; });
+          if (ic >= 0) CHAMADAS.splice(ic, 1);
+          corrigida = true;
+        }
+      }
+      if (!corrigida && !d.forcar && CHAMADAS.some(function(c){ return c.data===dia && c.turma===d.turma; }))
         throw new Error('DUPLICADA: já existe chamada de '+d.turma+(dia === hoje() ? ' hoje.' : ' em ' + dia.split('-').reverse().join('/') + '.'));
+      var rgAgora = d.registro ? Math.min(Number(d.registro), Date.now()) : Date.now();
       CHAMADAS.push({ data:dia, turma:d.turma, professor:d.professor });
       d.presencas.forEach(function(p){
         REGISTROS.push({ data:dia, turma:d.turma, professor:d.professor,
-                         aluno:p.aluno, status:p.status });
+                         aluno:p.aluno, status:p.status, rg:rgAgora });
       });
       var pres = d.presencas.filter(function(p){ return p.status==='Presente'; }).length;
       var r = { ok:true, turma:d.turma, professor:d.professor, data:dia,
                 total:d.presencas.length, presentes:pres, faltas:d.presencas.length-pres };
+      if (corrigida) r.corrigida = true;
       if (d.token) TOKENS[d.token] = r;
       return r;
     },

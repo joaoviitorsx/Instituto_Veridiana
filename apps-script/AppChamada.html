@@ -113,16 +113,34 @@ function montarChamada(d){
 
   S.turma = d.turma; S.data = d.data;
   S.professores = d.professores || [];
+  S.dTurma = d;
+  el('capaData').textContent = dataExtenso(d.data);
+  /* Já tem chamada hoje: abre a que foi salva, para conferir e corrigir.
+     Salvar troca a chamada em vez de somar outra (substituir). */
+  pintarChamada(d, !!d.chamadaDeHoje);
+}
+
+/* Desenha a lista. corrigindo: com as marcações da chamada salva hoje.
+   Sem isso: todo mundo em falta, como sempre. */
+function pintarChamada(d, corrigindo){
+  var salva = corrigindo ? d.chamadaDeHoje : null;
+  var antes = {};
+  if (salva) salva.presencas.forEach(function(p){ antes[p.aluno] = p.status; });
+  S.corrigindo = !!salva;
   /* Quem abriu pelo próprio link (?prof=) já vem escolhido. O cartão
-     continua tocável: professora substituta troca num toque. */
-  S.professor = profDoLink(S.professores) || d.professorSugerido || '';
+     continua tocável: professora substituta troca num toque. Na correção,
+     vale quem deu a aula salva, se ainda estiver na equipe. */
+  var daSalva = salva && S.professores.indexOf(salva.professor) !== -1 ? salva.professor : '';
+  S.professor = daSalva || profDoLink(S.professores) || d.professorSugerido || '';
   S.jaRegistrada = !!d.jaRegistrada; S.forcar = false; S.confirmouVazia = false;
   S.token = sorteioToken();
   /* Pedido das professoras: todo mundo começa com falta e o toque dá
-     presença. Assim ninguém recebe presença por esquecimento. */
-  S.alunos = (d.alunos || []).map(function(n){ return {aluno:n, status:'Falta'}; });
-
-  el('capaData').textContent = dataExtenso(d.data);
+     presença. Assim ninguém recebe presença por esquecimento. Aluno que
+     entrou na turma depois da chamada salva também começa em falta. */
+  S.alunos = (d.alunos || []).map(function(n){
+    var st = antes[n];
+    return {aluno:n, status: (st === 'Presente' || st === 'Justificada') ? st : 'Falta'};
+  });
 
   if (!S.alunos.length){
     el('palco').querySelector('.corpo').innerHTML =
@@ -141,7 +159,15 @@ function montarChamada(d){
     });
     h += '</div></div>';
   }
-  if (S.jaRegistrada){
+  if (S.corrigindo){
+    h += '<div class="aviso info">' + ico('renomear', 18) +
+         '<span>Corrigindo a chamada de hoje' +
+         (salva.professor ? ' — feita por ' + esc(primeiroNome(salva.professor)) : '') +
+         (salva.hora ? ' às ' + esc(salva.hora) : '') + '. Ao salvar, ela é trocada e não conta duas vezes.' +
+         (salva.varias ? ' (Hoje houve mais de uma; esta é a mais recente.)' : '') +
+         '<button type="button" class="acao-texto" data-acao="novaChamada">É outra aula? Começar uma chamada nova</button>' +
+         '</span></div>';
+  } else if (S.jaRegistrada){
     h += '<div class="aviso">' + ico('alerta', 18) +
          '<span>Esta turma já teve chamada salva hoje. Se salvar de novo, vai contar duas vezes.</span></div>';
   }
@@ -154,19 +180,19 @@ function montarChamada(d){
        '<button type="button" id="btTodos" data-acao="todosPresentes" hidden>Todos presentes</button></div>';
   h += '<ul class="lista">';
   S.alunos.forEach(function(a, i){
-    h += '<li class="li" data-st="Falta" id="li' + i + '" data-acao="ciclar" data-i="' + i + '"' +
-         ' role="button" tabindex="0" aria-label="' + esc(a.aluno) + ', faltou">' +
+    h += '<li class="li" data-st="' + a.status + '" id="li' + i + '" data-acao="ciclar" data-i="' + i + '"' +
+         ' role="button" tabindex="0" aria-label="' + esc(a.aluno) + ', ' + falado(a.status) + '">' +
          '<span class="ini">' + esc(iniciais(a.aluno)) + '</span>' +
          '<span class="nome">' + esc(a.aluno) + '</span>' +
-         '<span class="marca" id="mk' + i + '"><span class="selo">Faltou</span></span></li>';
+         '<span class="marca" id="mk' + i + '">' + marcaHtml(a.status) + '</span></li>';
   });
-  /* A lista já nasce pintada (todo mundo em falta): repintar aluno por
-     aluno logo depois eram duas buscas no DOM e um innerHTML por linha. */
+  /* A lista já nasce pintada: repintar aluno por aluno logo depois eram
+     duas buscas no DOM e um innerHTML por linha. */
   el('palco').querySelector('.corpo').innerHTML = h + '</ul>';
   atualizarPlacar();
 
   el('barraDentro').innerHTML =
-    '<button type="button" class="salvar" id="btSalvar" data-acao="salvar">Salvar chamada</button>';
+    '<button type="button" class="salvar" id="btSalvar" data-acao="salvar">' + rotuloSalvar() + '</button>';
   el('barra').hidden = false;
   medirBarra();
 
@@ -190,15 +216,29 @@ function naChamada(){
   return !!a && a.t === 'chamada' && !!el('li0');
 }
 
-function pintar(i){
-  var st = S.alunos[i].status, li = el('li' + i);
-  li.dataset.st = st;
-  li.setAttribute('aria-label', S.alunos[i].aluno + ', ' +
-    (st === 'Presente' ? 'presente' : st === 'Falta' ? 'faltou' : 'falta justificada'));
-  el('mk' + i).innerHTML = st === 'Presente'
+function falado(st){ return st === 'Presente' ? 'presente' : st === 'Falta' ? 'faltou' : 'falta justificada'; }
+function marcaHtml(st){
+  return st === 'Presente'
     ? '<span class="ok">' + ico('cheque', 16) + '</span>'
     : '<span class="selo">' + (st === 'Falta' ? 'Faltou' : 'Justificada') + '</span>';
 }
+function rotuloSalvar(){ return S.corrigindo ? 'Salvar correção' : 'Salvar chamada'; }
+
+function pintar(i){
+  var st = S.alunos[i].status, li = el('li' + i);
+  li.dataset.st = st;
+  li.setAttribute('aria-label', S.alunos[i].aluno + ', ' + falado(st));
+  el('mk' + i).innerHTML = marcaHtml(st);
+}
+
+/* "É outra aula": a turma teve duas aulas hoje. Deixa a salva como está e
+   começa uma nova, do jeito de sempre (todos em falta, confirma e soma). */
+ACOES.novaChamada = function(){
+  if (!S.dTurma || !naChamada()) return;
+  pintarChamada(S.dTurma, false);
+  window.scrollTo(0, 0);
+  toast('Chamada nova: a de antes continua salva.', 'ok');
+};
 
 ACOES.ciclar = function(b){
   var i = +b.getAttribute('data-i');
@@ -259,7 +299,7 @@ ACOES.salvar = function(){
       'Salvar com todos em falta', function(){ S.confirmouVazia = true; ACOES.salvar(); });
     return;
   }
-  if (S.jaRegistrada && !S.forcar){
+  if (S.jaRegistrada && !S.forcar && !S.corrigindo){
     confirmar('Salvar de novo?',
       'Esta turma já teve chamada salva hoje. Salvar de novo cria um segundo registro e conta em dobro nos relatórios.',
       'Salvar assim mesmo', function(){ S.forcar = true; ACOES.salvar(); });
@@ -281,13 +321,13 @@ function enviarChamada(){
   if (b){ b.disabled = true; b.textContent = 'Salvando…'; }
   api('salvarChamada',
     [{turma:S.turma, professor:S.professor, token:S.token,
-      presencas:S.alunos, forcar: !!S.forcar}],
+      presencas:S.alunos, forcar: !!S.forcar, substituir: !!S.corrigindo}],
     function(r){ S.salvando = false; vibrar(); ir('fim', {r:r}, true); },
     function(e){
       /* Nada de re-render aqui: as marcacoes do professor continuam na tela. */
       S.salvando = false;
       var bb = el('btSalvar');
-      if (bb){ bb.disabled = false; bb.textContent = 'Salvar chamada'; }
+      if (bb){ bb.disabled = false; bb.textContent = rotuloSalvar(); }
       /* Se o servidor recusou por duplicidade, oferecer "tentar de novo"
          seria empurrar o professor para o erro que acabamos de evitar. */
       var msg = textoErro(e);
@@ -312,9 +352,21 @@ TELAS.fim = function(p){
     html:'<div class="fim"><div class="selo-ok">' +
       '<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" ' +
       'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>' +
-      '</div><h2>Chamada salva</h2><p>' + esc(r.turma || S.turma) + '<br>' + esc(resumo) + '</p>' +
-      '<button type="button" class="botao" data-acao="outraChamada">Fazer outra chamada</button></div>'
+      '</div><h2>' + (r.corrigida ? 'Chamada corrigida' : 'Chamada salva') + '</h2><p>' +
+      esc(r.turma || S.turma) + '<br>' + esc(resumo) + '</p>' +
+      '<button type="button" class="botao" data-acao="outraChamada">Fazer outra chamada</button>' +
+      /* Errou alguém? Reabre a turma já com o que foi salvo, para corrigir. */
+      '<button type="button" class="botao leve" data-acao="corrigirChamada" data-t="' + esc(r.turma || S.turma) + '">' +
+      'Corrigir esta chamada</button></div>'
   };
+};
+ACOES.corrigirChamada = function(b){
+  var t = b.getAttribute('data-t') || S.turma;
+  /* salvarChamada já derrubou carregarTurma da memória (INVALIDA): a
+     turma reabre com a chamada recém-salva, não com a cópia de antes. */
+  if (S.viaQr){ ir('chamada', {turma:t}, true); return; }
+  S.pilha = [{t:'inicio', p:{}}, {t:'turmas', p:{}}];
+  ir('chamada', {turma:t});
 };
 ACOES.outraChamada = function(){
   if (S.viaQr){ ir('chamada', {turma:S.turma}, true); return; }
