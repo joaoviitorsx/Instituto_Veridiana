@@ -1,22 +1,22 @@
 /* Escolher a turma. Sem internet, vale a lista guardada no celular.
 
    Tela raiz: segue o DNA do Início (DESIGN.md §16). Topo roxo com o
-   resumo do dia, o cartão da aula de agora por cima da borda, atalhos,
-   as aulas de hoje pela grade e, embaixo, todas as turmas. */
+   resumo do dia, o cartão da aula de agora por cima da borda, as aulas de
+   hoje pela grade e, embaixo, todas as turmas. Só o que a professora usa
+   para abrir a chamada: cadastro de horário e histórico ficam na Grade e
+   na Gestão. */
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import {
-  CalendarClock, CalendarDays, CalendarPlus, ChevronRight, CircleCheck, ClipboardCheck, CloudOff, CloudUpload,
-  History, Users,
-} from 'lucide-react';
+import { CalendarClock, CalendarDays, CalendarPlus, CircleCheck, ClipboardCheck, CloudOff, CloudUpload, Users } from 'lucide-react';
 import { clsx } from 'clsx';
 import { leitura } from '../../../api/cliente';
 import { FaixaSemInternet, useOnline, usandoCopia } from '../../../offline/rede';
 import { useFila } from '../../../offline/envio';
 import { Tela } from '../../../ui/Tela';
-import { CARTAO, Esqueleto, Estado, GrupoNav, Osso } from '../../../ui/kit';
-import { Atalhos, BotaoHeroi, CabecalhoSecao, CARTAO_ELEVADO, Corpo, Heroi, Sobreposto, type Atalho } from '../../../ui/Heroi';
+import { Banner, CARTAO, Esqueleto, Estado, GrupoNav, Osso } from '../../../ui/kit';
+import { BotaoHeroi, CabecalhoSecao, Corpo, Heroi, Sobreposto } from '../../../ui/Heroi';
+import { CartaoAulaAgora, CartaoDestaque, textoDaAula } from '../../../ui/CartaoAula';
 import { ErroTela } from '../../../ui/ErroTela';
 import { dataExtenso, hojeISO, maiuscula, plural } from '../../../util';
 import {
@@ -50,14 +50,6 @@ function Turmas() {
 
   const abrir = (t: string) => navigate({ to: '/chamada/$turma', params: { turma: t } });
 
-  const atalhos: Atalho[] = [
-    { icone: CalendarDays, texto: 'Grade de aulas', to: '/grade' },
-    { icone: CalendarPlus, texto: 'Novo horário', to: '/grade/horario' },
-    fila.length
-      ? { icone: CloudUpload, texto: plural(fila.length, 'pendente', 'pendentes'), to: '/pendentes' }
-      : { icone: CircleCheck, texto: 'Tudo enviado', to: '/pendentes' },
-    { icone: History, texto: 'Histórico', to: '/gestao/historico' },
-  ];
 
   return (
     <Tela titulo="Chamada" voltar={false} roxo solto
@@ -75,7 +67,13 @@ function Turmas() {
 
       <Corpo>
         {usandoCopia(q, online) && <FaixaSemInternet desde={q.dataUpdatedAt} />}
-        <Atalhos itens={atalhos} />
+        {/* Só aparece quando há o que enviar: "tudo enviado" não precisa de botão. */}
+        {fila.length > 0 && (
+          <Banner tom="atencao" icone={CloudUpload} titulo={plural(fila.length, 'chamada esperando internet', 'chamadas esperando internet')}
+            acao={{ txt: 'Ver o que está guardado', fn: () => navigate({ to: '/pendentes' }) }}>
+            Está guardada neste celular e vai ser enviada sozinha.
+          </Banner>
+        )}
 
         {grade && deHoje.length > 0 && <AulasDeHoje g={grade} hs={deHoje} />}
 
@@ -122,25 +120,9 @@ function CartaoPrincipal({ g, carregando, onAbrir }: { g?: Grade; carregando: bo
 
   if (g && alvo) {
     const ehAgora = alvo === agora;
-    return (
-      <button type="button" onClick={() => onAbrir(alvo.turma)}
-        className={clsx(CARTAO_ELEVADO, 'flex min-h-21 w-full items-center gap-3 p-4 text-left transition-colors duration-150 ease-curva active:bg-fundo')}>
-        <span className={clsx('relative grid size-12 shrink-0 place-items-center rounded-2xl text-white', ehAgora ? 'bg-presente' : 'bg-roxo')}>
-          <CalendarClock size={24} />
-          {ehAgora && <span className="absolute -top-1 -right-1 size-3.5 rounded-full border-2 border-papel bg-presente motion-safe:animate-pulse" />}
-        </span>
-        <span className="min-w-0 flex-1">
-          <small className={clsx('block text-xs font-bold tracking-[.06em] uppercase', ehAgora ? 'text-presente' : 'text-roxo')}>
-            {ehAgora ? 'Aula agora' : 'Próxima aula'}
-          </small>
-          <b className="mt-0.5 block text-lg leading-tight font-bold tracking-tight hyphens-auto [overflow-wrap:anywhere]">{alvo.turma}</b>
-          <span className="mt-0.5 block text-sm text-apagado">
-            {(ehAgora ? 'agora · até ' + horaCurta(alvo.fim) : 'começa às ' + horaCurta(alvo.inicio)) + (alvo.sala ? ' · ' + alvo.sala : '')}
-          </span>
-        </span>
-        <span className="shrink-0 rounded-full bg-roxo px-3.5 py-2 text-sm font-bold text-white">Chamada</span>
-      </button>
-    );
+    return <CartaoAulaAgora turma={alvo.turma} agora={ehAgora}
+      sub={textoDaAula({ agora: ehAgora, inicio: horaCurta(alvo.inicio), fim: horaCurta(alvo.fim), sala: alvo.sala })}
+      onClick={() => onAbrir(alvo.turma)} />;
   }
 
   /* Sem aula pela frente hoje: o cartão conta como foi o dia, ou leva à grade. */
@@ -154,18 +136,8 @@ function CartaoPrincipal({ g, carregando, onAbrir }: { g?: Grade; carregando: bo
         ? [CalendarDays, DIAS[g!.dia], 'Sem aula na grade hoje', 'Escolha a turma abaixo ou veja a semana']
         : [CalendarPlus, 'Grade de aulas', 'Cadastre o horário das turmas', 'Assim a aula que está começando aparece aqui'];
   return (
-    <button type="button" onClick={() => navigate({ to: temGrade ? '/grade' : '/grade/horario' })}
-      className={clsx(CARTAO_ELEVADO, 'flex min-h-21 w-full items-center gap-3 p-4 text-left transition-colors duration-150 ease-curva active:bg-fundo')}>
-      <span className={clsx('grid size-12 shrink-0 place-items-center rounded-2xl', tudoFeito ? 'bg-presente text-white' : 'bg-roxo-fraco text-roxo')}>
-        <Ic size={24} />
-      </span>
-      <span className="min-w-0 flex-1">
-        <small className={clsx('block text-xs font-bold tracking-[.06em] uppercase', tudoFeito ? 'text-presente' : 'text-roxo')}>{rotulo}</small>
-        <b className="mt-0.5 block text-lg leading-tight font-bold tracking-tight">{titulo}</b>
-        <span className="mt-0.5 block text-sm text-apagado">{sub}</span>
-      </span>
-      <ChevronRight size={20} className="shrink-0 text-apagado" />
-    </button>
+    <CartaoDestaque icone={Ic} tom={tudoFeito ? 'ok' : 'suave'} rotulo={rotulo} titulo={titulo} sub={sub}
+      onClick={() => navigate({ to: temGrade ? '/grade' : '/grade/horario' })} />
   );
 }
 

@@ -4,10 +4,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { CalendarX, Copy, FileText } from 'lucide-react';
+import { Calendar, CalendarX, Copy, FileText } from 'lucide-react';
 import { leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { Banner, BotaoCheio, BotaoContorno, Campo, Esqueleto, Linha, Lista } from '../../../ui/kit';
+import { Banner, BotaoCheio, BotaoContorno, Campo, Esqueleto, Estado, Linha, Lista } from '../../../ui/kit';
 import { CabecalhoSecao } from '../../../ui/Heroi';
 import { ErroTela } from '../../../ui/ErroTela';
 import { toast } from '../../../ui/toast';
@@ -49,12 +49,14 @@ function RelatorioEdital() {
       <Intro>Os números que a prestação de contas pede: beneficiários atendidos, aulas realizadas e frequência.</Intro>
       {/* De/Até lado a lado enquanto couber; um embaixo do outro em tela estreita. */}
       <div className="mb-3 flex flex-wrap gap-x-3 gap-y-2">
-        <Campo id="dtIni" rotulo="De" type="date" value={de} max={ate || undefined}
+        {/* Com o ícone, a data não cabe pela metade de 360px: o par empilha no
+            celular e fica lado a lado só onde couber (180px cada). */}
+        <Campo id="dtIni" rotulo="De" type="date" icone={Calendar} value={de} max={ate || undefined}
           erro={erro?.campo === 'de' ? erro.msg : undefined}
-          onChange={(e) => { setDe(e.target.value); setErro(null); }} className="mb-0 min-w-0 flex-[1_1_140px]" />
-        <Campo id="dtFim" rotulo="Até" type="date" value={ate} min={de || undefined}
+          onChange={(e) => { setDe(e.target.value); setErro(null); }} className="mb-0 min-w-0 flex-[1_1_180px]" />
+        <Campo id="dtFim" rotulo="Até" type="date" icone={Calendar} value={ate} min={de || undefined}
           erro={erro?.campo === 'ate' ? erro.msg : undefined}
-          onChange={(e) => { setAte(e.target.value); setErro(null); }} className="mb-0 min-w-0 flex-[1_1_140px]" />
+          onChange={(e) => { setAte(e.target.value); setErro(null); }} className="mb-0 min-w-0 flex-[1_1_180px]" />
       </div>
       <BotaoCheio icone={FileText} onClick={gerar} carregando={q.isFetching}>
         {q.isFetching ? 'Contando as chamadas…' : 'Gerar relatório'}
@@ -93,9 +95,8 @@ function Saida({ r }: { r: Relatorio }) {
   /* Período sem aula: zeros não dizem nada, e colar zeros num edital é pior. */
   if (r.aulas === 0) {
     return (
-      <Banner tom="info" icone={CalendarX} titulo="Nenhuma chamada nesse período">
-        Confira as datas De e Até. O relatório conta só as chamadas salvas no app.
-      </Banner>
+      <Estado icone={CalendarX} titulo="Nenhuma chamada nesse período"
+        texto="Confira as datas De e Até. O relatório conta só as chamadas salvas no app." />
     );
   }
 

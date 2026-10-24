@@ -7,7 +7,7 @@
    Diferença do PWA: funciona sem internet. A lista vem da cópia guardada
    no celular (com a data na faixa do topo) e salvar sem conexão guarda
    a chamada na fila, que envia sozinha depois. */
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, useBlocker, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Cake, Check, ChevronRight, CloudOff, User, Users } from 'lucide-react';
@@ -19,6 +19,7 @@ import { FaixaSemInternet, useOnline, usandoCopia } from '../../../offline/rede'
 import { useSessao } from '../../../sessao';
 import { Tela, Capa } from '../../../ui/Tela';
 import { CARTAO_ELEVADO } from '../../../ui/Heroi';
+import { Acoes } from '../../../ui/folha';
 import { Avatar, Banner, BotaoCheio, Esqueleto, Estado, Lista } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { folha } from '../../../ui/folha';
@@ -117,9 +118,31 @@ function ChamadaAberta({ turma, base, viaQr, capa }: {
   const jaRegistrada = jaRegistradaServidor || naFilaHoje;
 
   const presentes = alunos.filter((a) => a.status === 'Presente').length;
+  const justificadas = alunos.filter((a) => a.status === 'Justificada').length;
   const total = alunos.length;
-  const faltas = total - presentes;
-  const rotulo = faltas === 0 ? 'turma completa' : presentes === 0 ? 'toque em quem veio' : plural(faltas, 'faltou', 'faltaram');
+  /* Justificada é ausência, mas conta à parte: a conversa com a família é outra. */
+  const faltas = total - presentes - justificadas;
+  const rotulo = presentes === total ? 'turma completa'
+    : presentes === 0 && justificadas === 0 ? 'presentes'
+      : [faltas ? plural(faltas, 'faltou', 'faltaram') : '', justificadas ? plural(justificadas, 'justificada', 'justificadas') : '']
+        .filter(Boolean).join(' · ');
+
+  /* Saiu sem salvar (botão voltar, gesto da borda, voltar do sistema,
+     fechar a aba) depois de marcar alguém: pergunta antes de jogar fora.
+     Sem marcação nenhuma ou depois de salvar, sai direto. A folha comum
+     entra no histórico com o mesmo endereço: essa navegação não conta. */
+  const tocou = useRef(false);
+  const saiuSalvando = useRef(false);
+  const marcou = () => tocou.current && !saiuSalvando.current && alunos.some((a) => a.status !== 'Falta');
+  const bloqueio = useBlocker({
+    shouldBlockFn: ({ current, next }) => current.pathname !== next.pathname && marcou(),
+    enableBeforeUnload: () => marcou(),
+    withResolver: true,
+  });
+  /* A pergunta aparece como folha, mas não é a folha do app: no voltar do
+     sistema o roteador está com o endereço já voltado enquanto espera a
+     resposta, e a folha comum mexe no histórico. Esta fica só na tela. */
+  const perguntando = bloqueio.status === 'blocked';
 
   function escolherProf() {
     if (!professores.length) { toast('Ninguém da equipe cadastrado ainda. Peça para a gestão cadastrar em Gestão → Equipe.', 'erro'); return; }
@@ -137,6 +160,7 @@ function ChamadaAberta({ turma, base, viaQr, capa }: {
   }, []);
 
   function ciclar(i: number) {
+    tocou.current = true;
     setAlunos((l) => l.map((a, j) => (j === i ? { ...a, status: CICLO[a.status] } : a)));
     vibrar();
   }
@@ -144,6 +168,7 @@ function ChamadaAberta({ turma, base, viaQr, capa }: {
   function todosPresentes() {
     const antes = alunos;
     if (antes.every((a) => a.status === 'Presente')) return;
+    tocou.current = true;
     setAlunos(antes.map((a) => ({ ...a, status: 'Presente' })));
     vibrar();
     toast('Todos marcados como presentes', 'ok', { rotulo: 'Desfazer', fn: () => { setAlunos(antes); vibrar(); } });
@@ -179,9 +204,11 @@ function ChamadaAberta({ turma, base, viaQr, capa }: {
       token: token.current, turma, professor, presencas: alunos, registro: Date.now(), forcar: forcar.current,
     });
     emMaos.add(item.token);
+    /* Já está guardada no celular: sair daqui não perde nada. */
+    saiuSalvando.current = true;
     const fim = (offline: boolean, resposta?: Resposta) => navigate({
       to: '/salva', replace: true,
-      state: { chamada: { turma, offline, resposta, presentes, total, viaQr } },
+      state: { chamada: { turma, offline, resposta, presentes, total, justificadas, viaQr } },
     });
     try {
       if (!navigator.onLine) { pedirSincronizacao(); vibrar(); fim(true); return; }
@@ -198,6 +225,7 @@ function ChamadaAberta({ turma, base, viaQr, capa }: {
          e vai sozinha depois que a pessoa entrar. */
       if (ehErroSessao(e)) return;
       await tirarDaFila(item.token);
+      saiuSalvando.current = false;
       setSalvando(false);
       const msg = textoErro(e);
       /* Recusou por duplicidade: oferecer "tentar de novo" seria empurrar
@@ -247,31 +275,46 @@ function ChamadaAberta({ turma, base, viaQr, capa }: {
         </Banner>
       )}
 
+      {/* Curto: com a letra grande, o primeiro aluno ainda aparece sem rolar.
+          O porquê fica a um toque. */}
       {jaRegistrada && (
-        <Banner tom="atencao" titulo="Esta turma já tem chamada hoje">
-          {naFilaHoje && !jaRegistradaServidor
-            ? 'Ela está guardada neste celular, esperando internet. Se salvar de novo, a aula conta duas vezes.'
-            : 'Se salvar de novo, a aula conta duas vezes nos relatórios. Só salve se for outra aula.'}
+        <Banner tom="atencao" className="py-2.5">
+          <b>Já tem chamada hoje.</b> Salvar de novo duplica a aula.{' '}
+          <button type="button" className="-my-3 inline-block min-h-11 px-1 font-bold underline"
+            onClick={() => folha.abrir('Por que conta duas vezes?', (fechar) => (
+              <>
+                <p className="mx-2 mb-3 text-[15px] leading-normal">
+                  {naFilaHoje && !jaRegistradaServidor
+                    ? 'A chamada desta turma de hoje está guardada neste celular, esperando internet. Se salvar outra, a planilha recebe as duas.'
+                    : 'A planilha já recebeu a chamada desta turma hoje. Se salvar outra, os relatórios contam duas aulas. Só salve se foi mesmo outra aula.'}
+                </p>
+                <Acoes rotulo="Entendi" perigo={false} rotuloCancelar="Fechar" onCancelar={fechar} onConfirmar={fechar} />
+              </>
+            ))}>
+            Por quê?
+          </button>
         </Banner>
       )}
 
       {/* O cartão principal da tela (DNA: elevado, ícone em quadrado roxo). */}
       <button type="button" onClick={escolherProf}
-        className={clsx(CARTAO_ELEVADO, 'mb-4 flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-150 active:bg-fundo')}>
-        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-roxo text-white"><User size={22} /></span>
+        className={clsx(CARTAO_ELEVADO, 'mb-3 flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-150 active:bg-fundo')}>
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-roxo text-white"><User size={20} /></span>
         <span className="min-w-0 flex-1">
-          <small className="block text-xs font-bold tracking-[.06em] text-roxo uppercase">Quem está dando a aula</small>
-          <b className={clsx('block truncate text-base', professor ? 'font-semibold' : 'font-normal text-apagado')}>
+          <small className="block text-xs font-bold tracking-[.06em] text-roxo uppercase">Quem dá a aula</small>
+          <b className={clsx('line-clamp-2 block text-base leading-snug', professor ? 'font-semibold' : 'font-normal text-apagado')}>
             {professor || 'Escolher'}
           </b>
         </span>
         <ChevronRight size={20} className="shrink-0 text-apagado" />
       </button>
 
-      {/* Cabeçalho de seção do DNA: versalete à esquerda, ação à direita. */}
-      <div className="mb-0.5 flex min-h-11 items-center justify-between gap-3 pl-4">
-        <h2 className="text-[13px] font-semibold tracking-wide text-apagado uppercase">Toque em quem veio</h2>
-        {faltas > 0 && (
+      {/* Cabeçalho de seção do DNA: versalete à esquerda, ação à direita.
+          Embaixo, a legenda do toque: o 2º toque (justificada) não se
+          descobre sozinho. */}
+      <div className="flex min-h-11 items-center justify-between gap-3 pl-4">
+        <h2 className="text-[13px] font-semibold tracking-wide text-apagado uppercase">Alunos</h2>
+        {presentes < total && (
           <button type="button" onClick={todosPresentes}
             className="-mr-1 min-h-11 rounded-p px-2 text-sm font-bold text-roxo active:bg-roxo-fraco">
             Todos presentes
@@ -279,7 +322,19 @@ function ChamadaAberta({ turma, base, viaQr, capa }: {
         )}
       </div>
 
+      <p className="mb-2 flex flex-wrap gap-x-2 gap-y-0.5 pl-4 text-xs leading-snug text-apagado" id="legendaToque">
+        <span>Toque em quem veio:</span>
+        <span><b className="text-presente">1 toque</b> veio</span>
+        <span aria-hidden="true">·</span>
+        <span><b className="text-justif-tinta">2</b> justificada</span>
+        <span aria-hidden="true">·</span>
+        <span><b>3</b> falta</span>
+      </p>
+
       <ListaAlunos alunos={alunos} onTocar={ciclar} />
+      {perguntando && (
+        <PerguntaSair onSair={() => bloqueio.proceed?.()} onFicar={() => bloqueio.reset?.()} />
+      )}
     </Tela>
   );
 }
@@ -321,5 +376,31 @@ function ListaAlunos({ alunos, onTocar }: { alunos: Presenca[]; onTocar: (i: num
         );
       })}
     </Lista>
+  );
+}
+
+/* "Sair sem salvar?" — com a cara da folha do app, sem entrar no histórico. */
+function PerguntaSair({ onSair, onFicar }: { onSair: () => void; onFicar: () => void }) {
+  const caixa = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const foco = document.activeElement as HTMLElement | null;
+    caixa.current?.querySelector<HTMLElement>('button')?.focus({ preventScroll: true });
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onFicar(); };
+    document.addEventListener('keydown', k);
+    const corpo = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.removeEventListener('keydown', k); document.body.style.overflow = corpo; foco?.focus({ preventScroll: true }); };
+  }, [onFicar]);
+  return (
+    <>
+      <div onClick={onFicar} aria-hidden="true" className="fixed inset-0 z-40 touch-none bg-tinta/50" />
+      <div ref={caixa} role="alertdialog" aria-modal="true" aria-labelledby="sairTitulo" aria-describedby="sairTexto"
+        className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[644px] rounded-t-g bg-papel px-3 pt-2 pb-[calc(12px+env(safe-area-inset-bottom))]">
+        <div className="mx-auto mt-1 mb-3 h-1 w-[38px] rounded-full bg-[#D9CFE2]" />
+        <h2 id="sairTitulo" className="mx-2 mb-2 text-[17px] font-bold tracking-tight">Sair sem salvar?</h2>
+        <p id="sairTexto" className="mx-2 mb-3 text-sm text-apagado">As marcações desta chamada vão se perder.</p>
+        <Acoes rotulo="Sair sem salvar" rotuloCancelar="Continuar a chamada" onCancelar={onFicar} onConfirmar={onSair} />
+      </div>
+    </>
   );
 }

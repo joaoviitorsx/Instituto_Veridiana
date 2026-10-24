@@ -6,6 +6,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { ChevronRight, Copy, KeyRound, Mail, MessageCircle, Pencil, Plus, User, UserMinus } from 'lucide-react';
+import { clsx } from 'clsx';
 import { leitura } from '../../../api/cliente';
 import { useSessao } from '../../../sessao';
 import { Tela } from '../../../ui/Tela';
@@ -77,21 +78,19 @@ function Equipe() {
                 <Linha key={p.nome}
                   esquerda={<Avatar nome={p.nome} />}
                   titulo={p.nome}
-                  sub={<span className="block truncate">{p.email || 'sem e-mail'}</span>}
-                  rotulo={p.nome + ', ' + SITUACAO[p.situacao]}
-                  direita={<>
-                    {/* Situação escrita em todas, não só um pontinho de cor. */}
-                    {p.situacao === 'ativo' && (
-                      <span className="shrink-0 rounded-full bg-presente-fraco px-2.5 py-1 text-xs font-bold text-presente">Ativa</span>
-                    )}
-                    {p.situacao === 'pendente' && (
-                      <span className="shrink-0 rounded-full bg-justif-fraco px-2.5 py-1 text-xs font-bold text-justif-tinta">Falta entrar</span>
-                    )}
-                    {p.situacao === 'sem-acesso' && (
-                      <span className="shrink-0 rounded-full bg-fundo px-2.5 py-1 text-xs font-bold text-apagado">Sem acesso</span>
-                    )}
-                    <ChevronRight size={18} className="shrink-0 text-apagado" />
+                  /* Situação escrita em todas, não só um pontinho de cor — e
+                     embaixo do e-mail, não ao lado: ao lado ela espremia o
+                     nome e cortava o e-mail em tela de 360px. */
+                  sub={<>
+                    <span className="block truncate">{p.email || 'sem e-mail'}</span>
+                    <span className={clsx('mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-bold',
+                      p.situacao === 'ativo' ? 'bg-presente-fraco text-presente'
+                        : p.situacao === 'pendente' ? 'bg-justif-fraco text-justif-tinta' : 'bg-fundo text-apagado')}>
+                      {p.situacao === 'ativo' ? 'Ativa' : p.situacao === 'pendente' ? 'Ainda não entrou' : 'Sem acesso'}
+                    </span>
                   </>}
+                  rotulo={p.nome + ', ' + SITUACAO[p.situacao]}
+                  direita={<ChevronRight size={18} className="shrink-0 text-apagado" />}
                   onClick={() => acoes(p)} />
               ))}
             </Lista>

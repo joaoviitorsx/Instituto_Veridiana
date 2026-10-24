@@ -38,6 +38,9 @@ código aqui. Mudou um padrão? Mude aqui também.
 - Aba ativa: ícone dentro de uma pílula de 56×32 (indicador do M3), cor roxa,
   rótulo em negrito. Altura 64 + área segura do sistema.
 - Tocar na aba em que já está rola a tela para o topo.
+- Histórico como no Android: do Início para outra aba empilha; entre abas,
+  substitui. Voltar numa aba leva ao Início; no Início, sai do app.
+- Cada aba lembra a rolagem em que a pessoa parou.
 - Sem menu hambúrguer.
 
 `src/ui/Abas.tsx`, `src/ui/Tela.tsx`
@@ -45,12 +48,12 @@ código aqui. Mudou um padrão? Mude aqui também.
 ### 2. Título grande que encolhe ao rolar
 *Fontes: HIG (large title nas telas de topo, vira título pequeno ao rolar); M3 Top app bar (small ao rolar, "lift on scroll").*
 
-- Barra de topo clara (fundo do app com desfoque), não mais roxa em toda tela.
-  O roxo virou cor de marca e de ação, não de moldura: cabeçalho roxo em
-  todas as telas pesava e competia com os botões principais, que também são roxos.
-- Telas raiz: título grande (28px) no conteúdo; ao rolar, ele some e o
-  título pequeno aparece na barra, que ganha um fio embaixo.
-- O Início mantém a capa roxa: é a identidade do instituto e a primeira tela.
+- Telas raiz (as 5 abas): topo roxo de marca com título grande (32px), o
+  `Heroi` do §16; ao rolar, o mesmo título aparece pequeno na barra roxa.
+- Telas internas: barra clara (fundo do app com desfoque), título de 17px
+  na barra desde o começo (é o `h1` da tela); ganha um fio embaixo ao rolar.
+  Exceção: a lista de chamada, cuja capa clara com placar encolhe para a barra.
+- O título pequeno da barra é o MESMO texto do título grande (HIG).
 - `theme-color` acompanha a tela: roxo no Início, claro nas demais (barra de
   status do Android sem emenda).
 
@@ -70,10 +73,16 @@ código aqui. Mudou um padrão? Mude aqui também.
 ### 4. Folhas (bottom sheets) para tarefas curtas
 *Fontes: HIG Sheets; M3 Bottom sheet.*
 
-- Uma folha por vez; puxador visível; arrastar para baixo fecha; tocar fora fecha.
-- Área do puxador com 48px de altura (alvo de toque mínimo do M3).
+- Uma folha por vez; puxador visível; tocar fora fecha.
+- **Voltar do sistema fecha a folha**, não a tela (a folha entra no histórico).
+- Arrastar para baixo fecha: pelo puxador, ou pelo corpo quando ele está no
+  topo; passando de 90px ou num peteleco rápido.
+- Fundo travado enquanto aberta; foco entra na folha, Tab não sai dela, e
+  ao fechar o foco volta para quem abriu.
+- Cancelar e confirmar sempre à vista (rodapé fixo da folha, mesmo com o
+  teclado aberto); altura máxima 85% da tela.
+- Na ficha, "Próximo" do teclado vai ao campo seguinte; só o último envia.
 - Largura máxima 640px; cantos grandes.
-- Cancelar sempre junto do confirmar.
 
 `src/ui/folha.tsx`
 
@@ -103,13 +112,15 @@ código aqui. Mudou um padrão? Mude aqui também.
 
 - Casca do app no service worker: abre na hora, até sem rede.
 - Esqueleto no lugar de spinner; dado guardado aparece primeiro.
-- Sem rede: mensagem em português + "Tentar de novo", nunca tela branca.
+- Sem rede: mensagem em português + "Tentar de novo", nunca tela branca nem
+  esqueleto eterno (consultas e escritas em `networkMode: 'offlineFirst'`:
+  tentam e falham com aviso, em vez de ficarem pausadas).
 - Rolagem preservada ao voltar.
 
 ### 8. Instalação
 *Fontes: web.dev App design; HIG.*
 
-- Ao abrir pelo navegador, um convite em folha oferece **Instalar**. No
+- Logo depois de entrar (nunca por cima do login), um convite em folha oferece **Instalar**. No
   Android/Chrome o botão abre o diálogo do sistema e o ícone vai para a tela
   inicial. No iPhone a Apple não deixa instalar por código: a folha mostra os
   dois passos (Compartilhar → Adicionar à Tela de Início).
@@ -125,7 +136,11 @@ código aqui. Mudou um padrão? Mude aqui também.
 
 - Corpo 16px; nada abaixo de 12px.
 - Contraste conferido por script em todas as telas (texto ≥ 4,5:1).
-- Sem travar zoom; palavras longas hifenizam em vez de quebrar no meio.
+- Sem travar zoom; nome que não cabe quebra na palavra, sem hífen
+  ("Tea-tro" lia como duas coisas).
+- Raios: `rounded-m` (14px) em cartão, campo e botão; `rounded-2xl` (16px)
+  no cartão principal (`CARTAO_ELEVADO`) e nos atalhos; `rounded-g` (22px)
+  no topo da folha.
 - Só tema claro (`color-scheme: only light`): o modo escuro automático do
   Chrome não pode inverter a lista de chamada.
 

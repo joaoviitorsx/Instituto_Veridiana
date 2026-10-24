@@ -67,6 +67,14 @@
   /* input date nativo: no iOS ignora altura e centraliza o texto. */
   input[type=date] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; text-align: left; }
   input[type=date]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+  /* Data e hora: um ícone só (o do campo, à esquerda). O indicador nativo
+     fica invisível e cobre o campo inteiro — tocar em qualquer lugar abre
+     o seletor do sistema. */
+  input[type=date], input[type=time] { position: relative; }
+  input[type=date]::-webkit-calendar-picker-indicator,
+  input[type=time]::-webkit-calendar-picker-indicator {
+    position: absolute; inset: 0; width: auto; height: auto; margin: 0; opacity: 0; cursor: pointer;
+  }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }

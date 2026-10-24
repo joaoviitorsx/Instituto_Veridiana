@@ -1,8 +1,9 @@
 /* A moldura de toda tela. Padrões e fontes em DESIGN.md.
 
-   - Barra de topo clara que ganha fio ao rolar; título grande nas telas
-     raiz, que encolhe para a barra ao rolar (HIG large title, M3 small
-     app bar on scroll). O Início é a exceção: capa roxa de marca.
+   - Telas raiz (abas): topo roxo de marca (Heroi, DESIGN.md §16), com o
+     mesmo título aparecendo pequeno na barra ao rolar (HIG large title).
+   - Telas internas: barra clara, título de 17px desde o começo (é o h1),
+     ganha fio ao rolar (M3 small app bar, lift on scroll).
    - Barra de abas no rodapé, só nas 5 telas raiz (HIG Tab bars, M3
      Navigation bar).
    - Ação da tela: barra fixa no rodapé (tarefa) ou FAB estendido acima
@@ -15,7 +16,7 @@ import { useNavigate, useRouter, useRouterState } from '@tanstack/react-router';
 import { ChevronLeft, type LucideIcon } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Logo } from './Logo';
-import { Abas, ehRaiz } from './Abas';
+import { Abas, ehRaiz, rolagemDaAba } from './Abas';
 import { registrarVoltar } from './Arrastar';
 
 const COR_ROXO = '#4A1D6E';
@@ -30,7 +31,7 @@ type Props = {
   grande?: boolean;
   /* Texto menor embaixo do título grande. */
   sub?: ReactNode;
-  /* Cabeçalho roxo de marca (só o Início usa). */
+  /* Cabeçalho roxo de marca: as telas raiz, com o Heroi. */
   roxo?: boolean;
   /* Número à direita no cabeçalho, quando a capa já rolou (placar da chamada). */
   placar?: ReactNode;
@@ -86,6 +87,20 @@ export function Tela({ titulo, capa, grande, sub, roxo, placar, acoes, voltar = 
   /* Barra de status do Android da mesma cor do topo, sem emenda. */
   useEffect(() => { corDoSistema(roxo ? COR_ROXO : COR_CLARO); }, [roxo]);
 
+  /* Trocou de tela: o leitor de tela anuncia o título (foco no h1, sem
+     rolar), e a aba volta para onde a pessoa tinha parado. */
+  useEffect(() => {
+    const h1 = document.querySelector<HTMLElement>('header h1, main h1, [data-conteudo] h1');
+    if (h1 && !document.querySelector('[role="dialog"]:not([hidden])')) {
+      h1.tabIndex = -1;
+      h1.focus({ preventScroll: true });
+    }
+    if (raiz) {
+      const y = rolagemDaAba(pathname);
+      if (y) requestAnimationFrame(() => window.scrollTo(0, y));
+    }
+  }, [pathname, raiz]);
+
   const compacto = rolou || (!capa && !tituloGrande);
 
   return (
@@ -110,10 +125,15 @@ export function Tela({ titulo, capa, grande, sub, roxo, placar, acoes, voltar = 
                 INSTITUTO VERIDIANA
               </div>
             )}
-            <div className={clsx('truncate text-[17px] font-bold tracking-tight transition-opacity duration-200',
-              compacto ? 'opacity-100' : 'opacity-0')} aria-hidden={!compacto}>
-              {titulo}
-            </div>
+            {/* Sem capa nem título grande, o título da barra é o h1 da tela. */}
+            {!capa && !tituloGrande ? (
+              <h1 className="truncate text-[17px] font-bold tracking-tight outline-none">{titulo}</h1>
+            ) : (
+              <div className={clsx('truncate text-[17px] font-bold tracking-tight transition-opacity duration-200',
+                compacto ? 'opacity-100' : 'opacity-0')} aria-hidden="true">
+                {titulo}
+              </div>
+            )}
           </div>
           {placar !== undefined && (
             <div className={clsx('shrink-0 pr-2 text-right text-[17px] font-bold text-roxo tabular-nums transition-opacity duration-200',
@@ -134,7 +154,7 @@ export function Tela({ titulo, capa, grande, sub, roxo, placar, acoes, voltar = 
           <div className={clsx('mx-auto max-w-[620px] px-4', tituloGrande ? 'pt-1' : 'pt-4')}>
             {tituloGrande && titulo && (
               <div className="mb-4">
-                <h1 className="text-[28px] leading-tight font-extrabold tracking-tight hyphens-auto [overflow-wrap:anywhere] baixo:text-[22px]">
+                <h1 className="text-[28px] leading-tight font-extrabold tracking-tight outline-none [overflow-wrap:break-word] baixo:text-[22px]">
                   {titulo}
                 </h1>
                 {sub && <p className="mt-1 text-[15px] text-apagado">{sub}</p>}
@@ -170,7 +190,7 @@ export function Capa({ titulo, sub, direita, logo, roxo }: {
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <h1 className={clsx('leading-tight font-extrabold tracking-tight hyphens-auto [overflow-wrap:anywhere] baixo:text-xl',
+          <h1 className={clsx('leading-tight font-extrabold tracking-tight [overflow-wrap:break-word] baixo:text-xl',
             roxo ? 'text-2xl' : 'text-[28px]')}>{titulo}</h1>
           {sub && <p className={clsx('mt-1 text-sm baixo:hidden', roxo ? 'text-roxo-claro' : 'text-[15px] text-apagado')}>{sub}</p>}
         </div>

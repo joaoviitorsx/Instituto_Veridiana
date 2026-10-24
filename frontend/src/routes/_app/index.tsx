@@ -4,10 +4,11 @@ import { createFileRoute, Link, redirect, useNavigate, useRouter } from '@tansta
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import {
-  CalendarDays, CalendarPlus, Calendar, Check, ChevronRight, ClipboardCheck, ClipboardList, Clock, CloudUpload,
+  CalendarDays, CalendarPlus, Calendar, Check, ClipboardCheck, ClipboardList, Clock, CloudUpload,
   Download, KeyRound, LogOut, Medal, Package, Settings, Share, TriangleAlert, Wallet, type LucideIcon,
 } from 'lucide-react';
-import { Atalhos, BotaoHeroi, CabecalhoSecao, CARTAO_ELEVADO, Corpo, Heroi, Sobreposto, type Atalho } from '../../ui/Heroi';
+import { Atalhos, BotaoHeroi, CabecalhoSecao, Corpo, Heroi, Sobreposto, type Atalho } from '../../ui/Heroi';
+import { CartaoAulaAgora, CartaoDestaque as CartaoBase, textoDaAula } from '../../ui/CartaoAula';
 import { clsx } from 'clsx';
 import { api, leitura, limparCache } from '../../api/cliente';
 import { useSessao, esquecerSessao, sessaoAtual } from '../../sessao';
@@ -45,11 +46,13 @@ export const Route = createFileRoute('/_app/')({
 
 type Bloco = { to: string; ic: LucideIcon; t: string; sub?: (r?: ResumoInicial) => string };
 const BLOCOS: Bloco[] = [
-  { to: '/chamada', ic: ClipboardList, t: 'Chamada', sub: (r) => (r?.turmas ? plural(r.turmas, 'turma', 'turmas') : '') },
-  { to: '/agenda', ic: Calendar, t: 'Agenda', sub: (r) => (r?.proximo ? dataCurta(r.proximo.data) + ' · ' + r.proximo.titulo : '') },
-  { to: '/caixa', ic: Wallet, t: 'Caixa', sub: (r) => (r?.saldo != null ? reais(r.saldo) + ' em caixa' : '') },
-  { to: '/materiais', ic: Package, t: 'Materiais', sub: (r) => (r?.materiais ? plural(r.materiais, 'item', 'itens') : '') },
-  { to: '/certificados', ic: Medal, t: 'Certificados' },
+  { to: '/chamada', ic: ClipboardList, t: 'Chamada', sub: (r) => (r?.turmas ? plural(r.turmas, 'turma', 'turmas') : 'frequência das turmas') },
+  { to: '/agenda', ic: Calendar, t: 'Agenda', sub: (r) => (r?.proximo ? dataCurta(r.proximo.data) + ' · ' + r.proximo.titulo : 'eventos do ano') },
+  /* O saldo não vem para a tela inicial de propósito (MOSTRAR_SALDO_NA_ENTRADA
+     no servidor): fica só dentro do Caixa. */
+  { to: '/caixa', ic: Wallet, t: 'Caixa', sub: (r) => (r?.saldo != null ? reais(r.saldo) + ' em caixa' : 'entradas e saídas') },
+  { to: '/materiais', ic: Package, t: 'Materiais', sub: (r) => (r?.materiais ? plural(r.materiais, 'item', 'itens') : 'figurinos e objetos') },
+  { to: '/certificados', ic: Medal, t: 'Certificados', sub: () => 'horas das alunas' },
   { to: '/gestao', ic: Settings, t: 'Gestão', sub: () => 'turmas e equipe' },
 ];
 
@@ -133,11 +136,12 @@ function Inicio() {
         {BLOCOS.map((b) => (
           <li key={b.to}>
             <Link to={b.to}
-              className={clsx(CARTAO, 'flex h-full min-h-[76px] w-full items-center gap-3 px-3.5 py-3 text-left',
+              className={clsx(CARTAO, 'flex h-full min-h-[76px] w-full items-center gap-2.5 px-3 py-3 text-left min-[380px]:gap-3 min-[380px]:px-3.5',
                 'transition-colors duration-150 ease-curva active:bg-fundo')}>
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-roxo-fraco text-roxo"><b.ic size={21} /></span>
-              <span className="min-w-0">
-                <b className="block text-[15px] leading-tight font-bold tracking-tight">{b.t}</b>
+              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-roxo-fraco text-roxo min-[380px]:size-10"><b.ic size={20} /></span>
+              {/* Em 360px "Certificados" encostava na borda: letra um ponto menor ali. */}
+              <span className="min-w-0 flex-1">
+                <b className="block text-[14px] leading-tight font-bold tracking-tight [overflow-wrap:break-word] min-[380px]:text-[15px]">{b.t}</b>
                 <small className="mt-0.5 line-clamp-2 min-h-[1.3em] text-xs leading-[1.3] text-apagado">{b.sub?.(r) || ''}</small>
               </span>
             </Link>
@@ -174,43 +178,25 @@ function Inicio() {
 }
 
 /* O atalho mais usado do sistema: a aula que deve estar começando, ou o
-   evento de hoje. Um toque e está na chamada. */
+   evento de hoje. Um toque e está na chamada. Mesmo cartão da Chamada
+   (src/ui/CartaoAula.tsx). */
 function CartaoDestaque({ d, carregando }: { d: Destaque | null; carregando: boolean }) {
   const navigate = useNavigate();
   if (carregando) return <Osso className="h-21 rounded-2xl shadow-cartao" />;
   if (!d) return <div className="h-12" aria-hidden="true" />;
-  const aula = d.tipo === 'aula';
-  const Ic = aula ? Clock : Calendar;
-  const rotulo = aula ? (d.agora ? 'Aula agora' : 'Próxima aula') : d.hoje ? 'Hoje na agenda' : 'Próximo na agenda';
-  const titulo = aula ? d.turma : d.titulo;
-  /* Pela grade é a hora certa ("começa às"); pelo palpite das chamadas,
-     "costuma começar às". */
-  const sala = aula && d.sala ? ' · ' + d.sala : '';
-  const sub = aula
-    ? d.origem === 'grade'
-      ? (d.agora ? 'agora · até ' + d.fim : 'começa às ' + d.hora) + sala
-      : (d.hora ? 'costuma começar às ' + d.hora : 'costuma ter aula hoje')
-    : (d.hoje ? '' : dataExtenso(d.data) + ' · ') + d.tipoEvento;
+  if (d.tipo === 'aula') {
+    /* Pela grade é a hora certa ("começa às"); pelo palpite das chamadas,
+       "costuma começar às". */
+    const sub = d.origem === 'grade'
+      ? textoDaAula({ agora: d.agora, inicio: d.hora, fim: d.fim, sala: d.sala })
+      : (d.hora ? 'costuma começar às ' + d.hora : 'costuma ter aula hoje');
+    return <CartaoAulaAgora turma={d.turma} agora={d.agora} sub={sub}
+      onClick={() => navigate({ to: '/chamada/$turma', params: { turma: d.turma } })} />;
+  }
   return (
-    <button type="button"
-      onClick={() => aula
-        ? navigate({ to: '/chamada/$turma', params: { turma: d.turma } })
-        : navigate({ to: '/agenda', search: { mes: d.data.slice(0, 7) } })}
-      className={clsx(CARTAO_ELEVADO, 'flex min-h-21 w-full items-center gap-3 p-4 text-left transition-colors duration-150 ease-curva active:bg-fundo')}>
-      <span className={clsx('relative grid size-12 shrink-0 place-items-center rounded-2xl text-white', aula && d.agora ? 'bg-presente' : 'bg-roxo')}>
-        <Ic size={24} />
-        {/* Pulso só na aula que está acontecendo: "é agora". */}
-        {aula && d.agora && <span className="absolute -top-1 -right-1 size-3.5 rounded-full border-2 border-papel bg-presente motion-safe:animate-pulse" />}
-      </span>
-      <span className="min-w-0 flex-1">
-        <small className={clsx('block text-xs font-bold tracking-[.06em] uppercase', aula && d.agora ? 'text-presente' : 'text-roxo')}>{rotulo}</small>
-        <b className="mt-0.5 block text-lg leading-tight font-bold tracking-tight hyphens-auto [overflow-wrap:anywhere]">{titulo}</b>
-        <span className="mt-0.5 block text-sm text-apagado">{sub}</span>
-      </span>
-      {aula
-        ? <span className="shrink-0 rounded-full bg-roxo px-3.5 py-2 text-sm font-bold text-white">Chamada</span>
-        : <ChevronRight size={20} className="shrink-0 text-apagado" />}
-    </button>
+    <CartaoBase icone={Calendar} rotulo={d.hoje ? 'Hoje na agenda' : 'Próximo na agenda'} titulo={d.titulo}
+      sub={(d.hoje ? '' : dataExtenso(d.data) + ' · ') + d.tipoEvento}
+      onClick={() => navigate({ to: '/agenda', search: { mes: d.data.slice(0, 7) } })} />
   );
 }
 

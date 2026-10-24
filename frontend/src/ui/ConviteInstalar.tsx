@@ -30,7 +30,9 @@ function guardarRecusa() {
 /* Telas em que um convite atrapalharia: a lista de chamada (marcando
    presença), o fim da chamada e as pendências. */
 function rotaTranquila(p: string) {
-  return !/^\/chamada\/.+/.test(p) && p !== '/salva' && p !== '/pendentes';
+  /* Nem no login: o convite cobria o formulário. Aparece logo depois de
+     entrar, na primeira tela do app. */
+  return !/^\/chamada\/.+/.test(p) && !['/salva', '/pendentes', '/entrar', '/senha'].includes(p);
 }
 
 export function ConviteInstalar() {

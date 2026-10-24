@@ -45,7 +45,7 @@ function Atencao() {
     corpo = (
       <>
         <Intro>
-          {plural(r.alunos.length, 'aluno faltou', 'alunos faltaram')} 3 aulas ou mais seguidas. Uma mensagem agora,
+          {plural(r.alunos.length, 'aluno faltou', 'alunos faltaram')} 3 aulas seguidas. Uma mensagem agora,
           antes de virar hábito, costuma trazer de volta.
         </Intro>
         <CabecalhoSecao titulo={plural(r.alunos.length, 'aluno', 'alunos') + ' para procurar'} />
@@ -75,8 +75,10 @@ function Atencao() {
                   {a.ultimaPresenca ? ' · veio pela última vez em ' + dataCurta(a.ultimaPresenca) : ' · sem presença nas aulas recentes'}
                 </p>
                 {zap ? (
+                  /* Contorno, não cheio: três botões verdes cheios por tela
+                     pesavam mais que o resto, e o verde cheio é "presente". */
                   <a href={zap} target="_blank" rel="noopener"
-                    className={clsx(BOTAO, 'bg-presente text-white active:bg-presente-fundo')}>
+                    className={clsx(BOTAO, 'border-2 border-presente bg-papel text-presente active:bg-presente-fraco')}>
                     <MessageCircle size={18} /> {rotuloZap(a.responsavel)}
                   </a>
                 ) : (

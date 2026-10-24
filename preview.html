@@ -2196,11 +2196,14 @@ function pedirTexto(titulo, rotulo, valor, rotuloBotao, fn){
 }
 
 /* confirmacao de acao destrutiva */
-function confirmar(titulo, texto, rotulo, fn){
+/* neutro: a confirmação não é perigosa (ex.: "Salvar mesmo assim") e o
+   botão sai roxo, não vermelho. */
+function confirmar(titulo, texto, rotulo, fn, neutro){
   abrirFolha(titulo,
     '<p class="sub">'+esc(texto)+'</p>'+
     '<div class="acoes"><button type="button" class="cancelar" data-c="0">Cancelar</button>'+
-    '<button type="button" class="confirmar" data-c="1">'+esc(rotulo)+'</button></div>');
+    '<button type="button" class="confirmar" data-c="1"' + (neutro ? ' style="background:var(--roxo)"' : '') + '>' +
+    esc(rotulo)+'</button></div>');
   el('folhaCorpo').onclick = function(e){
     var b = e.target.closest('[data-c]');
     if (!b) return;
@@ -6259,7 +6262,7 @@ ACOES.grSalvar = function(forcar){
        Às vezes é de propósito (duas turmas pequenas dividindo a sala). */
     if (msg.indexOf('CONFLITO:') === 0){
       confirmar('Horário ocupado', msg.replace(/^CONFLITO:\s*/, '') + ' Salvar mesmo assim?',
-        'Salvar mesmo assim', function(){ ACOES.grSalvar(true); });
+        'Salvar mesmo assim', function(){ ACOES.grSalvar(true); }, true);
       return;
     }
     toast(msg, 'erro');

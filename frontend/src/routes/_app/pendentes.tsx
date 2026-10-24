@@ -27,7 +27,7 @@ function Pendentes() {
   }
 
   return (
-    <Tela titulo="Esperando internet" voltar="/"
+    <Tela titulo="Chamadas guardadas" voltar="/"
       barra={itens.some((i) => i.situacao === 'pendente') && (
         <BotaoCheio icone={RefreshCw} onClick={tentar} carregando={indo}>{indo ? 'Enviando…' : 'Tentar enviar agora'}</BotaoCheio>
       )}>

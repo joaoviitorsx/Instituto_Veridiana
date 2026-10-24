@@ -55,8 +55,10 @@ function Entrar() {
   async function entrar(e: React.FormEvent) {
     e.preventDefault();
     const em = email.trim();
-    if (!em) { setErro({ campo: 'email', msg: 'Escreva o seu e-mail.' }); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { setErro({ campo: 'email', msg: 'Esse e-mail não parece completo. Confira o @ e o final.' }); return; }
+    /* Erro de e-mail leva o foco ao campo de e-mail (não fica no botão). */
+    const focoEmail = () => document.getElementById('lgEmail')?.focus();
+    if (!em) { setErro({ campo: 'email', msg: 'Escreva o seu e-mail.' }); focoEmail(); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { setErro({ campo: 'email', msg: 'Esse e-mail não parece completo. Confira o @ e o final.' }); focoEmail(); return; }
     if (!senha) { setErro({ campo: 'senha', msg: 'Escreva a sua senha.' }); campoSenha.current?.focus(); return; }
     setErro(null);
     setIndo(true);

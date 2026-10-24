@@ -50,7 +50,7 @@ export const gruposFechados = new Set<string>();
 /* ─── peças visuais ─── */
 export function SeloEstado({ estado }: { estado: string }) {
   return (
-    <span className="ml-1 inline-block rounded-full bg-falta-fraco px-2 py-px align-[1px] text-xs font-bold text-falta">
+    <span className="mt-1 inline-block rounded-full bg-falta-fraco px-2 py-px text-xs font-bold text-falta">
       {estado}
     </span>
   );

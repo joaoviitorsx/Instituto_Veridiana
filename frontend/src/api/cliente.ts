@@ -67,8 +67,12 @@ export const queryClient = new QueryClient({
       /* Rede: uma tentativa a mais. Erro do servidor (mensagem em
          português para a pessoa) não melhora tentando de novo. */
       retry: (n, e) => e instanceof ErroRede && n < 1,
+      /* Sem internet, tenta mesmo assim e falha com ErroRede: a tela mostra
+         "Sem conexão · Tentar de novo". No modo padrão ('online') a busca
+         ficava pausada, e tela nunca aberta mostrava esqueleto para sempre. */
+      networkMode: 'offlineFirst',
     },
-    mutations: { retry: false },
+    mutations: { retry: false, networkMode: 'offlineFirst' },
   },
 });
 

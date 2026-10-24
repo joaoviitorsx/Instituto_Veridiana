@@ -137,7 +137,9 @@ function Formulario({ id, ev, data, listas, titulo }: {
           erro={erros.fim} onChange={(e) => muda({ dataFim: e.target.value })} />}
 
         <Grupo rotulo="Tipo" id="agTipo" erro={erros.tipo}>
-          <div className="grid grid-cols-2 gap-2">
+          {/* Linhas todas da mesma altura (auto-rows-fr): "Data comemorativa"
+              ocupa duas linhas a 360px, e antes só a fileira dela crescia. */}
+          <div className="grid auto-rows-fr grid-cols-2 gap-2">
             {listas.tipos.map((t) => {
               const on = f.tipo === t;
               return (
@@ -148,7 +150,7 @@ function Formulario({ id, ev, data, listas, titulo }: {
                     'transition-colors duration-150',
                     on ? 'border-2 border-(--c) bg-[color-mix(in_srgb,var(--c)_10%,#fff)] px-[11px] py-[9px]' : 'border border-borda px-3 py-2.5')}>
                   <span className="size-3 shrink-0 rounded-full bg-(--c)" />
-                  <span className="min-w-0 [overflow-wrap:anywhere]">{t}</span>
+                  <span className="min-w-0 [overflow-wrap:break-word]">{t}</span>
                 </button>
               );
             })}

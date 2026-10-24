@@ -38,7 +38,7 @@ function Gestao() {
   const ir = (to: string) => () => navigate({ to });
   const atencao = risco === undefined ? 'carregando…'
     : risco === 0 ? 'ninguém faltando seguido, ótimo'
-      : <span className="text-falta">{plural(risco, 'aluno some há 3 aulas', 'alunos somem há 3 aulas')}</span>;
+      : <span className="text-falta">{plural(risco, 'aluno faltou', 'alunos faltaram')} 3 aulas seguidas</span>;
 
   /* Cadastros (turmas, alunos, equipe, grade) já estão nos atalhos; os
      grupos ficam com o resto, agrupado por assunto como nos Ajustes. */
@@ -66,12 +66,13 @@ function Gestao() {
   return (
     <Tela titulo="Gestão" voltar={false} roxo solto
       capa={
-        <Heroi sobre="Gestão" titulo="O instituto"
+        /* Regra do Heroi: contexto em cima, foco no título (o mesmo da barra
+           ao rolar). Duas pílulas: três quebravam em duas linhas a 360px. */
+        <Heroi sobre="Instituto Veridiana" titulo="Gestão"
           direita={<BotaoHeroi rotulo="Abrir a planilha" onClick={ir('/gestao/planilha')}><Sheet size={22} /></BotaoHeroi>}
           pilulas={g ? [
             { icone: ClipboardList, texto: plural(g.turmas, 'turma', 'turmas') },
             { icone: Users, texto: plural(g.alunosAtivos, 'aluno', 'alunos') },
-            { icone: User, texto: g.professores + ' na equipe' },
           ] : []} />
       }>
       <Sobreposto>

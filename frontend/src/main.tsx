@@ -38,7 +38,7 @@ declare module '@tanstack/react-router' {
   interface Register { router: typeof router }
   interface HistoryState {
     /* Resultado da chamada, da lista para a tela de "salva". */
-    chamada?: { turma: string; offline: boolean; resposta?: Resposta; presentes: number; total: number; viaQr: boolean };
+    chamada?: { turma: string; offline: boolean; resposta?: Resposta; presentes: number; total: number; justificadas?: number; viaQr: boolean };
   }
 }
 
@@ -47,14 +47,14 @@ declare module '@tanstack/react-router' {
 quandoSessaoCair(() => {
   const aqui = router.state.location.href;
   if (router.state.location.pathname === '/entrar') return;
-  folha.fechar();
+  folha.fecharSemVoltar();
   router.navigate({ to: '/entrar', search: { volta: aqui, aviso: 1 }, replace: true });
 });
 
 /* O toast vivia além da tela que o mostrou: "Desfazer" rodava sobre uma
    tela que não existe mais. Trocou de tela, fecha. */
 router.subscribe('onResolved', (e) => {
-  if (e.pathChanged) { fecharToast(); folha.fechar(); }
+  if (e.pathChanged) { fecharToast(); folha.fecharSemVoltar(); }
 });
 
 ligarEnvioAutomatico();

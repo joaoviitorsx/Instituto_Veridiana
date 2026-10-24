@@ -20,7 +20,9 @@ function Salva() {
   const r = c.resposta;
   const presentes = r?.presentes ?? c.presentes;
   const total = r?.total ?? c.total;
-  const faltas = total - presentes;
+  /* Justificada é ausência, mas aparece à parte (como na lista). */
+  const justificadas = c.justificadas ?? 0;
+  const faltas = total - presentes - justificadas;
 
   function outra() {
     if (c!.viaQr) navigate({ to: '/chamada/$turma', params: { turma: c!.turma }, search: { qr: 1 }, replace: true });
@@ -51,10 +53,11 @@ function Salva() {
 
         <div className="mt-7 w-full max-w-[340px] rounded-2xl bg-white/10 px-5 py-4 text-left">
           <b className="block truncate text-lg leading-tight">{c.turma}</b>
-          <span className="mt-0.5 block text-sm text-roxo-claro">{faltas ? plural(total, 'aluno na lista', 'alunos na lista') : 'Turma completa'}</span>
+          <span className="mt-0.5 block text-sm text-roxo-claro">{presentes < total ? plural(total, 'aluno na lista', 'alunos na lista') : 'Turma completa'}</span>
           <div className="mt-3 flex gap-2">
             <span className="rounded-full bg-presente px-3 py-1 text-sm font-bold">{presentes} {presentes === 1 ? 'presente' : 'presentes'}</span>
             {faltas > 0 && <span className="rounded-full bg-white/15 px-3 py-1 text-sm font-bold">{faltas} {faltas === 1 ? 'falta' : 'faltas'}</span>}
+            {justificadas > 0 && <span className="rounded-full bg-white/15 px-3 py-1 text-sm font-bold">{justificadas} {justificadas === 1 ? 'justificada' : 'justificadas'}</span>}
           </div>
         </div>
       </div>

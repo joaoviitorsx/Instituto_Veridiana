@@ -51,6 +51,7 @@ function Agenda() {
   const novo = () => navigate({ to: '/agenda/evento', search: { data: mes === mesDeHoje() ? hojeISO() : mes + '-01' } });
   const ano = +mes.slice(0, 4);
   const noMesDeHoje = mes === mesDeHoje();
+  const mesNome = maiuscula(MESES[+mes.slice(5, 7) - 1]);
 
   /* O próximo evento do mês que ainda não terminou e não foi cancelado:
      é o que a coordenação quer saber de relance. */
@@ -59,11 +60,13 @@ function Agenda() {
   const proximo = validos.find((ev) => (ev.dataFim || ev.data) >= hj) || null;
 
   return (
-    <Tela titulo="Agenda" roxo solto
+    <Tela titulo={mesNome} roxo solto
       fab={{ icone: Plus, texto: 'Novo evento', onClick: novo }}
       capa={
-        /* Ano no sobretítulo, só o mês no título: "Novembro de 2026" quebrava em 360px. */
-        <Heroi sobre={'Agenda de ' + ano} titulo={maiuscula(MESES[+mes.slice(5, 7) - 1])}
+        /* Regra do Heroi (DESIGN §16): sobretítulo = contexto, título = o
+           foco, e o título que encolhe na barra é o mesmo. Só o mês no
+           título: "Novembro de 2026" quebrava em 360px. */
+        <Heroi sobre={'Agenda · ' + ano} titulo={mesNome}
           direita={!noMesDeHoje && (
             <BotaoHeroi rotulo="Voltar para o mês de hoje"
               onClick={() => { vibrar(); navigate({ to: '/agenda', search: {}, replace: true }); }}>
@@ -77,8 +80,9 @@ function Agenda() {
       }>
       <Sobreposto>
         <div className={clsx(CARTAO_ELEVADO, 'overflow-hidden')}>
-          {proximo && r && <Proximo ev={proximo} r={r} mes={mes} />}
-          <PassoMes mes={mes} onAnterior={() => irMes(-1)} onProximo={() => irMes(1)} comBorda={!!proximo} />
+          {/* Sem próximo, o cartão não fica só com o passo: diz como está o mês. */}
+          {r && (proximo ? <Proximo ev={proximo} r={r} mes={mes} /> : <ResumoMes validos={validos} mes={mes} r={r} onNovo={novo} />)}
+          <PassoMes mes={mes} onAnterior={() => irMes(-1)} onProximo={() => irMes(1)} comBorda={!!r} />
         </div>
       </Sobreposto>
 
@@ -95,7 +99,9 @@ function Agenda() {
             <>
               <CabecalhoSecao titulo={'Eventos de ' + MESES[+mes.slice(5, 7) - 1]} />
               <ul className={clsx(CARTAO, 'overflow-hidden')}>
-                {r.eventos.map((ev) => <LinhaEvento key={ev.id || ev.titulo + ev.data} ev={ev} mes={mes} r={r} />)}
+                {r.eventos.map((ev) => (
+                  <LinhaEvento key={ev.id || ev.titulo + ev.data} ev={ev} mes={mes} r={r} destaque={!!proximo && ev === proximo} />
+                ))}
               </ul>
             </>
           ) : (
@@ -128,11 +134,41 @@ function Proximo({ ev, r, mes }: { ev: Evento; r: AgendaMes; mes: string }) {
         <small className={clsx('block text-xs font-bold tracking-[.06em] uppercase', hoje ? 'text-presente' : 'text-roxo')}>
           {hoje ? 'Hoje na agenda' : 'Próximo evento'}
         </small>
-        <b className="mt-0.5 block text-lg leading-tight font-bold tracking-tight hyphens-auto [overflow-wrap:anywhere]">{ev.titulo}</b>
+        <b className="mt-0.5 block text-lg leading-tight font-bold tracking-tight [overflow-wrap:break-word]">{ev.titulo}</b>
         <span className="mt-0.5 block text-sm text-apagado">{sub}</span>
       </span>
       <ChevronRight size={20} className="shrink-0 text-apagado" />
     </button>
+  );
+}
+
+/* No lugar do próximo evento, quando não há: o mês sem nada marcado (com
+   o atalho para marcar), ou o mês que já acabou (quantos e o último). */
+function ResumoMes({ validos, mes, r, onNovo }: { validos: Evento[]; mes: string; r: AgendaMes; onNovo: () => void }) {
+  const nome = MESES[+mes.slice(5, 7) - 1];
+  const ultimo = validos[validos.length - 1];
+  const passado = mes < (r.hoje || hojeISO()).slice(0, 7);
+  return (
+    <div className="flex min-h-21 items-center gap-3 p-4">
+      <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-roxo-fraco text-roxo">
+        {validos.length ? <CalendarCheck size={24} /> : <Calendar size={24} />}
+      </span>
+      <span className="min-w-0 flex-1">
+        <small className="block text-xs font-bold tracking-[.06em] text-roxo uppercase">
+          {validos.length ? (passado ? 'Mês encerrado' : 'Nada mais neste mês') : 'Mês livre'}
+        </small>
+        <b className="mt-0.5 block text-lg leading-tight font-bold tracking-tight">
+          {validos.length ? plural(validos.length, 'evento', 'eventos') + ' em ' + nome : 'Nada marcado em ' + nome}
+        </b>
+        <span className="mt-0.5 block text-sm text-apagado">
+          {ultimo ? 'o último: ' + ultimo.titulo + ', ' + dataCurta(ultimo.data) : passado ? 'nenhum evento neste mês' : 'ensaio, apresentação, reunião…'}
+        </span>
+      </span>
+      {!validos.length && !passado && (
+        <button type="button" onClick={onNovo}
+          className="shrink-0 rounded-full bg-roxo px-3.5 py-2 text-sm font-bold text-white active:bg-roxo-fundo">Marcar</button>
+      )}
+    </div>
   );
 }
 
@@ -171,7 +207,7 @@ function DiaBloco({ iso, desde, forte, apagado }: { iso: string; desde?: boolean
 
 /* Linha de evento no padrão do Início: dia à esquerda, título e apoio no
    meio, selo escrito à direita (Hoje / Já passou / Cancelado). */
-function LinhaEvento({ ev, mes, r }: { ev: Evento; mes: string; r: AgendaMes }) {
+function LinhaEvento({ ev, mes, r, destaque }: { ev: Evento; mes: string; r: AgendaMes; destaque?: boolean }) {
   const navigate = useNavigate();
   const editar = () => navigate({ to: '/agenda/evento', search: { id: ev.id, mes: ev.data.slice(0, 7) } });
   const fim = ev.dataFim || ev.data;
@@ -182,7 +218,10 @@ function LinhaEvento({ ev, mes, r }: { ev: Evento; mes: string; r: AgendaMes }) 
   const linha: string[] = [];
   if (ev.dataFim) linha.push('até ' + dataCurta(ev.dataFim));
   linha.push(ev.local || textoTurmas(ev.turmas));
-  const selo = cancelado ? 'Cancelado' : hoje ? 'Hoje' : passou ? 'Já passou' : ev.status === 'Confirmado' ? 'Confirmado' : '';
+  /* O evento que está no cartão de cima aparece aqui marcado como
+     "Próximo" — a lista não repete o cartão sem dizer que é o mesmo. */
+  const selo = cancelado ? 'Cancelado' : hoje ? 'Hoje' : passou ? 'Já passou' : destaque ? 'Próximo'
+    : ev.status === 'Confirmado' ? 'Confirmado' : '';
 
   return (
     <li className="relative not-first:before:absolute not-first:before:top-0 not-first:before:right-0 not-first:before:left-[76px] not-first:before:h-px not-first:before:bg-borda not-first:before:content-['']">
@@ -226,7 +265,7 @@ function verEvento(ev: Evento, r: AgendaMes, editar: () => void) {
         {ev.obs && <Detalhe icone={FileText}>{ev.obs}</Detalhe>}
       </ul>
       <ul>
-        <OpcaoFolha icone={Pencil} onClick={() => { fechar(); setTimeout(editar, 60); }}>Editar</OpcaoFolha>
+        <OpcaoFolha icone={Pencil} onClick={() => { fechar(); folha.depois(editar); }}>Editar</OpcaoFolha>
         <OpcaoFolha icone={Check} sub="planejado, confirmado, realizado, cancelado"
           onClick={() => { fechar(); setTimeout(() => mudarStatus(ev, r.status), 60); }}>Mudar situação</OpcaoFolha>
         <OpcaoFolha icone={Trash2} sub="só para engano de digitação" perigo

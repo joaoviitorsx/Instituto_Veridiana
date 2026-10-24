@@ -108,7 +108,11 @@ function Formulario({ g, h, dia, titulo }: { g: Grade; h?: Horario; dia?: number
     setErros(e); setErroGeral('');
     if (Object.keys(e).length) {
       vibrar();
-      if (e.inicio) refInicio.current?.focus(); else if (e.fim) refFim.current?.focus();
+      /* Foco no PRIMEIRO campo com erro, na ordem da tela. */
+      if (e.turma) document.getElementById('hTurma')?.focus();
+      else if (e.dias) document.querySelector<HTMLElement>('fieldset button')?.focus();
+      else if (e.inicio) refInicio.current?.focus();
+      else if (e.fim) refFim.current?.focus();
       return;
     }
     const dados = { turma, inicio, fim, sala: sala.trim(), professor, obs: obs.trim(), forcar,

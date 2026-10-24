@@ -50,7 +50,7 @@ export function Heroi({ sobre, titulo, pilulas, direita, sobreposto = true, chil
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             {sobre && <p className="text-[15px] font-medium text-roxo-claro">{sobre}</p>}
-            <h1 className="text-[32px] leading-[1.1] font-extrabold tracking-tight hyphens-auto [overflow-wrap:anywhere] baixo:text-2xl">
+            <h1 className="text-[32px] leading-[1.1] font-extrabold tracking-tight outline-none [overflow-wrap:break-word] baixo:text-2xl">
               {titulo}
             </h1>
           </div>

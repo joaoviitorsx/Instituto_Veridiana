@@ -259,7 +259,7 @@ export function Campo({ rotulo, id, dica, className, icone: Ic, erro, ...p }:
     <div className={clsx('mb-4', className)}>
       <label htmlFor={id} className="mb-2 block text-[13px] font-semibold text-apagado">{rotulo}</label>
       <div className="relative">
-        {Ic && <Ic size={20} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-apagado" />}
+        {Ic && <Ic size={20} className="pointer-events-none absolute top-1/2 left-4 z-1 -translate-y-1/2 text-apagado" />}
         <input id={id} aria-invalid={erro ? true : undefined} aria-describedby={erro ? id + '-erro' : undefined}
           className={clsx(CLASSE_INPUT, Ic && 'pl-12', comErro(erro))} {...p} />
       </div>
@@ -275,7 +275,7 @@ export function CampoSenha({ rotulo, id, icone: Ic, erro, ...p }: ComponentProps
     <div className="mb-4">
       <label htmlFor={id} className="mb-2 block text-[13px] font-semibold text-apagado">{rotulo}</label>
       <div className="relative">
-        {Ic && <Ic size={20} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-apagado" />}
+        {Ic && <Ic size={20} className="pointer-events-none absolute top-1/2 left-4 z-1 -translate-y-1/2 text-apagado" />}
         <input id={id} type={ver ? 'text' : 'password'} autoCapitalize="none" autoCorrect="off" spellCheck={false}
           aria-invalid={erro ? true : undefined} aria-describedby={erro ? id + '-erro' : undefined}
           className={clsx(CLASSE_INPUT, 'pr-13', Ic && 'pl-12', comErro(erro))} {...p} />

@@ -3,11 +3,11 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Copy, FileText, ReceiptText } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Calendar, Copy, FileText, ReceiptText } from 'lucide-react';
 import { clsx } from 'clsx';
 import { leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { Banner, BotaoCheio, CARTAO, Campo, Esqueleto } from '../../../ui/kit';
+import { Banner, BotaoCheio, CARTAO, Campo, Esqueleto, Estado } from '../../../ui/kit';
 import { CabecalhoSecao, CARTAO_ELEVADO } from '../../../ui/Heroi';
 import { ErroTela } from '../../../ui/ErroTela';
 import { toast } from '../../../ui/toast';
@@ -40,10 +40,12 @@ function Resumo() {
       <p className="mx-1 mb-4 text-sm text-apagado">Totais por categoria e por fonte, para colar na prestação de contas.</p>
       {/* Lado a lado enquanto couber, um embaixo do outro em tela estreita. */}
       <div className="mb-3 flex flex-wrap gap-x-3 gap-y-2">
-        <Campo id="cxIni" rotulo="De" type="date" value={ini} className="mb-0! min-w-0 flex-[1_1_140px]"
+        {/* Com o ícone, a data não cabe pela metade de 360px: o par empilha no
+            celular e fica lado a lado só onde couber (180px cada). */}
+        <Campo id="cxIni" rotulo="De" type="date" icone={Calendar} value={ini} className="mb-0! min-w-0 flex-[1_1_180px]"
           erro={erro?.campo === 'ini' ? erro.msg : undefined}
           onChange={(e) => { setIni(e.target.value); setErro(null); }} />
-        <Campo id="cxFim" rotulo="Até" type="date" value={fim} className="mb-0! min-w-0 flex-[1_1_140px]"
+        <Campo id="cxFim" rotulo="Até" type="date" icone={Calendar} value={fim} className="mb-0! min-w-0 flex-[1_1_180px]"
           erro={erro?.campo === 'fim' ? erro.msg : undefined}
           onChange={(e) => { setFim(e.target.value); setErro(null); }} />
       </div>
@@ -75,12 +77,12 @@ function Resultado({ r }: { r: ResumoCaixa }) {
     else toast('Não deu para copiar sozinho. Segure o dedo no texto.', 'erro');
   }
 
-  /* Período vazio: três "0,00" não dizem nada. Só o aviso. */
+  /* Período vazio: três "0,00" não dizem nada. O vazio tem a mesma cara
+     do resto do app (Estado), não um aviso. */
   if (r.lancamentos === 0) {
     return (
-      <Banner tom="info" titulo="Nada lançado nesse período" className="mt-5">
-        Confira as datas De e Até. Se o dinheiro entrou ou saiu e não aparece aqui, lance pela tela do Caixa.
-      </Banner>
+      <Estado icone={ReceiptText} titulo="Nada lançado nesse período"
+        texto="Confira as datas De e Até. Se o dinheiro entrou ou saiu e não aparece aqui, lance pela tela do Caixa." />
     );
   }
 

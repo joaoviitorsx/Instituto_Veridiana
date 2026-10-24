@@ -18,7 +18,7 @@ import { CabecalhoSecao, CARTAO_ELEVADO, Corpo, Heroi, Sobreposto } from '../../
 import { ErroTela } from '../../../ui/ErroTela';
 import { folha } from '../../../ui/folha';
 import { toast } from '../../../ui/toast';
-import { dataExtenso, hojeISO, maiuscula, mesExtenso, plural, reais, textoErro, urlSegura, vibrar } from '../../../util';
+import { dataExtenso, hojeISO, maiuscula, MESES, plural, reais, textoErro, urlSegura, vibrar } from '../../../util';
 import { MES_RE, type Lancamento, type MesCaixa } from './-tipos';
 
 export const Route = createFileRoute('/_app/caixa/')({
@@ -53,9 +53,10 @@ function Caixa() {
   const depois = idx > 0 ? () => irPara(idx - 1) : undefined;
 
   const semNota = r ? r.lancamentos.filter((l) => l.tipo === 'Saída' && !l.comprovante).length : 0;
+  const mesNome = maiuscula(MESES[+mes.slice(5, 7) - 1]);
 
   return (
-    <Tela titulo="Caixa" voltar="/" roxo solto
+    <Tela titulo={mesNome} voltar="/" roxo solto
       barra={
         <div className="flex gap-2">
           <button type="button" onClick={() => navigate({ to: '/caixa/lancar', search: { tipo: 'Entrada' } })}
@@ -69,9 +70,13 @@ function Caixa() {
         </div>
       }
       capa={
-        <Heroi sobre="Caixa" titulo={mesExtenso(mes)}
+        /* Regra do Heroi (DESIGN §16): sobretítulo = contexto, título = o
+           foco, e o título que encolhe na barra é o mesmo. Só o mês: "Outubro
+           de 2026" enchia os 360px. */
+        <Heroi sobre={'Caixa · ' + mes.slice(0, 4)} titulo={mesNome}
           pilulas={[
-            r && { icone: ReceiptText, texto: r.lancamentos.length ? plural(r.lancamentos.length, 'lançamento', 'lançamentos') : 'Nada lançado' },
+            /* Mês vazio: o vazio já é dito no Estado lá embaixo, uma vez só. */
+            r && r.lancamentos.length > 0 && { icone: ReceiptText, texto: plural(r.lancamentos.length, 'lançamento', 'lançamentos') },
             r && semNota > 0 && { icone: TriangleAlert, texto: plural(semNota, 'saída sem nota', 'saídas sem nota') },
           ]} />
       }>

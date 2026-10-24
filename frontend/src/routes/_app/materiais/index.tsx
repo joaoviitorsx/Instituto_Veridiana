@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react';
 import { ChevronRight, KeyRound, Package, Plus, Search, Table, Tag } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Tela } from '../../../ui/Tela';
-import { Busca, Esqueleto, Estado, Linha, Lista } from '../../../ui/kit';
+import { BotaoCheio, Busca, Esqueleto, Estado, Linha, Lista } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { folha } from '../../../ui/folha';
 import { plural, semAcento, vibrar } from '../../../util';
@@ -77,7 +77,9 @@ function ListaMateriais() {
 
   return (
     <Tela titulo="Materiais" voltar="/"
-      fab={{ icone: Plus, texto: 'Novo item', onClick: () => navigate({ to: '/materiais/novo' }) }}>
+      /* Tela interna: criar é barra larga embaixo, como em Turmas e Equipe
+         (DESIGN §3 — FAB só nas telas raiz). */
+      barra={<BotaoCheio icone={Plus} onClick={() => navigate({ to: '/materiais/novo' })}>Novo item</BotaoCheio>}>
       {/* Os atalhos com valor operacional, no jeito dos atalhos do Início:
           o que vai para o bazar e o que precisa de conserto, com número,
           sem abrir filtro; e o resumo. Os dois primeiros ligam e desligam. */}
@@ -135,8 +137,13 @@ function ListaMateriais() {
                     {itens.map((i) => (
                       <Linha key={i.id}
                         onClick={() => navigate({ to: '/materiais/$id', params: { id: i.id } })}
-                        titulo={<>{i.item}{ehRuim(i) && <SeloEstado estado={i.estado} />}</>}
-                        sub={[i.local || 'sem local', ehBazar(i) ? 'bazar' : ''].filter(Boolean).join(' · ')}
+                        titulo={i.item}
+                        /* Selo sempre embaixo do local: ao lado do nome, em nome
+                           longo ele pulava de linha e cada item ficava de um jeito. */
+                        sub={<>
+                          {[i.local || 'sem local', ehBazar(i) ? 'bazar' : ''].filter(Boolean).join(' · ')}
+                          {ehRuim(i) && <span className="block"><SeloEstado estado={i.estado} /></span>}
+                        </>}
                         direita={<Qtd n={i.quantidade} />} />
                     ))}
                   </Lista>

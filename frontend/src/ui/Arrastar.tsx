@@ -18,7 +18,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { ChevronLeft } from 'lucide-react';
 import { clsx } from 'clsx';
-import { ABAS, ehRaiz } from './Abas';
+import { ABAS, ehRaiz, irParaAba } from './Abas';
 import { folha } from './folha';
 import { ehIphone, rodandoInstalado } from '../offline/instalar';
 import { vibrar } from '../util';
@@ -133,8 +133,7 @@ export function Arrastar() {
         vibrar();
         /* A tela velha sai do ponto em que o dedo deixou; a nova entra
            deslizando do lado de onde veio o arrasto. */
-        navigate({ to: alvo.to, viewTransition: { types: [lado === 1 ? 'ir' : 'voltar'] } })
-          .finally(() => soltarConteudo(false));
+        irParaAba(navigate, alvo.to, [lado === 1 ? 'ir' : 'voltar']).finally(() => soltarConteudo(false));
       } else {
         soltarConteudo(true);
       }

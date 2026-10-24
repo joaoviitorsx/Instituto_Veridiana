@@ -406,7 +406,7 @@ ACOES.grSalvar = function(forcar){
        Às vezes é de propósito (duas turmas pequenas dividindo a sala). */
     if (msg.indexOf('CONFLITO:') === 0){
       confirmar('Horário ocupado', msg.replace(/^CONFLITO:\s*/, '') + ' Salvar mesmo assim?',
-        'Salvar mesmo assim', function(){ ACOES.grSalvar(true); });
+        'Salvar mesmo assim', function(){ ACOES.grSalvar(true); }, true);
       return;
     }
     toast(msg, 'erro');

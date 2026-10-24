@@ -6,11 +6,18 @@
    folha.pedirTexto(titulo, rotulo, valor, rotuloBotao, fn)
    folha.pedirFicha(titulo, campos, rotuloBotao, fn)
 
-   Funções soltas, como no AppNucleo.html: qualquer tela chama sem hook. */
+   Funções soltas, como no AppNucleo.html: qualquer tela chama sem hook.
+
+   Como folha de app nativo (M3 modal bottom sheet, HIG Sheets):
+   - o voltar do sistema fecha a folha, não a tela (entrada no histórico);
+   - o fundo não rola e o foco fica dentro dela, voltando ao fechar;
+   - Cancelar/Confirmar ficam sempre à vista, mesmo com o teclado aberto;
+   - fecha arrastando pelo puxador, pelo corpo (no topo) ou com peteleco. */
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Check, type LucideIcon } from 'lucide-react';
 import { clsx } from 'clsx';
 import { vibrar } from '../util';
+import { fecharToast } from './toast';
 import { Avatar, Campo } from './kit';
 
 type Corpo = ReactNode | ((fechar: () => void) => ReactNode);
@@ -28,20 +35,75 @@ export type CampoFicha = {
   id: string; rotulo: string; valor?: string; tipo?: string; dica?: string; obrigatorio?: boolean;
 };
 
-/* Fecha antes e roda depois: a ação da opção pode abrir outra folha. */
-function depois(fn?: () => void) { if (fn) setTimeout(fn, 60); }
+/* ─── a folha no histórico ───
+   Abrir empurra uma entrada com o mesmo endereço; o voltar do sistema
+   (ou o gesto) tira essa entrada e fecha a folha. Fechar pelo app tira a
+   entrada com history.back() — e tudo que viria depois (outra folha, ir
+   para outra tela) espera esse voltar terminar, senão o voltar atrasado
+   desfaria a navegação nova. */
+let naPilha = false;        // a entrada da folha está no topo do histórico
+let esperandoPop = false;   // pedimos history.back() e ele ainda não chegou
+let fila: (() => void)[] = [];
+let prazoPop: ReturnType<typeof setTimeout> | undefined;
+function soltarFila() {
+  esperandoPop = false; clearTimeout(prazoPop);
+  const f = fila; fila = [];
+  f.forEach((x) => x());
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('popstate', () => {
+    if (esperandoPop) { soltarFila(); return; }
+    /* Voltar do sistema com a folha aberta: só fecha a folha. */
+    if (naPilha) { naPilha = false; fecharSemHistorico(); }
+  });
+}
+function tirarDaPilha() {
+  if (!naPilha) return;
+  naPilha = false;
+  esperandoPop = true;
+  prazoPop = setTimeout(soltarFila, 450);   // navegador que não avisa: segue mesmo assim
+  history.back();
+}
+function fecharSemHistorico() {
+  if (!estado.aberta) return;
+  const f = estado.aoFechar;
+  mudar({ ...estado, aberta: false, aoFechar: undefined });
+  f?.();
+}
+
+/* Fecha antes e roda depois: a ação da opção pode abrir outra folha ou
+   mudar de tela — só depois que a entrada da folha saiu do histórico. */
+function depois(fn?: () => void) {
+  if (!fn) return;
+  if (esperandoPop) fila.push(() => setTimeout(fn, 30));
+  else setTimeout(fn, 60);
+}
 
 export const folha = {
   abrir(titulo: string, corpo: Corpo, o: { aoFechar?: () => void } = {}) {
+    if (esperandoPop) { fila.push(() => folha.abrir(titulo, corpo, o)); return; }
+    fecharToast();
+    if (!naPilha) {
+      history.pushState({ ...(history.state || {}), folha: estado.id + 1 }, '', location.href);
+      naPilha = true;
+    }
     mudar({ aberta: true, titulo, corpo, aoFechar: o.aoFechar, id: estado.id + 1 });
   },
   fechar() {
     if (!estado.aberta) return;
-    const f = estado.aoFechar;
-    mudar({ ...estado, aberta: false, aoFechar: undefined });
-    f?.();
+    tirarDaPilha();
+    fecharSemHistorico();
+  },
+  /* Para quem vai navegar logo depois de fechar (ex.: a rota mudou com a
+     folha aberta): fecha sem mexer no histórico. */
+  fecharSemVoltar() {
+    naPilha = false;
+    fecharSemHistorico();
   },
   aberta() { return estado.aberta; },
+  /* Para quem fecha a folha e logo navega ou abre outra: espera a entrada
+     da folha sair do histórico (senão o voltar atrasado desfaz a navegação). */
+  depois(fn: () => void) { depois(fn); },
 
   opcoes(titulo: string, lista: Opcao[]) {
     folha.abrir(titulo, (fechar) => (
@@ -103,7 +165,7 @@ export function Acoes({ rotulo, onCancelar, onConfirmar, perigo = true, desligad
   rotulo: string; onCancelar: () => void; onConfirmar: () => void; perigo?: boolean; desligado?: boolean; rotuloCancelar?: string;
 }) {
   return (
-    <div className="flex shrink-0 gap-2 px-2 pt-3">
+    <div className="sticky bottom-0 z-1 -mx-3 flex shrink-0 gap-2 bg-papel px-5 pt-3 pb-1">
       <button type="button" onClick={onCancelar}
         className="min-h-13 flex-1 rounded-m bg-fundo text-base font-bold text-tinta active:bg-borda">
         {rotuloCancelar}
@@ -142,7 +204,17 @@ function Ficha({ campos, rotuloBotao, onCancelar, onEnviar }: {
     onEnviar(r);
   }
   return (
-    <form onSubmit={(ev) => { ev.preventDefault(); enviar(); }} noValidate>
+    <form onSubmit={(ev) => { ev.preventDefault(); enviar(); }} noValidate
+      onKeyDown={(ev) => {
+        /* "Próximo" no teclado vai para o campo seguinte; só o último envia. */
+        if (ev.key !== 'Enter') return;
+        const alvo = ev.target as HTMLElement;
+        const i = campos.findIndex((c) => alvo.id === 'f_' + c.id);
+        if (i >= 0 && i < campos.length - 1) {
+          ev.preventDefault();
+          document.getElementById('f_' + campos[i + 1].id)?.focus();
+        }
+      }}>
       <div className="px-2">
         {campos.map((c, i) => (
           <Campo
@@ -172,7 +244,10 @@ export function Folha() {
   const e = useSyncExternalStore((f) => { ouvintes.add(f); return () => { ouvintes.delete(f); }; }, () => estado);
   const [visivel, setVisivel] = useState(false);
   const [arrasto, setArrasto] = useState<number | null>(null);
-  const y0 = useRef(0);
+  const toque0 = useRef<{ y: number; t: number; doCorpo: boolean } | null>(null);
+  const caixa = useRef<HTMLDivElement>(null);
+  const rolo = useRef<HTMLDivElement>(null);
+  const antesDoFoco = useRef<HTMLElement | null>(null);
 
   /* Fechada só por transform, a folha continuava alcançável por Tab e
      lida pelo leitor de tela. Depois da animação, sai do DOM. */
@@ -182,43 +257,95 @@ export function Folha() {
     return () => clearTimeout(t);
   }, [e.aberta]);
 
+  /* Aberta: fundo parado, foco dentro. Fechada: foco volta para quem abriu. */
   useEffect(() => {
-    const k = (ev: KeyboardEvent) => { if (ev.key === 'Escape') folha.fechar(); };
+    if (!e.aberta) return;
+    antesDoFoco.current = document.activeElement as HTMLElement | null;
+    const corpo = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const t = setTimeout(() => {
+      const c = caixa.current;
+      if (c && !c.contains(document.activeElement)) c.focus({ preventScroll: true });
+    }, 60);
+    return () => {
+      clearTimeout(t);
+      document.body.style.overflow = corpo;
+      const volta = antesDoFoco.current;
+      if (volta && document.contains(volta)) volta.focus({ preventScroll: true });
+    };
+  }, [e.aberta, e.id]);
+
+  useEffect(() => {
+    const k = (ev: KeyboardEvent) => {
+      if (!estado.aberta) return;
+      if (ev.key === 'Escape') { folha.fechar(); return; }
+      /* Tab não sai da folha. */
+      if (ev.key !== 'Tab' || !caixa.current) return;
+      const foc = [...caixa.current.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+        .filter((x) => !x.hasAttribute('disabled') && x.offsetParent !== null);
+      if (!foc.length) return;
+      const pri = foc[0], ult = foc[foc.length - 1];
+      if (ev.shiftKey && document.activeElement === pri) { ev.preventDefault(); ult.focus(); }
+      else if (!ev.shiftKey && document.activeElement === ult) { ev.preventDefault(); pri.focus(); }
+    };
     document.addEventListener('keydown', k);
     return () => document.removeEventListener('keydown', k);
   }, []);
 
-  const toque = {
-    onTouchStart: (ev: React.TouchEvent) => { y0.current = ev.touches[0].clientY; setArrasto(0); },
-    onTouchMove: (ev: React.TouchEvent) => { if (arrasto !== null) setArrasto(Math.max(0, ev.touches[0].clientY - y0.current)); },
-    onTouchEnd: () => { if ((arrasto || 0) > 90) folha.fechar(); setArrasto(null); },
-  };
+  /* Arrastar para fechar: pelo puxador e título, ou pelo corpo quando ele
+     está rolado até o topo. Fecha passando de 90px ou num peteleco. */
+  function comeca(ev: React.TouchEvent, doCorpo: boolean) {
+    if (doCorpo && (rolo.current?.scrollTop || 0) > 0) { toque0.current = null; return; }
+    toque0.current = { y: ev.touches[0].clientY, t: ev.timeStamp, doCorpo };
+  }
+  function move(ev: React.TouchEvent) {
+    const t = toque0.current;
+    if (!t) return;
+    const dy = ev.touches[0].clientY - t.y;
+    if (t.doCorpo && dy < 8 && arrasto === null) return;   // no corpo, subir é rolar
+    setArrasto(Math.max(0, dy));
+  }
+  function solta(ev: React.TouchEvent) {
+    const t = toque0.current;
+    toque0.current = null;
+    const dy = arrasto || 0;
+    setArrasto(null);
+    if (!t) return;
+    const vel = dy / Math.max(1, ev.timeStamp - t.t);
+    if (dy > 90 || (vel > 0.5 && dy > 30)) folha.fechar();
+  }
   const corpo = typeof e.corpo === 'function' ? (e.corpo as (f: () => void) => ReactNode)(folha.fechar) : e.corpo;
 
   return (
     <>
       <div
         onClick={folha.fechar}
-        className={clsx('fixed inset-0 z-40 bg-tinta/50 transition-opacity duration-240 ease-curva',
+        aria-hidden="true"
+        className={clsx('fixed inset-0 z-40 touch-none bg-tinta/50 transition-opacity duration-240 ease-curva',
           e.aberta ? 'opacity-100' : 'pointer-events-none opacity-0')}
       />
       <div
+        ref={caixa}
         role="dialog"
         aria-modal="true"
         aria-labelledby="folhaTitulo"
+        tabIndex={-1}
         hidden={!visivel && !e.aberta}
         style={arrasto ? { transform: `translateY(${arrasto}px)`, transition: 'none' } : undefined}
         className={clsx(
-          'fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[80vh] max-w-[644px] flex-col rounded-t-g bg-papel',
+          'fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[85dvh] max-w-[644px] flex-col rounded-t-g bg-papel outline-none',
           'pt-2 pb-[calc(12px+env(safe-area-inset-bottom))] transition-transform duration-300 ease-curva',
           e.aberta ? 'translate-y-0' : 'translate-y-full',
         )}
       >
-        <div {...toque} className="shrink-0">
+        <div onTouchStart={(ev) => comeca(ev, false)} onTouchMove={move} onTouchEnd={solta} className="shrink-0 touch-none">
           <div className="mx-auto mt-1 mb-3 h-1 w-[38px] rounded-full bg-[#D9CFE2]" />
           <h2 id="folhaTitulo" className="mx-5 mb-2 text-[17px] font-bold tracking-tight">{e.titulo}</h2>
         </div>
-        <div key={e.id} className="overflow-y-auto px-3">{visivel || e.aberta ? corpo : null}</div>
+        <div key={e.id} ref={rolo} onTouchStart={(ev) => comeca(ev, true)} onTouchMove={move} onTouchEnd={solta}
+          className="overflow-y-auto overscroll-contain px-3">
+          {visivel || e.aberta ? corpo : null}
+        </div>
       </div>
     </>
   );

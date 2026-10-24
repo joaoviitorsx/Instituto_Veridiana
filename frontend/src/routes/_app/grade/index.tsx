@@ -155,10 +155,12 @@ function ListaHorarios({ hs, g, hoje, proxima, compacta }: {
             <button type="button" onClick={() => abrirHorario(h, g, navigate)}
               className={clsx('flex w-full items-center gap-3 px-4 text-left transition-colors duration-150 active:bg-roxo-fraco/60',
                 compacta ? 'min-h-14 py-2' : 'min-h-[68px] py-3',
-                s === 'passou' && 'opacity-75', s === 'agora' && 'bg-roxo-fraco/50')}>
+                s === 'agora' && 'bg-roxo-fraco/50')}>
+              {/* Aula que passou: dita pelo selo "Já passou" e pelo nome em
+                  cinza, sem transparência (que baixava o contraste para 3:1). */}
               <Hora h={h} forte={s === 'agora'} />
               <span className="min-w-0 flex-1">
-                <b className="block text-base leading-tight font-semibold [overflow-wrap:anywhere]">{h.turma}</b>
+                <b className={clsx('block text-base leading-tight font-semibold [overflow-wrap:anywhere]', s === 'passou' && 'text-apagado')}>{h.turma}</b>
                 <small className="mt-0.5 block truncate text-[13px] text-apagado">{detalheHorario(h)}</small>
               </span>
               <Selo s={s} />
