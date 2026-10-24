@@ -7,12 +7,13 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Check, CircleAlert, ImageOff, LoaderCircle } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, CalendarDays, Camera, Check, CircleAlert, ImageOff, LoaderCircle } from 'lucide-react';
 import { clsx } from 'clsx';
 import { escrever, leitura } from '../../../api/cliente';
 import { useSessao } from '../../../sessao';
 import { Tela } from '../../../ui/Tela';
 import { Campo, Chip, Osso } from '../../../ui/kit';
+import { CARTAO_ELEVADO } from '../../../ui/Heroi';
 import { toast } from '../../../ui/toast';
 import { hojeISO, textoErro, vibrar } from '../../../util';
 import { reduzirFoto } from './-foto';
@@ -111,17 +112,24 @@ function Lancar() {
       }
     >
       <form onSubmit={(e) => { e.preventDefault(); salvar(); }} noValidate>
-        <div className="mb-4">
-          <label htmlFor="cxValor" className="mb-2 block text-[13px] font-semibold text-apagado">Valor</label>
+        {/* O cartão principal da tela (DNA do Início): o valor, grande, com o
+            sentido em ícone e cor. O campo fica dentro, sem moldura própria. */}
+        <div className={clsx(CARTAO_ELEVADO, 'mb-5 p-4', erro?.campo === 'valor' && 'border-falta! ring-3 ring-falta-fraco')}>
+          <div className="mb-2 flex items-center gap-2">
+            <span className={clsx('grid size-8 shrink-0 place-items-center rounded-full', entrada ? 'bg-presente-fraco text-presente' : 'bg-falta-fraco text-falta')}>
+              {entrada ? <ArrowDownLeft size={17} strokeWidth={2.5} /> : <ArrowUpRight size={17} strokeWidth={2.5} />}
+            </span>
+            <label htmlFor="cxValor" className={clsx('text-xs font-bold tracking-[.06em] uppercase', entrada ? 'text-presente' : 'text-falta')}>
+              {entrada ? 'Quanto entrou' : 'Quanto saiu'}
+            </label>
+          </div>
           <div className="relative">
-            <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-lg font-bold text-apagado">R$</span>
+            <span className="pointer-events-none absolute top-1/2 left-1 -translate-y-1/2 text-2xl font-bold text-apagado">R$</span>
             <input id="cxValor" ref={campoValor} type="text" inputMode="decimal" placeholder="0,00" autoComplete="off"
               enterKeyHint="next" aria-invalid={erro?.campo === 'valor' || undefined}
               aria-describedby={erro?.campo === 'valor' ? 'cxValor-erro' : undefined}
               value={valor} onChange={(e) => { setValor(e.target.value.replace(/[^0-9.,]/g, '')); if (erro?.campo === 'valor') setErro(null); }}
-              className={clsx('min-h-14 w-full rounded-m border bg-papel py-3 pr-4 pl-13 text-2xl font-bold tabular-nums text-tinta',
-                'focus:ring-3 focus:outline-none',
-                erro?.campo === 'valor' ? 'border-falta focus:border-falta focus:ring-falta-fraco' : 'border-borda focus:border-roxo focus:ring-roxo-fraco')} />
+              className="min-h-14 w-full rounded-m bg-transparent py-2 pr-2 pl-12 text-[34px] font-extrabold tracking-tight tabular-nums text-tinta placeholder:text-borda focus:outline-none" />
           </div>
           <ErroDoCampo id="cxValor-erro" msg={erro?.campo === 'valor' ? erro.msg : ''} />
         </div>
@@ -179,7 +187,7 @@ function Lancar() {
           </div>
         )}
 
-        <Campo id="cxData" rotulo="Quando" type="date" value={data}
+        <Campo id="cxData" rotulo="Quando" type="date" value={data} icone={CalendarDays}
           erro={erro?.campo === 'data' ? erro.msg : undefined}
           onChange={(e) => { setData(e.target.value); if (erro?.campo === 'data') setErro(null); }} />
         <button type="submit" hidden />

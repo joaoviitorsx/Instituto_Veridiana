@@ -6,8 +6,9 @@ import { Search, Users } from 'lucide-react';
 import { leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
 import { Busca, Esqueleto, Estado, Filtro } from '../../../ui/kit';
+import { CabecalhoSecao } from '../../../ui/Heroi';
 import { ErroTela } from '../../../ui/ErroTela';
-import { semAcento, vibrar } from '../../../util';
+import { plural, semAcento, vibrar } from '../../../util';
 import type { Aluno } from './-comum';
 import { LinhasAlunos } from './-alunos';
 
@@ -33,7 +34,12 @@ function Alunos() {
       <Filtro<Aba> valor={aba} onChange={(v) => { setAba(v); vibrar(); }}
         opcoes={[{ v: 'ativos', txt: 'Na chamada' }, { v: 'inativos', txt: 'Inativos' }]} />
       {q.data ? (
-        lista.length ? <LinhasAlunos lista={lista} mostrarTurma /> : b ? (
+        lista.length ? (
+          <>
+            <CabecalhoSecao titulo={b ? plural(lista.length, 'encontrado', 'encontrados') : plural(lista.length, 'aluno', 'alunos')} />
+            <LinhasAlunos lista={lista} mostrarTurma />
+          </>
+        ) : b ? (
           <Estado icone={Search} titulo="Ninguém com esse nome" texto="Confira a escrita ou troque para a outra aba." />
         ) : (
           <Estado icone={Users}

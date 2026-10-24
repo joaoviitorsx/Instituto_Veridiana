@@ -8,6 +8,7 @@ import { leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
 import { CARTAO, Esqueleto, GrupoNav } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
+import { CabecalhoSecao } from '../../../ui/Heroi';
 import { MESES, plural, vibrar } from '../../../util';
 import { anoDeHoje, anoValido, comCor, MES_CURTO, Passo, type AgendaAno } from './-comum';
 
@@ -31,6 +32,8 @@ function Ano() {
       <Passo rotulo={ano} onAnterior={() => passo(-1)} onProximo={() => passo(1)}
         nomeAnterior="Ano anterior" nomeProximo="Próximo ano" />
       {r ? (
+        <>
+        <CabecalhoSecao titulo={r.total ? plural(r.total, 'evento no ano', 'eventos no ano') : 'Nenhum evento no ano'} />
         <div className="mb-5 grid grid-cols-3 gap-2">
           {r.meses.map((m) => {
             const chave = ano + '-' + String(m.mes).padStart(2, '0');
@@ -52,6 +55,7 @@ function Ano() {
             );
           })}
         </div>
+        </>
       ) : q.isError ? (
         <ErroTela erro={q.error} tentar={() => q.refetch()} />
       ) : (

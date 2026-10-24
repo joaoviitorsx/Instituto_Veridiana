@@ -6,10 +6,10 @@ import { useMemo, useState } from 'react';
 import { ChevronRight, KeyRound, Package, Plus, Search, Table, Tag } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Tela } from '../../../ui/Tela';
-import { BotaoCheio, Busca, Esqueleto, Estado, Linha, Lista } from '../../../ui/kit';
+import { Busca, Esqueleto, Estado, Linha, Lista } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { folha } from '../../../ui/folha';
-import { semAcento, vibrar } from '../../../util';
+import { plural, semAcento, vibrar } from '../../../util';
 import { bateFinalidade, ehBazar, ehRuim, gruposFechados, Qtd, SeloEstado, useMateriais, type Material } from './-comum';
 
 type Filtros = { categoria?: string; finalidade?: string; estado?: string; busca?: string };
@@ -77,10 +77,11 @@ function ListaMateriais() {
 
   return (
     <Tela titulo="Materiais" voltar="/"
-      barra={<BotaoCheio icone={Plus} className="text-[17px]" onClick={() => navigate({ to: '/materiais/novo' })}>Novo item</BotaoCheio>}>
-      {/* Os dois atalhos com valor operacional: o que vai para o bazar e
-          o que precisa de conserto. Com número, sem abrir filtro. */}
-      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      fab={{ icone: Plus, texto: 'Novo item', onClick: () => navigate({ to: '/materiais/novo' }) }}>
+      {/* Os atalhos com valor operacional, no jeito dos atalhos do Início:
+          o que vai para o bazar e o que precisa de conserto, com número,
+          sem abrir filtro; e o resumo. Os dois primeiros ligam e desligam. */}
+      <ul className="mb-5 grid grid-cols-3 gap-2" aria-label="Atalhos">
         <Atalho ligado={F.finalidade === 'Bazar'} icone={Tag} n={q.data ? nBazar : undefined}
           onClick={() => { vibrar(); mudar({ finalidade: F.finalidade === 'Bazar' ? undefined : 'Bazar' }); }}>
           Para o bazar
@@ -90,7 +91,7 @@ function ListaMateriais() {
           Precisa reparo
         </Atalho>
         <Atalho icone={Table} onClick={() => navigate({ to: '/materiais/resumo' })}>Resumo</Atalho>
-      </div>
+      </ul>
 
       <Busca placeholder="Procurar item" aria-label="Procurar item" value={busca}
         onChange={(e) => { setBusca(e.target.value); mudar({ busca: e.target.value || undefined }); }} />
@@ -122,11 +123,12 @@ function ListaMateriais() {
             const aberto = !fechados.has(cat);
             return (
               <div key={cat} className="mb-1">
+                {/* Cabeçalho de seção do DNA (versalete), que recolhe. */}
                 <button type="button" aria-expanded={aberto} onClick={() => alternarGrupo(cat)}
-                  className="flex min-h-13 w-full items-center gap-2 px-1 text-left text-sm font-semibold text-apagado">
-                  <ChevronRight size={18} className={clsx('shrink-0 transition-transform duration-200 ease-curva', aberto && 'rotate-90')} />
+                  className="flex min-h-11 w-full items-center gap-1.5 pr-1 pl-4 text-left text-[13px] font-semibold tracking-wide text-apagado uppercase">
                   <span className="min-w-0 flex-1 truncate">{cat}</span>
-                  <span className="tabular-nums">{itens.length}</span>
+                  <span className="tabular-nums normal-case">{plural(itens.length, 'item', 'itens')}</span>
+                  <ChevronRight size={18} className={clsx('shrink-0 transition-transform duration-200 ease-curva', aberto && 'rotate-90')} />
                 </button>
                 {aberto && (
                   <Lista semAvatar>
@@ -148,17 +150,26 @@ function ListaMateriais() {
   );
 }
 
+/* Atalho no formato do Início (quadrado arredondado + rótulo), com o
+   número dentro e estado ligado/desligado para os filtros rápidos. */
 function Atalho({ ligado, icone: Ic, n, onClick, children }: {
   ligado?: boolean; icone: typeof Tag; n?: number; onClick: () => void; children: string;
 }) {
   return (
-    <button type="button" aria-pressed={ligado} onClick={onClick}
-      className={clsx('flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-bold whitespace-nowrap',
-        'transition-colors duration-150',
-        ligado ? 'border-roxo bg-roxo text-white' : 'border-borda bg-papel text-roxo active:bg-roxo-fraco')}>
-      <Ic size={18} /> {children}
-      {n !== undefined && <b className="tabular-nums">{n}</b>}
-    </button>
+    <li>
+      <button type="button" aria-pressed={ligado} onClick={onClick}
+        className="group flex w-full flex-col items-center gap-1.5 rounded-m py-1 text-center">
+        <span className={clsx('relative grid size-14 place-items-center rounded-2xl border shadow-cartao transition-colors duration-150',
+          ligado ? 'border-roxo bg-roxo text-white' : 'border-borda bg-papel text-roxo group-active:bg-roxo-fraco')}>
+          <Ic size={24} strokeWidth={2.1} />
+          {n !== undefined && (
+            <b className={clsx('absolute -top-1.5 -right-1.5 grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-xs tabular-nums',
+              ligado ? 'bg-papel text-roxo shadow-cartao' : 'bg-roxo text-white')}>{n}</b>
+          )}
+        </span>
+        <span className={clsx('text-xs leading-tight font-semibold', ligado ? 'text-roxo' : 'text-tinta')}>{children}</span>
+      </button>
+    </li>
   );
 }
 

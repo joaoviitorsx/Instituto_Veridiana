@@ -5,7 +5,9 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { Package, Pencil, Search } from 'lucide-react';
 import { escrever } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { Esqueleto, Estado, Linha, Lista, Numeros, Secao } from '../../../ui/kit';
+import { Esqueleto, Estado, Linha, Lista } from '../../../ui/kit';
+import { CabecalhoSecao, CARTAO_ELEVADO } from '../../../ui/Heroi';
+import { clsx } from 'clsx';
 import { ErroTela } from '../../../ui/ErroTela';
 import { folha } from '../../../ui/folha';
 import { toast } from '../../../ui/toast';
@@ -73,19 +75,19 @@ function Resumo() {
 
   const listaItens = (titulo: string, lista: Material[], vazio: string) => (
     <>
-      <Secao>{titulo}</Secao>
+      <CabecalhoSecao titulo={titulo} className="mt-4" />
       {lista.length ? (
         <Lista semAvatar>
           {lista.map((i) => (
             <Linha key={i.id} onClick={() => abrir(i)} titulo={i.item} sub={i.local || 'sem local'} direita={<Qtd n={i.quantidade} />} />
           ))}
         </Lista>
-      ) : <p className="mx-1 text-[13px] text-apagado">{vazio}</p>}
+      ) : <p className="mx-4 mb-2 text-[13px] text-apagado">{vazio}</p>}
     </>
   );
   const listaGrupos = (titulo: string, campo: 'categoria' | 'local', gs: Grupo[]) => (
     <>
-      <Secao>{titulo}</Secao>
+      <CabecalhoSecao titulo={titulo} className="mt-4" />
       <Lista semAvatar>
         {gs.map((g) => (
           <Linha key={g.nome} onClick={() => opcoes(campo, g.nome)} titulo={g.nome}
@@ -99,16 +101,24 @@ function Resumo() {
 
   return (
     <Tela titulo="Resumo dos materiais" voltar="/materiais">
-      <Numeros itens={[
-        { n: itens.length, txt: itens.length === 1 ? 'item' : 'itens' },
-        { n: unidades, txt: 'unidades' },
-        { n: porCat.length, txt: porCat.length === 1 ? 'categoria' : 'categorias' },
-      ]} />
+      {/* O cartão principal (DNA): os três números de relance. */}
+      <div className={clsx(CARTAO_ELEVADO, 'mb-2 grid grid-cols-3 divide-x divide-borda py-4')}>
+        {[
+          { n: itens.length, txt: itens.length === 1 ? 'item' : 'itens' },
+          { n: unidades, txt: unidades === 1 ? 'unidade' : 'unidades' },
+          { n: porCat.length, txt: porCat.length === 1 ? 'categoria' : 'categorias' },
+        ].map((x) => (
+          <div key={x.txt} className="px-2 text-center">
+            <b className="block text-[28px] leading-none font-extrabold tracking-tight text-roxo tabular-nums">{x.n}</b>
+            <span className="mt-1 block text-xs font-semibold text-apagado">{x.txt}</span>
+          </div>
+        ))}
+      </div>
       {listaItens('Para o bazar', itens.filter(ehBazar), 'Nenhum item marcado para o bazar.')}
       {listaItens('Precisam de reparo', itens.filter((i) => i.estado === 'Precisa reparo'), 'Nada quebrado. Ótimo.')}
       {listaGrupos('Por categoria', 'categoria', porCat)}
       {listaGrupos('Por local', 'local', porLocal)}
-      <p className="mx-1 text-[13px] leading-normal text-apagado">
+      <p className="mx-4 text-[13px] leading-normal text-apagado">
         Toque numa categoria ou num local para ver os itens ou mudar o nome.
       </p>
     </Tela>

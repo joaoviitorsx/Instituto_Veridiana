@@ -19,7 +19,8 @@ import { ErroTela } from '../../../ui/ErroTela';
 import { folha } from '../../../ui/folha';
 import { toast } from '../../../ui/toast';
 import { copiarTexto, linkZap, plural, textoErro, vibrar } from '../../../util';
-import { editarContato, Intro } from '../gestao/-relatorios';
+import { editarContato } from '../gestao/-relatorios';
+import { CabecalhoSecao, CARTAO_ELEVADO } from '../../../ui/Heroi';
 
 type AlunaCert = {
   nome: string; turma: string; ativo: boolean; aulas: number; horas: number; desde: string;
@@ -45,6 +46,8 @@ function CertTurma() {
      inteira" emitiria os certificados das alunas erradas. */
   const as = q.data?.every((a) => a.turma === turma) ? q.data : undefined;
   const com = (as || []).filter((a) => a.aulas > 0);
+  const totalHoras = Math.round(com.reduce((t, a) => t + (Number(a.horas) || 0), 0) * 10) / 10;
+  const semPresenca = (as || []).length - com.length;
 
   async function emitir(nomes: string[], umNome: string) {
     if (gerando) return;
@@ -89,7 +92,20 @@ function CertTurma() {
   } else {
     corpo = (
       <>
-        <Intro>Toque na aluna para gerar o certificado dela.</Intro>
+        {/* Cartão principal: quanto esta turma tem para certificar. */}
+        <div className={clsx(CARTAO_ELEVADO, 'mb-2 flex items-center gap-3 p-4')}>
+          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-roxo text-white"><Medal size={24} /></span>
+          <span className="min-w-0 flex-1 leading-tight">
+            <small className="block text-xs font-bold tracking-[.06em] text-roxo uppercase">Para certificar</small>
+            <b className="mt-0.5 block text-[22px] font-extrabold tracking-tight tabular-nums">
+              {plural(com.length, 'aluna', 'alunas')}
+            </b>
+            <span className="mt-0.5 block text-sm text-apagado">
+              {totalHoras.toLocaleString('pt-BR')} {totalHoras === 1 ? 'hora' : 'horas'} de aula somadas{semPresenca ? ' · ' + semPresenca + ' ainda sem presença' : ''}
+            </span>
+          </span>
+        </div>
+        <CabecalhoSecao titulo="Toque na aluna para gerar" className="mt-3" />
         <Lista>
           {as.map((a) => {
             const vazio = a.aulas === 0;
@@ -97,10 +113,15 @@ function CertTurma() {
               <Linha key={a.nome}
                 esquerda={<Avatar nome={a.nome} tom={vazio ? 'falta' : undefined} />}
                 titulo={<span className={clsx(vazio && 'text-apagado')}>{a.nome}</span>}
-                sub={vazio ? 'sem presença ainda' : plural(a.aulas, 'aula', 'aulas') + ' · ' + plural(a.horas, 'hora', 'horas')}
-                direita={vazio ? undefined : <ChevronRight size={18} className="shrink-0 text-apagado" />}
+                sub={vazio ? 'ainda não pode gerar' : plural(a.aulas, 'aula', 'aulas')}
+                direita={vazio
+                  ? <span className="shrink-0 rounded-full border border-borda bg-fundo px-2.5 py-1 text-xs font-bold text-apagado">sem presença</span>
+                  : <span className="flex shrink-0 items-center gap-1">
+                      <span className="rounded-full bg-roxo-fraco px-2.5 py-1 text-xs font-bold text-roxo tabular-nums">{Number(a.horas).toLocaleString('pt-BR')} h</span>
+                      <ChevronRight size={18} className="text-apagado" />
+                    </span>}
                 onClick={vazio ? undefined : () => emitir([a.nome], a.nome)}
-                rotulo={vazio ? undefined : 'Gerar certificado de ' + a.nome} />
+                rotulo={vazio ? undefined : 'Gerar certificado de ' + a.nome + ', ' + Number(a.horas).toLocaleString('pt-BR') + ' horas'} />
             );
           })}
         </Lista>
@@ -151,7 +172,7 @@ function Pronto({ r, umNome, ficha, turma }: { r: Gerado; umNome: string; ficha?
         </a>
       ) : umNome && r.publico ? (
         <button type="button" onClick={() => { folha.fechar(); setTimeout(() => editarContato(umNome, turma), 80); }}
-          className={clsx(BOTAO, 'mt-2 border border-dashed border-borda bg-fundo text-apagado active:bg-borda')}>
+          className={clsx(BOTAO, 'mt-2 border border-borda bg-papel text-roxo active:bg-roxo-fraco')}>
           <UserPlus size={18} /> Cadastrar telefone para o WhatsApp
         </button>
       ) : null}

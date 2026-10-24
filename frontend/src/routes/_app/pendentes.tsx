@@ -10,7 +10,7 @@ import { Tela } from '../../ui/Tela';
 import { BotaoCheio, CARTAO, Estado, Banner } from '../../ui/kit';
 import { folha } from '../../ui/folha';
 import { toast } from '../../ui/toast';
-import { copiarTexto, dataExtenso, hojeISO, plural } from '../../util';
+import { copiarTexto, dataCurta, dataExtenso, hojeISO, plural } from '../../util';
 
 export const Route = createFileRoute('/_app/pendentes')({ component: Pendentes });
 
@@ -64,20 +64,25 @@ function Item({ i }: { i: ItemFila }) {
   }
 
   return (
-    <li className={clsx(CARTAO, 'mb-3 p-4')}>
-      <div className="flex items-start gap-3">
-        <span className={clsx('mt-0.5 grid size-10 shrink-0 place-items-center rounded-full',
-          precisaDecidir ? 'bg-falta-fraco text-falta' : 'bg-roxo-fraco text-roxo')} aria-hidden="true">
-          <CloudUpload size={20} />
+    <li className={clsx(CARTAO, 'mb-3 rounded-2xl p-4')}>
+      {/* DNA: coluna fixa à esquerda (quando), o quê no meio, selo escrito à direita. */}
+      <div className="flex items-center gap-3">
+        <span className="flex w-[58px] shrink-0 flex-col items-start leading-tight tabular-nums">
+          <b className="text-[17px] font-extrabold tracking-tight">{dataCurta(dia)}</b>
+          <span className="text-[13px] font-medium text-apagado">{hora}</span>
         </span>
         <div className="min-w-0 flex-1">
           <b className="block text-base leading-tight [overflow-wrap:anywhere]">{i.turma}</b>
           <span className="block text-[13px] text-apagado">
-            {dataExtenso(dia)}, {hora} · {i.professor}<br />
-            {presentes} de {i.presencas.length} presentes
+            {presentes} de {i.presencas.length} presentes · {i.professor}
             {i.tentativas > 0 && ' · ' + plural(i.tentativas, 'tentativa', 'tentativas')}
           </span>
         </div>
+        <span className={clsx('inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold whitespace-nowrap',
+          precisaDecidir ? 'bg-falta-fraco text-falta' : 'bg-roxo-fraco text-roxo')}>
+          {!precisaDecidir && <CloudUpload size={13} strokeWidth={2.5} />}
+          {i.situacao === 'pendente' ? 'Esperando' : i.situacao === 'duplicada' ? 'Duplicada' : i.situacao === 'antiga' ? 'Antiga' : 'Recusada'}
+        </span>
       </div>
       {/* O que fazer, em palavras de quem está com o celular na mão. */}
       {i.situacao === 'duplicada' && (

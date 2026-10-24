@@ -7,11 +7,12 @@ import { useState } from 'react';
 import { CalendarX, Copy, FileText } from 'lucide-react';
 import { leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { Banner, BotaoCheio, BotaoContorno, Campo, Esqueleto, Linha, Lista, Numeros, Secao } from '../../../ui/kit';
+import { Banner, BotaoCheio, BotaoContorno, Campo, Esqueleto, Linha, Lista } from '../../../ui/kit';
+import { CabecalhoSecao } from '../../../ui/Heroi';
 import { ErroTela } from '../../../ui/ErroTela';
 import { toast } from '../../../ui/toast';
 import { copiarTexto, dataCurta, hojeISO, plural, vibrar } from '../../../util';
-import { Intro, Pct } from './-relatorios';
+import { Intro, NumerosCartao, Pct } from './-relatorios';
 
 type Relatorio = {
   inicio: string; fim: string; completo: boolean;
@@ -107,25 +108,25 @@ function Saida({ r }: { r: Relatorio }) {
           O período é longo e a conta parou antes do fim. Gere por partes, um semestre de cada vez, e some.
         </Banner>
       )}
-      <Secao className="mt-0">Resumo</Secao>
-      <Numeros itens={[
+      <CabecalhoSecao titulo={'Resumo · ' + dataCurta(r.inicio) + ' a ' + dataCurta(r.fim)} />
+      <NumerosCartao itens={[
         { n: r.beneficiarios, txt: 'beneficiários' },
         { n: r.aulas, txt: 'aulas' },
         { n: r.frequencia + '%', txt: 'frequência' },
       ]} />
 
       {faixas.length > 0 && (
-        <>
-          <Secao>Faixa etária</Secao>
+        <section className="mt-5">
+          <CabecalhoSecao titulo="Faixa etária" />
           <Lista semAvatar>
             {faixas.map((k) => <Linha key={k} titulo={k} direita={<Pct>{r.faixas[k]}</Pct>} />)}
           </Lista>
-        </>
+        </section>
       )}
 
       {r.turmas.length > 0 && (
-        <>
-          <Secao>Por turma</Secao>
+        <section>
+          <CabecalhoSecao titulo="Por turma" />
           <Lista semAvatar>
             {r.turmas.map((t) => (
               <Linha key={t.turma} titulo={t.turma}
@@ -133,7 +134,7 @@ function Saida({ r }: { r: Relatorio }) {
                 direita={<Pct>{t.pct}%</Pct>} />
             ))}
           </Lista>
-        </>
+        </section>
       )}
 
       <BotaoContorno icone={Copy} onClick={copiar} className="mt-5">Copiar para colar no edital</BotaoContorno>

@@ -1,12 +1,13 @@
 /* Peças das telas de leitura da gestão (histórico, atenção, relatório)
    e dos certificados. O '-' no nome tira este arquivo das rotas. */
 import type { ReactNode } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react';
 import { clsx } from 'clsx';
 import { escrever, leitura, queryClient } from '../../../api/cliente';
 import { folha } from '../../../ui/folha';
 import { toast } from '../../../ui/toast';
 import { CARTAO } from '../../../ui/kit';
+import { CARTAO_ELEVADO } from '../../../ui/Heroi';
 import { textoErro, vibrar } from '../../../util';
 
 /* Número à direita da linha: percentual, contagem. cheio = verde. */
@@ -19,13 +20,46 @@ export function Pct({ children, cheio, perigo }: { children: ReactNode; cheio?: 
   );
 }
 
-/* Bloco roxo com o número que resume a tela. */
-export function Resumo({ n, txt }: { n: ReactNode; txt: ReactNode }) {
+/* O número que resume a tela, no cartão principal (CARTAO_ELEVADO, como o
+   cartão de destaque do Início). Número grande em roxo, a frase embaixo. */
+export function Resumo({ n, txt, icone: Ic }: { n: ReactNode; txt: ReactNode; icone?: LucideIcon }) {
   return (
-    <div className="rounded-m bg-roxo p-5 text-center text-white">
-      <b className="block text-[32px] font-bold tracking-tighter tabular-nums">{n}</b>
-      <span className="mt-1 block text-sm text-roxo-claro">{txt}</span>
+    <div className={clsx(CARTAO_ELEVADO, 'flex items-center gap-4 p-5')}>
+      {Ic && <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-roxo text-white"><Ic size={24} /></span>}
+      <span className="min-w-0">
+        <b className="block text-[34px] leading-none font-extrabold tracking-tighter text-roxo tabular-nums">{n}</b>
+        <span className="mt-1.5 block text-sm text-apagado">{txt}</span>
+      </span>
     </div>
+  );
+}
+
+/* Vários números lado a lado num cartão só (o resumo do relatório). Fio
+   entre eles em vez de três caixas roxas: um bloco, uma leitura. */
+export function NumerosCartao({ itens }: { itens: { n: ReactNode; txt: string }[] }) {
+  return (
+    <div className={clsx(CARTAO_ELEVADO, 'flex divide-x divide-borda py-4')}>
+      {itens.map((x, i) => (
+        <div key={i} className="min-w-0 flex-1 px-2 text-center">
+          <b className="block text-[26px] leading-none font-extrabold tracking-tight text-roxo tabular-nums">{x.n}</b>
+          <span className="mt-1.5 block text-xs text-apagado">{x.txt}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* Coluna fixa à esquerda da linha (como a hora em "Hoje na grade" no
+   Início): dia do mês grande, dia da semana embaixo. */
+const DIAS_CURTOS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+export function ColunaDia({ iso }: { iso: string }) {
+  const [a, m, d] = iso.split('-').map(Number);
+  const semana = DIAS_CURTOS[new Date(a, m - 1, d).getDay()];
+  return (
+    <span className="w-10 shrink-0 text-center leading-tight" aria-hidden="true">
+      <b className="block text-lg tabular-nums">{d}</b>
+      <small className="block text-xs text-apagado">{semana}</small>
+    </span>
   );
 }
 

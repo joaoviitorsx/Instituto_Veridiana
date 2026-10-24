@@ -30,6 +30,13 @@ dois usam as mesmas funções do servidor: nenhuma regra de negócio mudou.
   iPhone**, abre em tela cheia e instantâneo.
 - A sessão fica guardada no aparelho (o iframe do Apps Script nem sempre
   deixava).
+- **Cara e jeito de app nativo:** barra de abas, título grande que encolhe,
+  folhas, toasts, transições entre telas e gestos (arrastar da borda para
+  voltar, arrastar para o lado para trocar de aba). Convite para instalar ao
+  abrir pelo navegador. Os padrões, com as fontes (Material 3, Apple HIG,
+  web.dev), estão em [`DESIGN.md`](DESIGN.md) — leia antes de mexer em tela.
+- **Grade de aulas** (`/grade`): a semana por dia ou inteira, cadastro em
+  vários dias de uma vez, aviso de conflito, "Aulas de hoje" na chamada.
 
 ### Como a chamada offline não duplica
 
@@ -117,6 +124,16 @@ de novo — nada para republicar.
 
 ---
 
+## Gestos e instalação
+
+- `src/ui/Arrastar.tsx`: voltar pela borda esquerda (desligado no Safari do
+  iPhone fora do app instalado, que já faz isso) e trocar de aba arrastando.
+- `src/ui/ConviteInstalar.tsx`: convite ao abrir pelo navegador. No Android
+  instala com um toque; no iPhone mostra os passos (a Apple não deixa
+  instalar por código). "Agora não" vale 7 dias.
+- As capturas em `public/capturas/` aparecem no diálogo de instalação do
+  Android. Mudou a cara do app? Gere de novo.
+
 ## Estrutura
 
 ```
@@ -129,7 +146,8 @@ src/
   offline/instalar.ts botão de instalar (Android) e dica do iPhone
   sw.ts               service worker: cache do app + Background Sync da fila
   sessao.ts           token do login (localStorage + cópia no IndexedDB para o SW)
-  ui/                 Tela, folha (bottom sheet), toast, kit de componentes
+  ui/                 Tela (moldura), Abas, Heroi (DNA das telas raiz), folha,
+                      toast, Arrastar (gestos), ConviteInstalar, kit
   routes/             uma tela por arquivo (TanStack Router); cada seção é
                       um pedaço separado do pacote — quem escaneia o QR
                       não baixa gestão, caixa nem agenda

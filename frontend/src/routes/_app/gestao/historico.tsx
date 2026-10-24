@@ -4,13 +4,14 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { Calendar } from 'lucide-react';
+import { Calendar, CalendarCheck } from 'lucide-react';
 import { leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { Esqueleto, Estado, Linha, Lista, Secao } from '../../../ui/kit';
+import { Esqueleto, Estado, Linha, Lista } from '../../../ui/kit';
+import { CabecalhoSecao } from '../../../ui/Heroi';
 import { ErroTela } from '../../../ui/ErroTela';
-import { dataExtenso, hojeISO, maiuscula, mesExtenso, plural, vibrar } from '../../../util';
-import { Passo, Pct, Resumo } from './-relatorios';
+import { dataExtenso, hojeISO, mesExtenso, plural, vibrar } from '../../../util';
+import { ColunaDia, Passo, Pct, Resumo } from './-relatorios';
 
 type Mes = {
   mes: string;
@@ -67,36 +68,37 @@ function MesAberto({ r }: { r: Mes }) {
   });
   return (
     <>
-      <Resumo n={t.pct + '%'} txt={'de presença em ' + plural(t.aulas, 'aula', 'aulas')} />
+      <Resumo icone={CalendarCheck} n={t.pct + '%'} txt={'de presença em ' + plural(t.aulas, 'aula', 'aulas') + ' do mês'} />
 
       {r.turmas.length > 0 && (
-        <>
-          <Secao>Por turma</Secao>
+        <section className="mt-5">
+          <CabecalhoSecao titulo="Por turma" />
           <Lista semAvatar>
             {r.turmas.map((x) => (
               <Linha key={x.turma} titulo={x.turma}
                 sub={plural(x.aulas, 'aula', 'aulas') + ' · ' + x.presentes + ' de ' + x.total + ' presenças'}
-                direita={<Pct>{x.pct}%</Pct>} />
+                direita={<Pct cheio={x.pct === 100}>{x.pct}%</Pct>} />
             ))}
           </Lista>
-        </>
+        </section>
       )}
 
       {dias.length > 0 && (
-        <>
-          <Secao>Aulas do mês</Secao>
-          {dias.map((d) => (
-            <div key={d.data}>
-              <div className="mx-1 mt-4 mb-2 text-[13px] font-semibold text-apagado">{maiuscula(dataExtenso(d.data))}</div>
-              <Lista semAvatar>
-                {d.aulas.map((a) => (
-                  <Linha key={a.turma} titulo={a.turma} sub={a.professor || 'sem professor'}
-                    direita={<Pct cheio={a.presentes === a.total}>{a.presentes}/{a.total}</Pct>} />
-                ))}
-              </Lista>
-            </div>
-          ))}
-        </>
+        <section>
+          <CabecalhoSecao titulo="Aulas do mês" />
+          {/* Uma lista só, com o dia numa coluna fixa à esquerda (como a
+              hora no "Hoje na grade" do Início). O dia aparece na primeira
+              aula dele; as outras do mesmo dia ficam alinhadas embaixo. */}
+          <Lista>
+            {dias.flatMap((d) => d.aulas.map((a, k) => (
+              <Linha key={d.data + a.turma}
+                rotulo={dataExtenso(d.data) + ', ' + a.turma + ', ' + a.presentes + ' de ' + a.total + ' presentes'}
+                esquerda={k === 0 ? <ColunaDia iso={d.data} /> : <span className="w-10 shrink-0" />}
+                titulo={a.turma} sub={a.professor || 'sem professor'}
+                direita={<Pct cheio={a.presentes === a.total}>{a.presentes}/{a.total}</Pct>} />
+            )))}
+          </Lista>
+        </section>
       )}
     </>
   );

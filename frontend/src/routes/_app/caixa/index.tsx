@@ -1,17 +1,24 @@
 /* Fluxo de caixa: o mês. Lançar em poucos toques, do celular, entre uma
-   aula e outra. Dois botões grandes no rodapé: entrou, saiu. */
+   aula e outra. Tela raiz com o DNA do Início (DESIGN.md §16): Heroi com o
+   mês, o saldo num cartão por cima da borda. Entrou/Saiu ficam nos dois
+   botões grandes, verde e vermelho, fixos embaixo: cor, sinal e palavra
+   dizem o sentido de longe, e o polegar não precisa procurar. */
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { ChevronLeft, ChevronRight, ExternalLink, FileText, Minus, Plus, Trash2, Wallet } from 'lucide-react';
+import {
+  ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight, ExternalLink, FileText, Minus, Plus, ReceiptText, Trash2,
+  TriangleAlert, Wallet,
+} from 'lucide-react';
 import { clsx } from 'clsx';
 import { escrever, leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { Banner, CARTAO, Esqueleto, Estado, GrupoNav, Lista, Secao } from '../../../ui/kit';
+import { Banner, CARTAO, Esqueleto, Estado, GrupoNav, Osso } from '../../../ui/kit';
+import { CabecalhoSecao, CARTAO_ELEVADO, Corpo, Heroi, Sobreposto } from '../../../ui/Heroi';
 import { ErroTela } from '../../../ui/ErroTela';
 import { folha } from '../../../ui/folha';
 import { toast } from '../../../ui/toast';
-import { dataExtenso, hojeISO, mesExtenso, plural, reais, textoErro, urlSegura, vibrar } from '../../../util';
+import { dataExtenso, hojeISO, maiuscula, mesExtenso, plural, reais, textoErro, urlSegura, vibrar } from '../../../util';
 import { MES_RE, type Lancamento, type MesCaixa } from './-tipos';
 
 export const Route = createFileRoute('/_app/caixa/')({
@@ -42,125 +49,147 @@ function Caixa() {
     vibrar();
     navigate({ to: '/caixa', search: i === 0 ? {} : { mes: lista[i] }, replace: true });
   };
+  const antes = idx < lista.length - 1 ? () => irPara(idx + 1) : undefined;
+  const depois = idx > 0 ? () => irPara(idx - 1) : undefined;
 
-  const lancar = (tipo: 'Entrada' | 'Saída') => navigate({ to: '/caixa/lancar', search: { tipo } });
+  const semNota = r ? r.lancamentos.filter((l) => l.tipo === 'Saída' && !l.comprovante).length : 0;
 
   return (
-    <Tela
-      titulo="Caixa"
-      voltar="/"
+    <Tela titulo="Caixa" voltar="/" roxo solto
       barra={
         <div className="flex gap-2">
-          <button type="button" onClick={() => lancar('Entrada')}
+          <button type="button" onClick={() => navigate({ to: '/caixa/lancar', search: { tipo: 'Entrada' } })}
             className="flex min-h-13 flex-1 items-center justify-center gap-2 rounded-m bg-presente text-base font-bold text-white transition-colors duration-150 active:bg-presente-fundo">
             <Plus size={18} /> Entrou
           </button>
-          <button type="button" onClick={() => lancar('Saída')}
+          <button type="button" onClick={() => navigate({ to: '/caixa/lancar', search: { tipo: 'Saída' } })}
             className="flex min-h-13 flex-1 items-center justify-center gap-2 rounded-m bg-falta text-base font-bold text-white transition-colors duration-150 active:bg-falta-fundo">
             <Minus size={18} /> Saiu
           </button>
         </div>
       }
-    >
-      {meses.isError ? (
-        <ErroTela erro={meses.error} tentar={() => meses.refetch()} />
-      ) : !meses.data ? (
-        <Esqueleto n={4} />
-      ) : (
-        <>
-          <Passo
-            rotulo={mesExtenso(mes)}
-            antes={idx < lista.length - 1 ? () => irPara(idx + 1) : undefined}
-            depois={idx > 0 ? () => irPara(idx - 1) : undefined}
-          />
-          {r ? <Mes r={r} /> : q.isError ? <ErroTela erro={q.error} tentar={() => q.refetch()} /> : <Esqueleto n={3} />}
-        </>
-      )}
+      capa={
+        <Heroi sobre="Caixa" titulo={mesExtenso(mes)}
+          pilulas={[
+            r && { icone: ReceiptText, texto: r.lancamentos.length ? plural(r.lancamentos.length, 'lançamento', 'lançamentos') : 'Nada lançado' },
+            r && semNota > 0 && { icone: TriangleAlert, texto: plural(semNota, 'saída sem nota', 'saídas sem nota') },
+          ]} />
+      }>
+      <Sobreposto>
+        {meses.isError ? (
+          <div className={CARTAO_ELEVADO}><ErroTela erro={meses.error} tentar={() => meses.refetch()} /></div>
+        ) : r ? (
+          <Saldo r={r} antes={antes} depois={depois} />
+        ) : q.isError ? (
+          <div className={CARTAO_ELEVADO}><ErroTela erro={q.error} tentar={() => q.refetch()} /></div>
+        ) : (
+          <Osso className="h-44 rounded-2xl shadow-cartao" />
+        )}
+      </Sobreposto>
+      <Corpo>
+        <GrupoNav className="mt-1" itens={[{ icone: FileText, titulo: 'Resumo do período', sub: 'por categoria e por fonte, para a prestação de contas',
+          onClick: () => navigate({ to: '/caixa/resumo' }) }]} />
+        {r ? <Lancamentos r={r} /> : !q.isError && !meses.isError && <Esqueleto n={3} />}
+      </Corpo>
     </Tela>
   );
 }
 
-/* Mês anterior / próximo. */
-function Passo({ rotulo, antes, depois }: { rotulo: string; antes?: () => void; depois?: () => void }) {
-  const bt = 'grid size-11 shrink-0 place-items-center rounded-p text-roxo transition-colors duration-150 active:bg-roxo-fraco disabled:text-borda';
+/* O cartão principal: quanto há em caixa no fim do mês da tela, o que
+   entrou e saiu nele, e o passo de mês nos cantos. Branco elevado sobre o
+   roxo do Heroi (o bloco roxo antigo ficaria roxo sobre roxo). */
+function Saldo({ r, antes, depois }: { r: MesCaixa; antes?: () => void; depois?: () => void }) {
+  const bt = 'grid size-11 shrink-0 place-items-center rounded-full text-roxo transition-colors duration-150 active:bg-roxo-fraco disabled:text-borda';
   return (
-    <div className={clsx(CARTAO, 'mb-4 flex items-center justify-between gap-2 p-1')}>
-      <button type="button" className={bt} onClick={antes} disabled={!antes} aria-label="Mês anterior"><ChevronLeft size={22} /></button>
-      <b className="min-w-0 flex-1 truncate text-center text-base font-bold tracking-tight">{rotulo}</b>
-      <button type="button" className={bt} onClick={depois} disabled={!depois} aria-label="Próximo mês"><ChevronRight size={22} /></button>
+    <div className={clsx(CARTAO_ELEVADO, 'p-2 pb-4')}>
+      <div className="flex items-center justify-between">
+        <button type="button" className={bt} onClick={antes} disabled={!antes} aria-label="Mês anterior"><ChevronLeft size={22} /></button>
+        <span className="text-xs font-bold tracking-[.06em] text-roxo uppercase">Em caixa</span>
+        <button type="button" className={bt} onClick={depois} disabled={!depois} aria-label="Próximo mês"><ChevronRight size={22} /></button>
+      </div>
+      <b className="-mt-1 block px-2 text-center text-[34px] leading-tight font-extrabold tracking-tight tabular-nums [overflow-wrap:anywhere]">
+        {reais(r.acumulado)}
+      </b>
+      <div className="mx-2 mt-3 flex gap-2 border-t border-borda pt-3">
+        <Movimento tipo="entrada" valor={r.entrou} rotulo="entrou no mês" />
+        <Movimento tipo="saida" valor={r.saiu} rotulo="saiu no mês" />
+      </div>
     </div>
   );
 }
 
-function Mes({ r }: { r: MesCaixa }) {
-  const navigate = useNavigate();
+function Movimento({ tipo, valor, rotulo }: { tipo: 'entrada' | 'saida'; valor: number; rotulo: string }) {
+  const entrada = tipo === 'entrada';
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-2">
+      <span className={clsx('grid size-8 shrink-0 place-items-center rounded-full', entrada ? 'bg-presente-fraco text-presente' : 'bg-falta-fraco text-falta')}>
+        {entrada ? <ArrowDownLeft size={17} strokeWidth={2.5} /> : <ArrowUpRight size={17} strokeWidth={2.5} />}
+      </span>
+      <span className="min-w-0 leading-tight">
+        <b className={clsx('block truncate text-[15px] tabular-nums', entrada ? 'text-presente' : 'text-falta')}>{reais(valor)}</b>
+        <small className="block text-xs text-apagado">{rotulo}</small>
+      </span>
+    </div>
+  );
+}
 
-  /* Lançamentos agrupados por dia, na ordem que o servidor mandou (mais novo primeiro). */
+function Lancamentos({ r }: { r: MesCaixa }) {
+  /* Agrupados por dia, na ordem que o servidor mandou (mais novo primeiro). */
   const dias: { data: string; itens: Lancamento[] }[] = [];
   r.lancamentos.forEach((l) => {
     const ult = dias[dias.length - 1];
     if (ult && ult.data === l.data) ult.itens.push(l); else dias.push({ data: l.data, itens: [l] });
   });
 
+  if (!r.lancamentos.length) {
+    return (
+      <Estado icone={Wallet} titulo="Nada lançado neste mês"
+        texto="Assim que entrar ou sair dinheiro, toque em Entrou ou Saiu, aqui embaixo." />
+    );
+  }
   return (
     <>
-      <div className="mb-2 rounded-m bg-roxo p-5 text-center text-white">
-        <span className="block text-[13px] text-roxo-claro">em caixa</span>
-        <b className="mt-1 block text-[32px] leading-tight font-bold tracking-tight tabular-nums [overflow-wrap:anywhere]">
-          {reais(r.acumulado)}
-        </b>
-        <div className="mt-4 flex gap-2 border-t border-white/20 pt-4 text-[15px] font-semibold tabular-nums">
-          <div className="min-w-0 flex-1 text-[#A8E6C6]">
-            {reais(r.entrou)}<small className="mt-0.5 block text-xs font-normal text-roxo-claro">entrou no mês</small>
-          </div>
-          <div className="min-w-0 flex-1 text-[#F2B8C2]">
-            {reais(r.saiu)}<small className="mt-0.5 block text-xs font-normal text-roxo-claro">saiu no mês</small>
-          </div>
-        </div>
-      </div>
-
-      {/* O resumo é por período, não pelo mês da tela: vale até em mês vazio. */}
-      <GrupoNav className="mt-4" itens={[{
-        icone: FileText, titulo: 'Resumo para prestação de contas', sub: 'totais por categoria e por fonte',
-        onClick: () => navigate({ to: '/caixa/resumo' }),
-      }]} />
-
-      {!r.lancamentos.length ? (
-        <Estado icone={Wallet} titulo="Nada lançado neste mês"
-          texto="Assim que entrar ou sair dinheiro, toque em Entrou ou Saiu, aqui embaixo." />
-      ) : (
-        <>
-          <Secao>{plural(r.lancamentos.length, 'lançamento', 'lançamentos')}</Secao>
-          {dias.map((d) => (
-            <div key={d.data}>
-              <div className="mx-1 mt-4 mb-2 text-[13px] font-semibold text-apagado">{dataExtenso(d.data)}</div>
-              <Lista semAvatar>
-                {d.itens.map((l) => <ItemLanc key={l.linha} l={l} />)}
-              </Lista>
-            </div>
-          ))}
-        </>
-      )}
+      <CabecalhoSecao titulo={plural(r.lancamentos.length, 'lançamento', 'lançamentos')} />
+      {dias.map((d) => (
+        <section key={d.data} className="mb-3">
+          <div className="mb-1.5 pl-4 text-[13px] font-semibold text-apagado">{maiuscula(dataExtenso(d.data))}</div>
+          <ul className={clsx(CARTAO, 'overflow-hidden')}>
+            {d.itens.map((l) => <ItemLanc key={l.linha} l={l} />)}
+          </ul>
+        </section>
+      ))}
     </>
   );
 }
 
+/* Linha no padrão do Início: coluna fixa à esquerda (o sentido, em ícone
+   e cor), categoria e descrição no meio, valor com sinal à direita e o
+   selo "sem nota" escrito embaixo dele. */
 function ItemLanc({ l }: { l: Lancamento }) {
   const entrada = l.tipo === 'Entrada';
-  const sub = (l.descricao || l.fonte || (entrada ? 'entrada' : 'saída')) +
-    (l.comprovante ? ' · com nota' : entrada ? '' : ' · sem nota');
+  const semNota = !entrada && !l.comprovante;
+  const sub = l.descricao || l.fonte || (entrada ? 'entrada' : 'saída');
   return (
     <li role="button" tabIndex={0} onClick={() => verLanc(l)}
+      aria-label={(entrada ? 'Entrou ' : 'Saiu ') + reais(l.valor) + ', ' + l.categoria + (semNota ? ', sem nota' : '')}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); verLanc(l); } }}
-      className={clsx('relative flex min-h-16 cursor-pointer items-center gap-3 px-4 py-3 transition-colors duration-150 ease-curva active:bg-roxo-fraco',
-        'not-first:before:absolute not-first:before:top-0 not-first:before:right-0 not-first:before:left-4',
+      className={clsx('relative flex min-h-16 cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors duration-150 ease-curva active:bg-roxo-fraco/60',
+        'not-first:before:absolute not-first:before:top-0 not-first:before:right-0 not-first:before:left-[68px]',
         'not-first:before:h-px not-first:before:bg-borda not-first:before:content-[""]')}>
-      <span className="min-w-0 flex-1 text-base leading-tight font-semibold [overflow-wrap:anywhere]">
-        {l.categoria}
-        <small className="mt-0.5 block truncate text-[13px] font-normal text-apagado">{sub}</small>
+      <span className={clsx('grid size-10 shrink-0 place-items-center rounded-xl', entrada ? 'bg-presente-fraco text-presente' : 'bg-falta-fraco text-falta')}>
+        {entrada ? <ArrowDownLeft size={20} strokeWidth={2.4} /> : <ArrowUpRight size={20} strokeWidth={2.4} />}
       </span>
-      <span className={clsx('shrink-0 text-base font-bold whitespace-nowrap tabular-nums', entrada ? 'text-presente' : 'text-falta')}>
-        {entrada ? '+' : '−'} {reais(l.valor)}
+      <span className="min-w-0 flex-1 leading-tight">
+        <b className="block text-base font-semibold [overflow-wrap:anywhere]">{l.categoria}</b>
+        <small className="mt-0.5 block truncate text-[13px] text-apagado">{sub}</small>
+      </span>
+      <span className="flex shrink-0 flex-col items-end gap-1">
+        <span className={clsx('text-base font-bold whitespace-nowrap tabular-nums', entrada ? 'text-presente' : 'text-falta')}>
+          {entrada ? '+' : '−'} {reais(l.valor)}
+        </span>
+        {semNota && (
+          <span className="rounded-full bg-justif-fraco px-2 py-0.5 text-xs font-bold text-justif-tinta">sem nota</span>
+        )}
       </span>
     </li>
   );
@@ -200,7 +229,7 @@ function verLanc(l: Lancamento) {
         </Banner>
       )}
       <button type="button" onClick={() => { fechar(); setTimeout(() => apagar(l), 80); }}
-        className="mt-4 flex min-h-13 w-full items-center justify-center gap-2 rounded-m border border-dashed border-[#EDC6CE] bg-fundo p-3.5 text-base font-bold text-falta active:bg-borda">
+        className="mt-4 flex min-h-13 w-full items-center justify-center gap-2 rounded-m border border-falta/30 bg-papel p-3.5 text-base font-bold text-falta active:bg-falta-fraco">
         <Trash2 size={18} /> Apagar lançamento
       </button>
     </div>

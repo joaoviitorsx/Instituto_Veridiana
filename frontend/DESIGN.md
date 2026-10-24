@@ -63,6 +63,9 @@ código aqui. Mudou um padrão? Mude aqui também.
 - Tela raiz com "criar": **FAB estendido** (ícone + texto, nunca só ícone) acima
   da barra de abas, à direita. No máximo um por tela, só para ação positiva.
 - Confirmar e cancelar ficam embaixo, na folha, nunca no canto de cima.
+- Exceção pedida pelo instituto: no **Caixa**, Entrou (verde, +) e Saiu
+  (vermelho, −) são dois botões grandes fixos acima das abas — o sentido do
+  dinheiro tem que ser óbvio de longe, e são as duas ações da tela.
 
 ### 4. Folhas (bottom sheets) para tarefas curtas
 *Fontes: HIG Sheets; M3 Bottom sheet.*

@@ -5,7 +5,8 @@ import { useState } from 'react';
 import { Copy, ExternalLink, Lock, Share2, Sheet, WandSparkles } from 'lucide-react';
 import { leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { Banner, BotaoCheio, BotaoContorno, CARTAO, Esqueleto, Secao } from '../../../ui/kit';
+import { Banner, BotaoCheio, BotaoContorno, CARTAO, Esqueleto } from '../../../ui/kit';
+import { CabecalhoSecao, CARTAO_ELEVADO } from '../../../ui/Heroi';
 import { ErroTela } from '../../../ui/ErroTela';
 import { toast } from '../../../ui/toast';
 import { copiarTexto, vibrar } from '../../../util';
@@ -29,11 +30,14 @@ function Planilha() {
     <Tela titulo="Planilha" voltar="/gestao">
       {d ? (
         <>
-          <div className={CARTAO + ' mb-3 p-5 text-center text-roxo'}>
-            <Sheet size={26} className="mx-auto" />
-            <b className="mt-3 mb-1 block text-[17px] font-bold text-tinta [overflow-wrap:anywhere]">{d.nome}</b>
-            <span className="block text-sm leading-normal text-apagado">
-              Todo dado do app mora aqui. A aba Painel mostra a frequência por turma e por dia.
+          {/* O cartão principal, no padrão do destaque do Início. */}
+          <div className={CARTAO_ELEVADO + ' mb-3 flex items-center gap-3 p-4'}>
+            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-presente text-white"><Sheet size={24} /></span>
+            <span className="min-w-0">
+              <b className="block text-[17px] leading-tight font-bold [overflow-wrap:anywhere]">{d.nome}</b>
+              <span className="mt-0.5 block text-sm leading-snug text-apagado">
+                Todo dado do app mora aqui. A aba Painel mostra a frequência por turma e por dia.
+              </span>
             </span>
           </div>
           <a href={d.url} target="_blank" rel="noopener"
@@ -51,7 +55,7 @@ function Planilha() {
             Só abre para quem já tem permissão. Para incluir alguém, use o botão Compartilhar dentro da própria planilha.
           </Banner>
 
-          <Secao>Padronizar</Secao>
+          <CabecalhoSecao titulo="Padronizar" className="mt-2" />
           <div className={CARTAO + ' mb-3 p-5 text-sm leading-normal text-apagado'}>
             Deixa cabeçalho, larguras, cores, listas de SIM/NAO e o Painel no padrão. Pode rodar quantas vezes quiser,
             não duplica nada.

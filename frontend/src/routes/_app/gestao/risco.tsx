@@ -8,6 +8,7 @@ import { clsx } from 'clsx';
 import { leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
 import { Avatar, CARTAO, Esqueleto, Estado } from '../../../ui/kit';
+import { CabecalhoSecao } from '../../../ui/Heroi';
 import { ErroTela } from '../../../ui/ErroTela';
 import { dataCurta, linkZap, plural } from '../../../util';
 import { editarContato, Intro } from './-relatorios';
@@ -47,13 +48,14 @@ function Atencao() {
           {plural(r.alunos.length, 'aluno faltou', 'alunos faltaram')} 3 aulas ou mais seguidas. Uma mensagem agora,
           antes de virar hábito, costuma trazer de volta.
         </Intro>
+        <CabecalhoSecao titulo={plural(r.alunos.length, 'aluno', 'alunos') + ' para procurar'} />
         <ul>
           {r.alunos.map((a) => {
             const texto = 'Oi! Aqui é do Instituto Veridiana. Sentimos falta de ' + a.aluno + ' nas últimas ' +
               a.faltas + ' aulas de ' + a.turma + '. Está tudo bem? A gente gostaria muito de ver de volta.';
             const zap = linkZap(a.telefone, texto);
             return (
-              <li key={a.turma + '|' + a.aluno} className={clsx(CARTAO, 'mb-3 p-4')}>
+              <li key={a.turma + '|' + a.aluno} className={clsx(CARTAO, 'mb-3 rounded-2xl p-4')}>
                 <div className="flex items-center gap-3">
                   <Avatar nome={a.aluno} tom="perigo" />
                   <span className="min-w-0 flex-1 text-base leading-tight font-semibold [overflow-wrap:anywhere]">

@@ -99,6 +99,21 @@ Só o Dia Internacional da Dança está nas datas fixas. As demais esperam
 confirmação da coordenação (`DATAS_FIXAS` em `Agenda.gs`) — lista
 genérica de internet vira ruído que ela teria que limpar.
 
+## Grade de aulas
+
+O retrato da semana: que turma tem aula em que dia, de que hora a que
+hora, em que sala e com quem. Mora na aba **Grade** da planilha (criada
+no primeiro uso), escrita de um jeito que qualquer pessoa conserta à mão:
+dia por extenso ("Segunda"), hora como "14:00".
+
+- Cadastro em vários dias de uma vez ("Ballet I, segunda e quarta, 14h às 15h").
+- Antes de salvar, avisa se a sala, a professora ou a turma já estão
+  ocupadas naquele horário — e deixa salvar assim mesmo, se for o caso.
+- A tela da chamada mostra **Aulas de hoje** em cima, com ✓ nas que já
+  tiveram chamada.
+- Com grade cadastrada, o cartão "Aula agora" da tela inicial usa a hora
+  certa. Sem grade, continua o palpite pelas chamadas salvas (abaixo).
+
 ## Materiais
 
 Estrutura fixa, categorias livres. Os campos são sempre os mesmos;
@@ -256,7 +271,7 @@ mínimo 44px.
 ## Estrutura
 
 ```
-apps-script/        cole estes 26 arquivos no editor do Apps Script
+apps-script/        cole estes 28 arquivos no editor do Apps Script
   Codigo.gs           constantes, doGet/doPost (modo duplo), montagem da página e módulos
   Api.gs              API JSON do PWA: roteador {fn, args} sobre as mesmas funções
   Util.gs             planilha, datas, cache e trava
@@ -270,6 +285,7 @@ apps-script/        cole estes 26 arquivos no editor do Apps Script
   Certificado.gs      certificado em PDF com carga horária
   Caixa.gs            entradas, saídas, comprovantes e resumo
   Agenda.gs           agenda anual e calendário em PDF
+  Grade.gs            grade semanal de aulas e o "Aula agora" pela grade
   Materiais.gs        lista de materiais
   Index.html          casca da página
   Estilo.html         CSS da casca, da entrada, da chamada e da gestão
@@ -283,6 +299,7 @@ apps-script/        cole estes 26 arquivos no editor do Apps Script
   AppQr.html          encoder de QR                    (sob demanda)
   AppAgenda.html      telas da agenda, com o CSS dela  (sob demanda)
   AppMateriais.html   telas de materiais, com o CSS    (sob demanda)
+  AppGrade.html       telas da grade de aulas, com o CSS (sob demanda)
 
 frontend/           PWA em React (Vercel) — ver frontend/README.md
 testes/             testes de servidor no Node (node testes/teste-api.js)
@@ -354,7 +371,7 @@ módulos chegam pelo mock, para testar o carregamento sob demanda.
 > o app. Cadastro, agenda, materiais, caixa — tudo pelo celular ou
 > direto na planilha, sem abrir editor de script nenhum.
 
-São 26 arquivos. Colar isso à mão é caminho garantido para erro (um
+São 28 arquivos. Colar isso à mão é caminho garantido para erro (um
 arquivo esquecido, um colado no lugar do outro). Use o
 [`clasp`](https://github.com/google/clasp), a ferramenta de linha de
 comando do próprio Google.
@@ -452,10 +469,10 @@ Saiba disso antes de publicar, não durante o problema.
 Dá para colar à mão: no editor, **+** ao lado de "Arquivos" cria cada um.
 
 **Script** (`+` → **Script**, nome sem `.gs`):
-`Codigo` · `Api` · `Util` · `Acesso` · `Inicio` · `Chamada` · `Gestao` · `Planilha` · `Historico` · `Impacto` · `Certificado` · `Caixa` · `Agenda` · `Materiais`
+`Codigo` · `Api` · `Util` · `Acesso` · `Inicio` · `Chamada` · `Gestao` · `Planilha` · `Historico` · `Impacto` · `Certificado` · `Caixa` · `Agenda` · `Grade` · `Materiais`
 
 **HTML** (`+` → **HTML**, nome sem `.html`):
-`Index` · `Estilo` · `AppNucleo` · `AppEntrada` · `AppInicio` · `AppChamada` · `AppPartida` · `AppGestao` · `AppCaixa` · `AppQr` · `AppAgenda` · `AppMateriais`
+`Index` · `Estilo` · `AppNucleo` · `AppEntrada` · `AppInicio` · `AppChamada` · `AppPartida` · `AppGestao` · `AppCaixa` · `AppQr` · `AppAgenda` · `AppGrade` · `AppMateriais`
 
 Em cada um: `Ctrl+A`, `Delete`, cole o arquivo de mesmo nome, `Ctrl+S`.
 Depois, a mesma sequência de publicação acima.

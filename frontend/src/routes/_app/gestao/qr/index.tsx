@@ -10,6 +10,7 @@ import { ClipboardList, QrCode, Users } from 'lucide-react';
 import { leitura } from '../../../../api/cliente';
 import { Tela } from '../../../../ui/Tela';
 import { GrupoNav, Esqueleto, Estado } from '../../../../ui/kit';
+import { CabecalhoSecao } from '../../../../ui/Heroi';
 import { ErroTela } from '../../../../ui/ErroTela';
 import type { TurmaGestao } from '../-comum';
 
@@ -20,10 +21,11 @@ function ListaQr() {
   const q = useQuery(leitura<TurmaGestao[]>('listarTurmasCompleto'));
   return (
     <Tela titulo="QR do app" voltar="/gestao">
-      <GrupoNav itens={[{ icone: QrCode, titulo: 'Acessar o app', sub: 'um cartaz só, para todo mundo',
+      <CabecalhoSecao titulo="Para todo mundo" />
+      <GrupoNav itens={[{ icone: QrCode, titulo: 'Acessar o app', sub: 'um cartaz só: escanear, entrar e instalar',
         onClick: () => navigate({ to: '/gestao/qr/ver' }) }]} />
-      <p className="mx-4 mt-2 mb-1.5 text-[13px] font-semibold tracking-wide text-apagado uppercase">Por turma (opcional)</p>
-      <p className="mx-4 mb-2 text-sm text-apagado">Já abre direto a chamada daquela sala.</p>
+      <CabecalhoSecao titulo="Por turma (opcional)" />
+      <p className="-mt-1 mb-2 pl-4 text-sm text-apagado">Já abre direto a chamada daquela sala.</p>
       {q.data ? (
         q.data.length ? (
           <GrupoNav itens={q.data.map((t) => ({

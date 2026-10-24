@@ -7,7 +7,8 @@ import { Copy, ExternalLink, FileText, MessageCircle, Printer } from 'lucide-rea
 import { clsx } from 'clsx';
 import { leitura, useEscrita } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { Banner, BotaoCheio, CARTAO } from '../../../ui/kit';
+import { Banner, BotaoCheio } from '../../../ui/kit';
+import { CARTAO_ELEVADO } from '../../../ui/Heroi';
 import { folha } from '../../../ui/folha';
 import { toast } from '../../../ui/toast';
 import { copiarTexto, plural, textoErro, urlSegura, vibrar } from '../../../util';
@@ -64,7 +65,7 @@ function Imprimir() {
     <Tela titulo="Calendário para imprimir" voltar="/agenda">
       <Passo rotulo={ano} onAnterior={() => passo(-1)} onProximo={() => passo(1)}
         nomeAnterior="Ano anterior" nomeProximo="Próximo ano" />
-      <div className={clsx(CARTAO, 'mb-3 p-5 text-center text-roxo')}>
+      <div className={clsx(CARTAO_ELEVADO, 'mb-3 p-5 text-center text-roxo')}>
         <Printer size={26} className="mx-auto" />
         <b className="mt-3 mb-1 block text-[17px] font-bold text-tinta">Calendário {ano}</b>
         <span className="block text-sm leading-normal text-apagado">

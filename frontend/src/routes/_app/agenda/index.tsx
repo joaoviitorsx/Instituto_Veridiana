@@ -3,17 +3,21 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { Calendar, CalendarClock, Check, FileText, MapPin, Pencil, Plus, Printer, Table, Trash2, Users } from 'lucide-react';
+import {
+  Cake, Calendar, CalendarCheck, CalendarClock, Check, ChevronLeft, ChevronRight, Clock, FileText, MapPin, Pencil, Plus,
+  Printer, Table, Trash2, Users,
+} from 'lucide-react';
 import { clsx } from 'clsx';
 import { escrever, leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
 import { CARTAO, Esqueleto, Estado } from '../../../ui/kit';
+import { Atalhos, BotaoHeroi, CabecalhoSecao, CARTAO_ELEVADO, Corpo, Heroi, Sobreposto } from '../../../ui/Heroi';
 import { ErroTela } from '../../../ui/ErroTela';
 import { folha } from '../../../ui/folha';
 import { toast } from '../../../ui/toast';
-import { dataCurta, dataExtenso, hojeISO, maiuscula, MESES, mesExtenso, textoErro, vibrar } from '../../../util';
+import { dataCurta, dataExtenso, hojeISO, maiuscula, MESES, mesExtenso, plural, textoErro, vibrar } from '../../../util';
 import {
-  corTipo, diaSemanaIso, mesDeHoje, mesValido, Passo, somarMes, Tag, textoTurmas,
+  corTipo, diaSemanaIso, MES_CURTO, mesDeHoje, mesValido, somarMes, Tag, textoTurmas,
   type AgendaMes, type Evento,
 } from './-comum';
 
@@ -45,75 +49,164 @@ function Agenda() {
   /* No mês de hoje, a data já vem hoje. Em outro mês, o dia 1 dele:
      quem navegou até abril quer marcar algo em abril. */
   const novo = () => navigate({ to: '/agenda/evento', search: { data: mes === mesDeHoje() ? hojeISO() : mes + '-01' } });
+  const ano = +mes.slice(0, 4);
+  const noMesDeHoje = mes === mesDeHoje();
+
+  /* O próximo evento do mês que ainda não terminou e não foi cancelado:
+     é o que a coordenação quer saber de relance. */
+  const hj = r?.hoje || hojeISO();
+  const validos = r ? r.eventos.filter((ev) => ev.status !== 'Cancelado') : [];
+  const proximo = validos.find((ev) => (ev.dataFim || ev.data) >= hj) || null;
 
   return (
-    <Tela titulo="Agenda"
-      fab={{ icone: Plus, texto: 'Novo evento', onClick: novo }}>
-      <Passo rotulo={mesExtenso(mes)} onAnterior={() => irMes(-1)} onProximo={() => irMes(1)}
-        nomeAnterior="Mês anterior" nomeProximo="Próximo mês" />
-      <div className="mb-4 flex gap-2">
-        <Atalho icone={Table} onClick={() => navigate({ to: '/agenda/ano', search: { ano: +mes.slice(0, 4) } })}>Ver o ano</Atalho>
-        <Atalho icone={Printer} onClick={() => navigate({ to: '/agenda/imprimir', search: { ano: +mes.slice(0, 4) } })}>Imprimir</Atalho>
-        <Atalho icone={CalendarClock} onClick={() => navigate({ to: '/grade' })}>Aulas</Atalho>
-      </div>
+    <Tela titulo="Agenda" roxo solto
+      fab={{ icone: Plus, texto: 'Novo evento', onClick: novo }}
+      capa={
+        /* Ano no sobretítulo, só o mês no título: "Novembro de 2026" quebrava em 360px. */
+        <Heroi sobre={'Agenda de ' + ano} titulo={maiuscula(MESES[+mes.slice(5, 7) - 1])}
+          direita={!noMesDeHoje && (
+            <BotaoHeroi rotulo="Voltar para o mês de hoje"
+              onClick={() => { vibrar(); navigate({ to: '/agenda', search: {}, replace: true }); }}>
+              <CalendarCheck size={22} />
+            </BotaoHeroi>
+          )}
+          pilulas={[
+            r && { icone: Calendar, texto: validos.length ? plural(validos.length, 'evento no mês', 'eventos no mês') : 'Nada marcado no mês' },
+            proximo && { icone: Clock, texto: 'próximo: ' + dataCurta(proximo.data) },
+          ]} />
+      }>
+      <Sobreposto>
+        <div className={clsx(CARTAO_ELEVADO, 'overflow-hidden')}>
+          {proximo && r && <Proximo ev={proximo} r={r} mes={mes} />}
+          <PassoMes mes={mes} onAnterior={() => irMes(-1)} onProximo={() => irMes(1)} comBorda={!!proximo} />
+        </div>
+      </Sobreposto>
 
-      {r ? (
-        r.eventos.length ? (
-          <ul>
-            {r.eventos.map((ev) => <CartaoEvento key={ev.id || ev.titulo + ev.data} ev={ev} mes={mes} r={r} />)}
-          </ul>
+      <Corpo>
+        <Atalhos itens={[
+          { icone: Table, texto: 'Ver o ano', onClick: () => navigate({ to: '/agenda/ano', search: { ano } }) },
+          { icone: Printer, texto: 'Imprimir', onClick: () => navigate({ to: '/agenda/imprimir', search: { ano } }) },
+          { icone: CalendarClock, texto: 'Grade de aulas', onClick: () => navigate({ to: '/grade' }) },
+          { icone: Cake, texto: 'Datas do ano', onClick: () => navigate({ to: '/agenda/datas', search: { ano } }) },
+        ]} />
+
+        {r ? (
+          r.eventos.length ? (
+            <>
+              <CabecalhoSecao titulo={'Eventos de ' + MESES[+mes.slice(5, 7) - 1]} />
+              <ul className={clsx(CARTAO, 'overflow-hidden')}>
+                {r.eventos.map((ev) => <LinhaEvento key={ev.id || ev.titulo + ev.data} ev={ev} mes={mes} r={r} />)}
+              </ul>
+            </>
+          ) : (
+            <Estado icone={Calendar} titulo={'Nada marcado em ' + MESES[+mes.slice(5, 7) - 1]}
+              texto="Coloque aqui ensaios, apresentações, reuniões e datas do instituto."
+              botao={{ txt: 'Marcar o primeiro evento', fn: novo }} />
+          )
+        ) : q.isError ? (
+          <ErroTela erro={q.error} tentar={() => q.refetch()} />
         ) : (
-          <Estado icone={Calendar} titulo={'Nada marcado em ' + MESES[+mes.slice(5, 7) - 1]}
-            texto="Coloque aqui ensaios, apresentações, reuniões e datas do instituto."
-            botao={{ txt: 'Marcar o primeiro evento', fn: novo }} />
-        )
-      ) : q.isError ? (
-        <ErroTela erro={q.error} tentar={() => q.refetch()} />
-      ) : (
-        <Esqueleto n={3} />
-      )}
+          <Esqueleto n={3} />
+        )}
+      </Corpo>
     </Tela>
   );
 }
 
-function Atalho({ icone: Ic, children, onClick }: { icone: typeof Table; children: string; onClick: () => void }) {
+/* Topo do cartão elevado: o próximo evento, no mesmo jeito do "Aula
+   agora" do Início — rótulo pequeno, título grande, uma linha de apoio. */
+function Proximo({ ev, r, mes }: { ev: Evento; r: AgendaMes; mes: string }) {
+  const navigate = useNavigate();
+  const editar = () => navigate({ to: '/agenda/evento', search: { id: ev.id, mes: ev.data.slice(0, 7) } });
+  const hoje = ev.data <= r.hoje && (ev.dataFim || ev.data) >= r.hoje;
+  const sub = [hoje ? '' : maiuscula(dataExtenso(ev.data)), ev.local || textoTurmas(ev.turmas)].filter(Boolean).join(' · ');
   return (
-    <button type="button" onClick={onClick}
-      className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-m border border-borda bg-papel text-[15px] font-bold text-roxo transition-colors duration-150 active:bg-fundo">
-      <Ic size={18} /> {children}
+    <button type="button" onClick={() => verEvento(ev, r, editar)}
+      className="flex min-h-21 w-full items-center gap-3 p-4 text-left transition-colors duration-150 active:bg-fundo">
+      <DiaBloco iso={ev.data} desde={ev.data.slice(0, 7) < mes} forte />
+      <span className="min-w-0 flex-1">
+        <small className={clsx('block text-xs font-bold tracking-[.06em] uppercase', hoje ? 'text-presente' : 'text-roxo')}>
+          {hoje ? 'Hoje na agenda' : 'Próximo evento'}
+        </small>
+        <b className="mt-0.5 block text-lg leading-tight font-bold tracking-tight hyphens-auto [overflow-wrap:anywhere]">{ev.titulo}</b>
+        <span className="mt-0.5 block text-sm text-apagado">{sub}</span>
+      </span>
+      <ChevronRight size={20} className="shrink-0 text-apagado" />
     </button>
   );
 }
 
-function CartaoEvento({ ev, mes, r }: { ev: Evento; mes: string; r: AgendaMes }) {
+/* Passo de mês dentro do cartão elevado, com o nome dos vizinhos: "set"
+   e "nov" dizem para onde o toque leva. */
+function PassoMes({ mes, onAnterior, onProximo, comBorda }: {
+  mes: string; onAnterior: () => void; onProximo: () => void; comBorda: boolean;
+}) {
+  const ant = somarMes(mes, -1), prox = somarMes(mes, 1);
+  const bt = 'flex min-h-12 items-center gap-1 rounded-xl px-3 text-sm font-bold text-roxo transition-colors duration-150 active:bg-roxo-fraco';
+  return (
+    <div className={clsx('flex items-center justify-between gap-2 p-1.5', comBorda && 'border-t border-borda')}>
+      <button type="button" className={bt} onClick={onAnterior} aria-label={'Mês anterior, ' + mesExtenso(ant)}>
+        <ChevronLeft size={20} /> {MES_CURTO[+ant.slice(5, 7) - 1]}
+      </button>
+      <b className="text-[15px] font-bold tracking-tight" aria-live="polite">{mesExtenso(mes)}</b>
+      <button type="button" className={bt} onClick={onProximo} aria-label={'Próximo mês, ' + mesExtenso(prox)}>
+        {MES_CURTO[+prox.slice(5, 7) - 1]} <ChevronRight size={20} />
+      </button>
+    </div>
+  );
+}
+
+/* Coluna fixa do dia, como a hora em "Hoje na grade". */
+function DiaBloco({ iso, desde, forte, apagado }: { iso: string; desde?: boolean; forte?: boolean; apagado?: boolean }) {
+  return (
+    <span className={clsx('flex shrink-0 flex-col items-center justify-center rounded-2xl leading-none',
+      forte ? 'size-12 bg-roxo text-white' : 'w-12 py-1', apagado ? 'text-apagado' : !forte && 'text-roxo')}>
+      <b className={clsx('font-bold tracking-tighter tabular-nums', forte ? 'text-xl' : 'text-[22px]')}>{desde ? '…' : +iso.slice(8)}</b>
+      <small className={clsx('mt-0.5 text-xs font-semibold lowercase', forte ? 'text-white/85' : '')}>
+        {desde ? 'desde ' + dataCurta(iso) : diaSemanaIso(iso)}
+      </small>
+    </span>
+  );
+}
+
+/* Linha de evento no padrão do Início: dia à esquerda, título e apoio no
+   meio, selo escrito à direita (Hoje / Já passou / Cancelado). */
+function LinhaEvento({ ev, mes, r }: { ev: Evento; mes: string; r: AgendaMes }) {
   const navigate = useNavigate();
   const editar = () => navigate({ to: '/agenda/evento', search: { id: ev.id, mes: ev.data.slice(0, 7) } });
-  const passou = ev.dataFim ? ev.dataFim < r.hoje : ev.data < r.hoje;
+  const fim = ev.dataFim || ev.data;
+  const passou = fim < r.hoje;
+  const hoje = ev.data <= r.hoje && fim >= r.hoje;
   const cancelado = ev.status === 'Cancelado';
   const comecaAntes = ev.data.slice(0, 7) < mes;
   const linha: string[] = [];
-  if (ev.dataFim) linha.push('de ' + dataCurta(ev.data) + ' a ' + dataCurta(ev.dataFim));
-  linha.push(textoTurmas(ev.turmas));
-  if (ev.local) linha.push(ev.local);
-  if (ev.status !== 'Planejado') linha.push(ev.status);
+  if (ev.dataFim) linha.push('até ' + dataCurta(ev.dataFim));
+  linha.push(ev.local || textoTurmas(ev.turmas));
+  const selo = cancelado ? 'Cancelado' : hoje ? 'Hoje' : passou ? 'Já passou' : ev.status === 'Confirmado' ? 'Confirmado' : '';
 
   return (
-    <li className="mb-3">
+    <li className="relative not-first:before:absolute not-first:before:top-0 not-first:before:right-0 not-first:before:left-[76px] not-first:before:h-px not-first:before:bg-borda not-first:before:content-['']">
       <button type="button" onClick={() => verEvento(ev, r, editar)}
         aria-label={ev.titulo + (passou ? ', já passou' : '') + (cancelado ? ', cancelado' : '')}
-        className={clsx(CARTAO, 'flex w-full items-stretch overflow-hidden text-left transition-colors duration-150 active:bg-fundo',
-          passou && 'bg-fundo/60 shadow-none')}>
-        <span className={clsx('flex w-16 shrink-0 flex-col items-center justify-center px-1 py-3',
-          passou ? 'bg-fundo text-apagado' : 'bg-roxo-fraco text-roxo')}>
-          <b className="text-[26px] leading-none font-bold tracking-tighter tabular-nums">{comecaAntes ? '…' : +ev.data.slice(8)}</b>
-          <small className="mt-1 text-center text-xs font-semibold lowercase">{comecaAntes ? 'desde ' + dataCurta(ev.data) : diaSemanaIso(ev.data)}</small>
-        </span>
-        <span className="min-w-0 flex-1 px-4 py-3">
-          <Tag tipo={ev.tipo} cor={corTipo(r.cores, ev.tipo)} />
-          <b className={clsx('mt-1.5 block text-base leading-snug font-bold [overflow-wrap:anywhere]',
+        className={clsx('flex min-h-18 w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-150 active:bg-roxo-fraco/60',
+          passou && 'bg-fundo/50')}>
+        <DiaBloco iso={ev.data} desde={comecaAntes} apagado={passou || cancelado} />
+        <span className="min-w-0 flex-1">
+          <b className={clsx('block text-base leading-snug font-bold [overflow-wrap:anywhere]',
             (cancelado || passou) && 'text-apagado', cancelado && 'line-through')}>{ev.titulo}</b>
-          <small className="mt-0.5 block text-[13px] leading-snug text-apagado">{linha.join(' · ')}</small>
+          <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <Tag tipo={ev.tipo} cor={corTipo(r.cores, ev.tipo)} />
+            <small className="min-w-0 text-[13px] leading-snug text-apagado">{linha.join(' · ')}</small>
+          </span>
         </span>
+        {selo && (
+          <span className={clsx('shrink-0 rounded-full px-2.5 py-1 text-xs font-bold',
+            hoje && !cancelado ? 'bg-presente text-white'
+              : cancelado ? 'bg-falta-fraco text-falta'
+                : passou ? 'bg-fundo text-apagado' : 'bg-roxo-fraco text-roxo')}>
+            {selo}
+          </span>
+        )}
       </button>
     </li>
   );

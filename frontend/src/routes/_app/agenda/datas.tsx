@@ -74,7 +74,7 @@ function Escolha({ ano, r }: { ano: number; r: Datas }) {
           </BotaoCheio>
         : <BotaoCheio onClick={voltar} className="text-[17px]">Voltar para a agenda</BotaoCheio>}>
       {livres ? (
-        <p className="mb-4 ml-1 text-sm text-apagado">
+        <p className="mx-4 mb-4 text-sm text-apagado">
           Datas que se repetem todo ano. Desmarque o que não quiser e toque no botão aqui embaixo.
         </p>
       ) : (

@@ -6,7 +6,8 @@ import { useMemo } from 'react';
 import { Copy, Printer, Share2 } from 'lucide-react';
 import { leitura } from '../../../../api/cliente';
 import { Tela } from '../../../../ui/Tela';
-import { Banner, BotaoCheio, BotaoContorno, CARTAO, Esqueleto, Filtro } from '../../../../ui/kit';
+import { Banner, Esqueleto, Filtro } from '../../../../ui/kit';
+import { Atalhos, CARTAO_ELEVADO, type Atalho } from '../../../../ui/Heroi';
 import { toast } from '../../../../ui/toast';
 import { copiarTexto, vibrar } from '../../../../util';
 import { partilhar } from '../-comum';
@@ -41,6 +42,12 @@ function Cartaz() {
     ? { title: 'Chamada · ' + turma, text: 'Chamada da turma ' + turma, url }
     : { title: 'Instituto Veridiana', text: 'App do Instituto Veridiana', url }, copiar);
 
+  const acoesCartaz = ([
+    'share' in navigator && { icone: Share2, texto: 'Compartilhar', onClick: compartilhar },
+    { icone: Copy, texto: 'Copiar link', onClick: copiar },
+    { icone: Printer, texto: 'Imprimir', onClick: () => window.print() },
+  ] as (Atalho | false)[]).filter(Boolean) as Atalho[];
+
   return (
     <Tela titulo={turma || 'QR do app'} voltar="/gestao/qr">
       {/* Na impressão sai só o cartaz. */}
@@ -63,7 +70,7 @@ function Cartaz() {
         </Banner>
       ) : qr && (
         <>
-          <div className={CARTAO + ' mb-4 p-6 text-center print:border-0 print:shadow-none'}>
+          <div className={CARTAO_ELEVADO + ' mb-5 p-6 text-center print:border-0 print:shadow-none'}>
             <p className="mb-4 text-[21px] font-bold tracking-tight [overflow-wrap:anywhere]">{turma || 'Instituto Veridiana'}</p>
             <svg viewBox={`0 0 ${qr.tot} ${qr.tot}`} xmlns="http://www.w3.org/2000/svg" role="img"
               aria-label={turma ? 'Código QR da chamada de ' + turma : 'Código QR do app'}
@@ -80,12 +87,11 @@ function Cartaz() {
           </div>
 
           <div className="sem-impressao">
-            <div className="flex gap-2">
-              {'share' in navigator && <BotaoCheio icone={Share2} onClick={compartilhar} className="flex-1 px-2">Compartilhar</BotaoCheio>}
-              <BotaoContorno icone={Copy} onClick={copiar} className="flex-1 px-2">Copiar link</BotaoContorno>
-            </div>
-            <BotaoContorno icone={Printer} onClick={() => window.print()} className="mt-2">Imprimir</BotaoContorno>
-            <p className="mx-1 mt-4 text-[13px] leading-normal text-apagado [overflow-wrap:anywhere]">{url}</p>
+            {/* O que se faz com o cartaz, como os atalhos do Início. */}
+            {/* Com 2 ou 3 ações (sem Compartilhar no computador), as colunas
+                acompanham a quantidade para os botões não encostarem num canto. */}
+            <Atalhos className={'mb-4 ' + (acoesCartaz.length === 2 ? 'grid-cols-2!' : 'grid-cols-3!')} itens={acoesCartaz} />
+            <p className="mx-1 text-[13px] leading-normal text-apagado [overflow-wrap:anywhere]">{url}</p>
             {!turma && !antigo && (
               <p className="mx-1 mt-3 text-[13px] leading-normal text-apagado">
                 Para instalar: no iPhone, Safari → Compartilhar → Adicionar à Tela de Início. No Android, o app oferece

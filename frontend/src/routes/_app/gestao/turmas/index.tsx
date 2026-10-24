@@ -5,6 +5,7 @@ import { ClipboardList, Plus, Users } from 'lucide-react';
 import { leitura } from '../../../../api/cliente';
 import { Tela } from '../../../../ui/Tela';
 import { BotaoCheio, GrupoNav, Esqueleto, Estado } from '../../../../ui/kit';
+import { CabecalhoSecao } from '../../../../ui/Heroi';
 import { ErroTela } from '../../../../ui/ErroTela';
 import { folha } from '../../../../ui/folha';
 import { plural } from '../../../../util';
@@ -26,11 +27,14 @@ function Turmas() {
     <Tela titulo="Turmas" voltar="/gestao" barra={<BotaoCheio icone={Plus} onClick={nova}>Criar turma</BotaoCheio>}>
       {q.data ? (
         q.data.length ? (
+          <>
+          <CabecalhoSecao titulo={plural(q.data.length, 'turma ativa', 'turmas ativas')} />
           <GrupoNav itens={q.data.map((t) => ({
             icone: Users, titulo: t.nome,
             sub: plural(t.ativos, 'aluno', 'alunos') + (t.inativos ? ' · ' + plural(t.inativos, 'inativo', 'inativos') : ''),
             onClick: () => navigate({ to: '/gestao/turmas/$turma', params: { turma: t.nome } }),
           }))} />
+          </>
         ) : (
           <Estado icone={ClipboardList} titulo="Nenhuma turma ainda" texto='Toque em "Criar turma", aqui embaixo. Depois, cadastre os alunos dentro dela.' />
         )

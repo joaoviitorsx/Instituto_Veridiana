@@ -3,10 +3,12 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Copy, FileText, ReceiptText } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Copy, FileText, ReceiptText } from 'lucide-react';
+import { clsx } from 'clsx';
 import { leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { Banner, BotaoCheio, Campo, Esqueleto, Lista, Secao } from '../../../ui/kit';
+import { Banner, BotaoCheio, CARTAO, Campo, Esqueleto } from '../../../ui/kit';
+import { CabecalhoSecao, CARTAO_ELEVADO } from '../../../ui/Heroi';
 import { ErroTela } from '../../../ui/ErroTela';
 import { toast } from '../../../ui/toast';
 import { copiarTexto, dataCurta, hojeISO, plural, reais, vibrar } from '../../../util';
@@ -38,10 +40,10 @@ function Resumo() {
       <p className="mx-1 mb-4 text-sm text-apagado">Totais por categoria e por fonte, para colar na prestação de contas.</p>
       {/* Lado a lado enquanto couber, um embaixo do outro em tela estreita. */}
       <div className="mb-3 flex flex-wrap gap-x-3 gap-y-2">
-        <Campo id="cxIni" rotulo="De" type="date" value={ini} className="!mb-0 min-w-0 flex-[1_1_140px]"
+        <Campo id="cxIni" rotulo="De" type="date" value={ini} className="mb-0! min-w-0 flex-[1_1_140px]"
           erro={erro?.campo === 'ini' ? erro.msg : undefined}
           onChange={(e) => { setIni(e.target.value); setErro(null); }} />
-        <Campo id="cxFim" rotulo="Até" type="date" value={fim} className="!mb-0 min-w-0 flex-[1_1_140px]"
+        <Campo id="cxFim" rotulo="Até" type="date" value={fim} className="mb-0! min-w-0 flex-[1_1_140px]"
           erro={erro?.campo === 'fim' ? erro.msg : undefined}
           onChange={(e) => { setFim(e.target.value); setErro(null); }} />
       </div>
@@ -57,8 +59,6 @@ function Resumo() {
     </Tela>
   );
 }
-
-const semRS = (v: number) => reais(v).replace('R$ ', '');
 
 function Resultado({ r }: { r: ResumoCaixa }) {
   async function copiar() {
@@ -86,32 +86,32 @@ function Resultado({ r }: { r: ResumoCaixa }) {
 
   return (
     <>
-      <Secao>Resumo</Secao>
-      {/* Três números lado a lado: em 360 px cabem até "99.999,99" sem quebrar. */}
-      <div className="flex gap-2">
-        {[
-          { n: semRS(r.entrou), txt: 'entrou', cor: 'bg-presente' },
-          { n: semRS(r.saiu), txt: 'saiu', cor: 'bg-falta' },
-          { n: semRS(r.saldo), txt: 'saldo', cor: 'bg-roxo' },
-        ].map((x) => (
-          <div key={x.txt} className={'min-w-0 flex-1 rounded-m px-1.5 py-4 text-center text-white ' + x.cor}>
-            <b className="block text-[clamp(15px,4.6vw,24px)] leading-tight font-bold tracking-tight tabular-nums [overflow-wrap:anywhere]">{x.n}</b>
-            <span className="mt-1 block text-xs text-white/90">{x.txt}</span>
-          </div>
-        ))}
+      <CabecalhoSecao titulo="Resumo" className="mt-4" />
+      {/* O cartão principal, como o saldo da tela do Caixa: o saldo grande,
+          entrou e saiu embaixo com sinal e cor (e o rótulo escrito). */}
+      <div className={clsx(CARTAO_ELEVADO, 'p-4')}>
+        <span className="block text-center text-xs font-bold tracking-[.06em] text-roxo uppercase">Saldo do período</span>
+        <b className={clsx('mt-1 block text-center text-[32px] leading-tight font-extrabold tracking-tight tabular-nums [overflow-wrap:anywhere]',
+          r.saldo < 0 && 'text-falta')}>{reais(r.saldo)}</b>
+        <span className="mt-0.5 block text-center text-[13px] text-apagado">{plural(r.lancamentos, 'lançamento', 'lançamentos')}</span>
+        <div className="mt-3 flex gap-2 border-t border-borda pt-3">
+          <Total tipo="entrada" valor={r.entrou} />
+          <Total tipo="saida" valor={r.saiu} />
+        </div>
       </div>
 
-      <Bloco titulo="Entradas por categoria" itens={r.entradas} />
-      <Bloco titulo="Saídas por categoria" itens={r.saidas} />
+      <Bloco titulo="Entradas por categoria" itens={r.entradas} tipo="entrada" />
+      <Bloco titulo="Saídas por categoria" itens={r.saidas} tipo="saida" />
 
       {r.fontes.length > 0 && (
         <>
-          <Secao>Por fonte</Secao>
-          <Lista semAvatar>
+          <CabecalhoSecao titulo="Por fonte" className="mt-4" />
+          <ul className={clsx(CARTAO, 'overflow-hidden')}>
             {r.fontes.map((f) => (
-              <LinhaValor key={f.fonte} nome={f.fonte} sub={'entrou ' + reais(f.entrou) + ' · saiu ' + reais(f.saiu)} valor={f.entrou - f.saiu} />
+              <LinhaValor key={f.fonte} nome={f.fonte} sub={'entrou ' + reais(f.entrou) + ' · saiu ' + reais(f.saiu)}
+                valor={f.entrou - f.saiu} tipo={f.entrou - f.saiu >= 0 ? 'entrada' : 'saida'} saldo />
             ))}
-          </Lista>
+          </ul>
         </>
       )}
 
@@ -126,24 +126,45 @@ function Resultado({ r }: { r: ResumoCaixa }) {
   );
 }
 
-function Bloco({ titulo, itens }: { titulo: string; itens: { nome: string; valor: number }[] }) {
+function Total({ tipo, valor }: { tipo: 'entrada' | 'saida'; valor: number }) {
+  const entrada = tipo === 'entrada';
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-2">
+      <span className={clsx('grid size-8 shrink-0 place-items-center rounded-full', entrada ? 'bg-presente-fraco text-presente' : 'bg-falta-fraco text-falta')}>
+        {entrada ? <ArrowDownLeft size={17} strokeWidth={2.5} /> : <ArrowUpRight size={17} strokeWidth={2.5} />}
+      </span>
+      <span className="min-w-0 leading-tight">
+        <b className={clsx('block truncate text-[15px] tabular-nums', entrada ? 'text-presente' : 'text-falta')}>{reais(valor)}</b>
+        <small className="block text-xs text-apagado">{entrada ? 'entrou' : 'saiu'}</small>
+      </span>
+    </div>
+  );
+}
+
+function Bloco({ titulo, itens, tipo }: { titulo: string; itens: { nome: string; valor: number }[]; tipo: 'entrada' | 'saida' }) {
   if (!itens.length) return null;
   return (
     <>
-      <Secao>{titulo}</Secao>
-      <Lista semAvatar>{itens.map((x) => <LinhaValor key={x.nome} nome={x.nome} valor={x.valor} />)}</Lista>
+      <CabecalhoSecao titulo={titulo} className="mt-4" />
+      <ul className={clsx(CARTAO, 'overflow-hidden')}>{itens.map((x) => <LinhaValor key={x.nome} nome={x.nome} valor={x.valor} tipo={tipo} />)}</ul>
     </>
   );
 }
 
-function LinhaValor({ nome, sub, valor }: { nome: string; sub?: string; valor: number }) {
+/* Linha com o valor à direita, com sinal e cor do sentido. Em "Por fonte"
+   o valor é o saldo daquela fonte. */
+function LinhaValor({ nome, sub, valor, tipo, saldo }: { nome: string; sub?: string; valor: number; tipo: 'entrada' | 'saida'; saldo?: boolean }) {
+  const entrada = tipo === 'entrada';
+  const sinal = saldo ? (valor < 0 ? '−' : '+') : entrada ? '+' : '−';
   return (
-    <li className="relative flex min-h-16 items-center gap-3 px-4 py-3 not-first:before:absolute not-first:before:top-0 not-first:before:right-0 not-first:before:left-4 not-first:before:h-px not-first:before:bg-borda not-first:before:content-['']">
+    <li className="relative flex min-h-14 items-center gap-3 px-4 py-3 not-first:before:absolute not-first:before:top-0 not-first:before:right-0 not-first:before:left-4 not-first:before:h-px not-first:before:bg-borda not-first:before:content-['']">
       <span className="min-w-0 flex-1 text-base leading-tight font-semibold [overflow-wrap:anywhere]">
         {nome}
         {sub && <small className="mt-0.5 block text-[13px] font-normal text-apagado">{sub}</small>}
       </span>
-      <span className="shrink-0 text-[15px] font-bold whitespace-nowrap text-apagado tabular-nums">{reais(valor)}</span>
+      <span className={clsx('shrink-0 text-[15px] font-bold whitespace-nowrap tabular-nums', entrada ? 'text-presente' : 'text-falta')}>
+        {sinal} {reais(Math.abs(valor))}
+      </span>
     </li>
   );
 }

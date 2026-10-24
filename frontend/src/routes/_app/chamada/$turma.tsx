@@ -18,7 +18,8 @@ import { emMaos, pedirSincronizacao, useFila } from '../../../offline/envio';
 import { FaixaSemInternet, useOnline, usandoCopia } from '../../../offline/rede';
 import { useSessao } from '../../../sessao';
 import { Tela, Capa } from '../../../ui/Tela';
-import { Avatar, Banner, BotaoCheio, CARTAO, Esqueleto, Estado, Lista } from '../../../ui/kit';
+import { CARTAO_ELEVADO } from '../../../ui/Heroi';
+import { Avatar, Banner, BotaoCheio, Esqueleto, Estado, Lista } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { folha } from '../../../ui/folha';
 import { toast } from '../../../ui/toast';
@@ -254,11 +255,12 @@ function ChamadaAberta({ turma, base, viaQr, capa }: {
         </Banner>
       )}
 
+      {/* O cartão principal da tela (DNA: elevado, ícone em quadrado roxo). */}
       <button type="button" onClick={escolherProf}
-        className={clsx(CARTAO, 'mb-5 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-150 active:bg-fundo')}>
-        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-roxo-fraco text-roxo"><User size={20} /></span>
+        className={clsx(CARTAO_ELEVADO, 'mb-4 flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-150 active:bg-fundo')}>
+        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-roxo text-white"><User size={22} /></span>
         <span className="min-w-0 flex-1">
-          <small className="block text-[13px] leading-tight text-apagado">Quem está dando a aula</small>
+          <small className="block text-xs font-bold tracking-[.06em] text-roxo uppercase">Quem está dando a aula</small>
           <b className={clsx('block truncate text-base', professor ? 'font-semibold' : 'font-normal text-apagado')}>
             {professor || 'Escolher'}
           </b>
@@ -266,11 +268,12 @@ function ChamadaAberta({ turma, base, viaQr, capa }: {
         <ChevronRight size={20} className="shrink-0 text-apagado" />
       </button>
 
-      <div className="mb-3 flex items-center justify-between gap-3 pl-1">
-        <span className="text-sm text-apagado">Toque em quem veio</span>
+      {/* Cabeçalho de seção do DNA: versalete à esquerda, ação à direita. */}
+      <div className="mb-0.5 flex min-h-11 items-center justify-between gap-3 pl-4">
+        <h2 className="text-[13px] font-semibold tracking-wide text-apagado uppercase">Toque em quem veio</h2>
         {faltas > 0 && (
           <button type="button" onClick={todosPresentes}
-            className="-mr-1 min-h-11 rounded-p px-3 text-sm font-semibold text-roxo active:bg-roxo-fraco">
+            className="-mr-1 min-h-11 rounded-p px-2 text-sm font-bold text-roxo active:bg-roxo-fraco">
             Todos presentes
           </button>
         )}
@@ -286,7 +289,7 @@ function ChamadaAberta({ turma, base, viaQr, capa }: {
    barulhenta, o olho vê na hora quem ainda não foi marcado. */
 function ListaAlunos({ alunos, onTocar }: { alunos: Presenca[]; onTocar: (i: number) => void }) {
   return (
-    <Lista>
+    <Lista className="rounded-2xl">
       {alunos.map((a, i) => {
         const tom = a.status === 'Presente' ? 'presente' : a.status === 'Justificada' ? 'justif' : 'falta';
         const falado = a.status === 'Presente' ? 'presente' : a.status === 'Falta' ? 'faltou' : 'falta justificada';

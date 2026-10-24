@@ -10,6 +10,8 @@ import { folha } from '../../../../ui/folha';
 import { toast } from '../../../../ui/toast';
 import { textoErro, vibrar } from '../../../../util';
 import { BotaoQtd, nomeFinalidade, useAjuste, useMateriais } from '../-comum';
+import { CabecalhoSecao, CARTAO_ELEVADO } from '../../../../ui/Heroi';
+import { clsx } from 'clsx';
 
 export const Route = createFileRoute('/_app/materiais/$id/')({ component: Ficha });
 
@@ -62,17 +64,22 @@ function Ficha() {
     <Tela titulo={item.item} voltar="/materiais"
       barra={<BotaoCheio icone={Pencil} className="text-[17px]"
         onClick={() => { aj.enviar(); navigate({ to: '/materiais/$id/editar', params: { id: item.id } }); }}>Editar</BotaoCheio>}>
-      <h2 className="pt-2 pb-1 text-center text-[22px] font-bold tracking-tight [overflow-wrap:anywhere]">{item.item}</h2>
-
-      <div className="mt-5 mb-2 flex items-center justify-center gap-2">
-        <BotaoQtd grande onClick={() => aj.somar(-1)} disabled={aj.quantidade === 0} />
-        <output aria-live="polite" className="min-w-24 text-center text-[40px] leading-none font-bold tracking-tight tabular-nums">
-          {aj.quantidade}
-        </output>
-        <BotaoQtd grande mais onClick={() => aj.somar(1)} />
+      {/* O cartão principal da ficha (DNA): o nome e a quantidade, que é o
+          que mais se mexe. */}
+      <div className={clsx(CARTAO_ELEVADO, 'mb-5 px-4 pt-4 pb-3 text-center')}>
+        <small className="block text-xs font-bold tracking-[.06em] text-roxo uppercase">{item.categoria}</small>
+        <h2 className="mt-0.5 text-[22px] leading-tight font-bold tracking-tight [overflow-wrap:anywhere]">{item.item}</h2>
+        <div className="mt-4 flex items-center justify-center gap-2">
+          <BotaoQtd grande onClick={() => aj.somar(-1)} disabled={aj.quantidade === 0} />
+          <output aria-live="polite" className="min-w-24 text-center text-[40px] leading-none font-bold tracking-tight tabular-nums">
+            {aj.quantidade}
+          </output>
+          <BotaoQtd grande mais onClick={() => aj.somar(1)} />
+        </div>
+        <p className="mt-2 text-[13px] text-apagado">{aj.quantidade === 1 ? 'unidade' : 'unidades'}</p>
       </div>
-      <p className="mb-4 text-center text-[13px] text-apagado">{aj.quantidade === 1 ? 'unidade' : 'unidades'}</p>
 
+      <CabecalhoSecao titulo="Detalhes" />
       <Lista semAvatar>
         {dados.map(([r, v]) => (
           <li key={r}
@@ -83,9 +90,10 @@ function Ficha() {
         ))}
       </Lista>
 
+      <CabecalhoSecao titulo="Quando não serve mais" className="mt-2" />
       {item.estado !== 'Inservível' && (
         <button type="button" onClick={inservivel}
-          className="mt-4 flex min-h-13 w-full items-center justify-center gap-2 rounded-m border border-borda bg-papel p-3.5 text-base font-bold text-tinta transition-colors duration-150 active:bg-fundo">
+          className="flex min-h-13 w-full items-center justify-center gap-2 rounded-m border border-borda bg-papel p-3.5 text-base font-bold text-tinta transition-colors duration-150 active:bg-fundo">
           <CircleAlert size={18} /> Marcar como inservível
         </button>
       )}

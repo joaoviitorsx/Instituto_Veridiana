@@ -2,11 +2,12 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Archive, ChevronRight, Pencil, Plus, Users } from 'lucide-react';
+import { Archive, CalendarClock, ChevronRight, Pencil, Plus, QrCode, Users } from 'lucide-react';
 import { clsx } from 'clsx';
 import { leitura } from '../../../../api/cliente';
 import { Tela, useVoltar } from '../../../../ui/Tela';
-import { BotaoCheio, BotaoContorno, Esqueleto, Estado, Secao } from '../../../../ui/kit';
+import { BotaoCheio, Esqueleto, Estado } from '../../../../ui/kit';
+import { Atalhos, CabecalhoSecao } from '../../../../ui/Heroi';
 import { ErroTela } from '../../../../ui/ErroTela';
 import { folha } from '../../../../ui/folha';
 import { plural } from '../../../../util';
@@ -55,13 +56,17 @@ function FichaTurma() {
       barra={<BotaoCheio icone={Plus} onClick={() => novoAluno(turma)}>Adicionar aluno</BotaoCheio>}>
       {q.data ? (
         <>
-          <div className="mb-5 flex gap-2">
-            <BotaoContorno icone={Pencil} onClick={renomear} className="flex-1 px-2">Renomear</BotaoContorno>
-            <BotaoContorno icone={Archive} onClick={arquivar} className="flex-1 px-2">Arquivar</BotaoContorno>
-          </div>
+          {/* As ações da turma como atalhos, igual ao Início. Adicionar aluno,
+              a mais usada, fica na barra de baixo. */}
+          <Atalhos itens={[
+            { icone: Pencil, texto: 'Renomear', onClick: renomear },
+            { icone: QrCode, texto: 'QR da turma', to: '/gestao/qr/ver', search: { turma } },
+            { icone: CalendarClock, texto: 'Grade de aulas', to: '/grade' },
+            { icone: Archive, texto: 'Arquivar', onClick: arquivar },
+          ]} />
           {ativos.length ? (
             <>
-              <Secao>{plural(ativos.length, 'aluno', 'alunos')}</Secao>
+              <CabecalhoSecao titulo={plural(ativos.length, 'aluno na chamada', 'alunos na chamada')} />
               <LinhasAlunos lista={ativos} />
             </>
           ) : (

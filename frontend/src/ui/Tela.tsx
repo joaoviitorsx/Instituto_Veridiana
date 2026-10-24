@@ -127,7 +127,9 @@ export function Tela({ titulo, capa, grande, sub, roxo, placar, acoes, voltar = 
 
       {capa && <div data-conteudo>{capa}</div>}
 
-      <main data-conteudo className={clsx(raiz ? 'pb-[calc(32px+var(--barra-h)+var(--fab-h))]' : 'pb-[calc(24px+var(--barra-h))]')}>
+      {/* O FAB (quando há) também ocupa o rodapé: o último item da lista
+          não pode ficar embaixo dele, em tela raiz ou interna. */}
+      <main data-conteudo className={clsx(raiz ? 'pb-[calc(32px+var(--barra-h)+var(--fab-h))]' : 'pb-[calc(24px+var(--barra-h)+var(--fab-h))]')}>
         {solto ? children : (
           <div className={clsx('mx-auto max-w-[620px] px-4', tituloGrande ? 'pt-1' : 'pt-4')}>
             {tituloGrande && titulo && (

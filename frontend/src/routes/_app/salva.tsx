@@ -49,7 +49,7 @@ function Salva() {
           {c.offline ? 'Vai enviar sozinha quando a internet voltar.' : 'Já está na planilha.'}
         </p>
 
-        <div className="mt-7 w-full max-w-[340px] rounded-g bg-white/10 px-5 py-4 text-left">
+        <div className="mt-7 w-full max-w-[340px] rounded-2xl bg-white/10 px-5 py-4 text-left">
           <b className="block truncate text-lg leading-tight">{c.turma}</b>
           <span className="mt-0.5 block text-sm text-roxo-claro">{faltas ? plural(total, 'aluno na lista', 'alunos na lista') : 'Turma completa'}</span>
           <div className="mt-3 flex gap-2">

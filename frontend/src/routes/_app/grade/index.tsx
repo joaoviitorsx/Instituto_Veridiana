@@ -9,6 +9,7 @@ import { FaixaSemInternet, useOnline, usandoCopia } from '../../../offline/rede'
 import { Tela } from '../../../ui/Tela';
 import { BotaoCheio, CARTAO, Esqueleto, Estado, Filtro } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
+import { CabecalhoSecao } from '../../../ui/Heroi';
 import { folha } from '../../../ui/folha';
 import { toast } from '../../../ui/toast';
 import { plural, textoErro, vibrar } from '../../../util';
@@ -89,9 +90,9 @@ function VisaoDia({ g, dia, onDia }: { g: Grade; dia: number; onDia: (d: number)
             <button key={d} type="button" role="tab" aria-selected={ligado}
               aria-label={DIAS[d] + (d === g.dia ? ', hoje' : '') + ', ' + plural(n, 'aula', 'aulas')}
               onClick={() => onDia(d)}
-              className={clsx('flex min-h-14 min-w-12 flex-1 shrink-0 flex-col items-center justify-center rounded-m border px-1 py-1.5',
+              className={clsx('flex min-h-14 min-w-12 flex-1 shrink-0 flex-col items-center justify-center rounded-2xl border px-1 py-1.5',
                 'transition-colors duration-150',
-                ligado ? 'border-roxo bg-roxo text-white' : d === g.dia ? 'border-roxo bg-papel text-roxo' : 'border-borda bg-papel text-tinta')}>
+                ligado ? 'border-roxo bg-roxo text-white shadow-[0_6px_16px_rgba(74,29,110,.25)]' : d === g.dia ? 'border-roxo bg-papel text-roxo' : 'border-borda bg-papel text-tinta')}>
               <b className="text-[15px] leading-tight font-bold">{DIAS_CURTOS[d]}</b>
               <span className={clsx('text-xs leading-tight', ligado ? 'text-roxo-claro' : 'text-apagado')}>
                 {d === g.dia ? 'hoje' : n ? n + (n === 1 ? ' aula' : ' aulas') : 'livre'}
@@ -101,9 +102,7 @@ function VisaoDia({ g, dia, onDia }: { g: Grade; dia: number; onDia: (d: number)
         })}
       </div>
 
-      <h2 className="mx-1 mb-2 text-[13px] font-semibold tracking-wide text-apagado uppercase">
-        {DIAS[dia]}{ehHoje ? ' · hoje' : ''} · {plural(doDia.length, 'aula', 'aulas')}
-      </h2>
+      <CabecalhoSecao titulo={DIAS[dia] + (ehHoje ? ' · hoje' : '') + ' · ' + plural(doDia.length, 'aula', 'aulas')} />
       {doDia.length ? (
         <ListaHorarios hs={doDia} g={g} hoje={ehHoje} proxima={proxima} />
       ) : (
@@ -125,14 +124,13 @@ function VisaoSemana({ g }: { g: Grade }) {
         const ehHoje = d === g.dia;
         return (
           <section key={d} className="mb-5" aria-label={DIAS[d]}>
-            <h2 className="mx-1 mb-1.5 flex items-center gap-2 text-[13px] font-semibold tracking-wide text-apagado uppercase">
-              {DIAS[d]}
+            <CabecalhoSecao titulo={<span className="flex items-center gap-2">{DIAS[d]}
               {ehHoje && <span className="rounded-full bg-roxo px-2 py-0.5 text-xs font-bold tracking-normal text-white normal-case">hoje</span>}
-            </h2>
+            </span>} />
             {hs.length ? (
               <ListaHorarios hs={hs} g={g} hoje={ehHoje} proxima={ehHoje ? primeiraDepois(hs, g.feitasHoje) : undefined} compacta />
             ) : (
-              <p className={clsx(CARTAO, 'px-4 py-3 text-sm text-apagado')}>Sem aula</p>
+              <p className={clsx(CARTAO, 'rounded-2xl px-4 py-3 text-sm text-apagado')}>Sem aula</p>
             )}
           </section>
         );
@@ -147,7 +145,7 @@ function ListaHorarios({ hs, g, hoje, proxima, compacta }: {
 }) {
   const navigate = useNavigate();
   return (
-    <ul className={clsx(CARTAO, 'mb-4 overflow-hidden')}>
+    <ul className={clsx(CARTAO, 'mb-4 overflow-hidden rounded-2xl')}>
       {hs.map((h) => {
         const s = hoje ? situacaoHoje(h, g.feitasHoje, undefined, proxima) : 'depois';
         return (

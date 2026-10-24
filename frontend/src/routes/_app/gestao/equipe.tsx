@@ -10,10 +10,11 @@ import { leitura } from '../../../api/cliente';
 import { useSessao } from '../../../sessao';
 import { Tela } from '../../../ui/Tela';
 import { Avatar, Banner, BotaoCheio, BotaoContorno, Campo, Esqueleto, Estado, Linha, Lista } from '../../../ui/kit';
+import { CabecalhoSecao, CARTAO_ELEVADO } from '../../../ui/Heroi';
 import { ErroTela } from '../../../ui/ErroTela';
 import { Acoes, folha, type Opcao } from '../../../ui/folha';
 import { toast } from '../../../ui/toast';
-import { copiarTexto, primeiroNome, vibrar } from '../../../util';
+import { copiarTexto, plural, primeiroNome, vibrar } from '../../../util';
 import { gravar, type Pessoa } from './-comum';
 
 export const Route = createFileRoute('/_app/gestao/equipe')({ component: Equipe });
@@ -70,6 +71,7 @@ function Equipe() {
       {q.data ? (
         q.data.length ? (
           <>
+            <CabecalhoSecao titulo={plural(q.data.length, 'pessoa na equipe', 'pessoas na equipe')} />
             <Lista>
               {q.data.map((p) => (
                 <Linha key={p.nome}
@@ -78,7 +80,10 @@ function Equipe() {
                   sub={<span className="block truncate">{p.email || 'sem e-mail'}</span>}
                   rotulo={p.nome + ', ' + SITUACAO[p.situacao]}
                   direita={<>
-                    {/* Situação escrita, não só um pontinho de cor. */}
+                    {/* Situação escrita em todas, não só um pontinho de cor. */}
+                    {p.situacao === 'ativo' && (
+                      <span className="shrink-0 rounded-full bg-presente-fraco px-2.5 py-1 text-xs font-bold text-presente">Ativa</span>
+                    )}
                     {p.situacao === 'pendente' && (
                       <span className="shrink-0 rounded-full bg-justif-fraco px-2.5 py-1 text-xs font-bold text-justif-tinta">Falta entrar</span>
                     )}
@@ -164,7 +169,7 @@ function mostrarSenha(r: { nome: string; email: string; senha: string }) {
         Mande agora para {primeiroNome(r.nome)}: esta senha não aparece de novo. Se perder, é só gerar outra.
       </Banner>
       {/* Cartão de credencial: o que a pessoa vai digitar, grande e separado. */}
-      <div className="mb-4 overflow-hidden rounded-g border border-borda bg-papel shadow-cartao">
+      <div className={CARTAO_ELEVADO + ' mb-4 overflow-hidden'}>
         <div className="flex items-center gap-3 border-b border-borda px-4 py-3">
           <Mail size={18} className="shrink-0 text-apagado" />
           <span className="min-w-0">
