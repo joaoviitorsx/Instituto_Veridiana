@@ -156,6 +156,10 @@ main{padding:0 0 24px}
   padding:12px 16px;border-radius:var(--r-m);font-size:14px;margin-bottom:16px;
 }
 .aviso svg{flex-shrink:0;margin-top:2px}
+/* Informativo, não alerta: corrigir a chamada de hoje não é problema. */
+.aviso.info{background:var(--roxo-fraco);border-color:#D9C8E8;color:var(--roxo)}
+.aviso .acao-texto{display:block;margin:4px 0 -8px -8px;min-height:44px;padding:0 8px;
+  font-size:14px;font-weight:700;color:var(--roxo);text-decoration:underline;text-align:left}
 
 /* ─────────── lista agrupada ─────────── */
 /* Uma superficie so, com fios internos. Vinte cartoes flutuando cada um
@@ -348,6 +352,7 @@ main{padding:0 0 24px}
   transition:background 160ms var(--curva);
 }
 .fim .botao:active{background:rgba(255,255,255,.14)}
+.fim .botao.leve{margin-top:8px;border-color:transparent;color:var(--roxo-claro);font-weight:600}
 
 /* ─────────── cartoes de navegacao ─────────── */
 .cartoes{list-style:none;margin:0;padding:0}
@@ -686,6 +691,20 @@ main{padding:0 0 24px}
   min-height:1.45em;font-size:13px;line-height:1.45;color:var(--apagado)}
 .rodape{margin:32px 0 8px;text-align:center;font-size:12px;color:var(--apagado)}
 
+/* ─────────── grade: hora e situação ───────────
+   Aqui e não no AppGrade: a seção "Aulas de hoje" da chamada usa, e a
+   chamada não carrega o módulo da grade. */
+.gr-h{flex:0 0 52px;font-size:15px;font-weight:700;color:var(--roxo);font-variant-numeric:tabular-nums;line-height:1.2}
+.gr-h small{display:block;font-size:12px;font-weight:600;color:var(--apagado)}
+.gr-selo{flex-shrink:0;display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;
+  font-size:12px;font-weight:700;white-space:nowrap}
+.gr-selo.agora{background:var(--roxo);color:#fff}
+.gr-selo.feita{background:var(--presente-fraco);color:var(--presente)}
+.gr-selo.passou{background:var(--fundo);color:var(--apagado);border:1px solid var(--borda)}
+.link-grade{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:44px;
+  margin:-4px 0 20px;font-size:14px;font-weight:600;color:var(--roxo);border-radius:var(--r-p)}
+.link-grade:active{background:var(--roxo-fraco)}
+
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
   .fim .selo-ok svg path{stroke-dashoffset:0}
@@ -956,6 +975,61 @@ main{padding:0 0 24px}
     return m;
   }
 
+  /* ─── grade semanal (Grade.gs) ─── */
+  var DIAS_GRADE = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  var seqGrade = 0;
+  function hg(id, turma, dia, ini, fim, sala, prof){ return { id:id || ('G' + (++seqGrade)), turma:turma, dia:dia, inicio:ini, fim:fim, sala:sala, professor:prof, obs:'' }; }
+  var GRADE = [
+    hg(0,'Ballet Infantil I',1,'14:00','15:00','Sala 1','Vera Lúcia Sampaio'),
+    hg(0,'Ballet Infantil I',3,'14:00','15:00','Sala 1','Vera Lúcia Sampaio'),
+    hg(0,'Ballet Infantil II',1,'15:00','16:00','Sala 1','Vera Lúcia Sampaio'),
+    hg(0,'Ballet Infantil II',3,'15:00','16:00','Sala 1','Vera Lúcia Sampaio'),
+    hg(0,'Jazz Juvenil',2,'15:00','16:30','Sala 2','Aline Ferreira'),
+    hg(0,'Jazz Juvenil',4,'15:00','16:30','Sala 2','Aline Ferreira'),
+    hg(0,'Danças Urbanas',2,'17:00','18:30','Palco','Bruno Tavares'),
+    hg(0,'Danças Urbanas',5,'17:00','18:30','Palco','Bruno Tavares'),
+    hg(0,'Contemporâneo Avançado',4,'18:00','20:00','Sala 1','Cláudia Nogueira'),
+    hg(0,'Contemporâneo Avançado',6,'09:00','11:00','Sala 1','Cláudia Nogueira'),
+    hg(0,'Teatro',5,'14:00','15:30','Sala 2','Denise Rocha'),
+    hg(0,'Teatro',6,'11:00','12:30','Palco','Denise Rocha')
+  ];
+  /* Um horário em cada dia, perto de agora: o preview sempre tem "Aula agora". */
+  (function(){
+    var d = new Date(), m = d.getHours() * 60 + d.getMinutes();
+    function hh(x){ x = Math.max(0, Math.min(23 * 60 + 59, x)); return String(Math.floor(x / 60)).padStart(2,'0') + ':' + String(x % 60).padStart(2,'0'); }
+    if (m > 60 && m < 22 * 60) GRADE.push(hg(0,'Teatro', d.getDay(), hh(m - 20), hh(m + 70), 'Sala 3', 'Denise Rocha'));
+  })();
+  function minG(s){ var p = String(s || '').split(':'); return p.length === 2 ? (+p[0]) * 60 + (+p[1]) : -1; }
+  function horaCurta(s){ var p = String(s).split(':'); return (+p[0]) + 'h' + (+p[1] ? p[1] : ''); }
+  function conflitosG(novos, ignorar){
+    var fr = [];
+    novos.forEach(function(n){
+      GRADE.forEach(function(h){
+        if (h.id === ignorar || h.dia !== n.dia) return;
+        if (!(minG(h.inicio) < minG(n.fim) && minG(n.inicio) < minG(h.fim))) return;
+        var q = DIAS_GRADE[h.dia].toLowerCase() + ', das ' + horaCurta(h.inicio) + ' às ' + horaCurta(h.fim);
+        if (chave(h.turma) === chave(n.turma)) fr.push(h.turma + ' já tem aula na ' + q + '.');
+        else if (n.sala && chave(h.sala) === chave(n.sala)) fr.push('A sala ' + h.sala + ' já tem ' + h.turma + ' na ' + q + '.');
+        else if (n.professor && chave(h.professor) === chave(n.professor)) fr.push(h.professor + ' já dá ' + h.turma + ' na ' + q + '.');
+      });
+    });
+    return fr.filter(function(f, i){ return fr.indexOf(f) === i; }).slice(0, 4);
+  }
+  function validarG(d, base){
+    base = base || {};
+    var t = d.turma !== undefined ? d.turma : base.turma;
+    if (!t) throw new Error('Escolha a turma.');
+    var ini = d.inicio !== undefined ? d.inicio : base.inicio, fim = d.fim !== undefined ? d.fim : base.fim;
+    if (minG(ini) < 0) throw new Error('Escolha a hora em que a aula começa.');
+    if (minG(fim) < 0) throw new Error('Escolha a hora em que a aula termina.');
+    if (minG(fim) <= minG(ini)) throw new Error('A aula termina antes de começar. Confira os horários.');
+    if (minG(fim) - minG(ini) > 360) throw new Error('Essa aula ficou com mais de 6 horas. Confira os horários.');
+    return { turma:t, inicio:ini, fim:fim,
+             sala: String(d.sala !== undefined ? d.sala : (base.sala || '')).trim(),
+             professor: String(d.professor !== undefined ? d.professor : (base.professor || '')).trim(),
+             obs: String(d.obs !== undefined ? d.obs : (base.obs || '')).trim() };
+  }
+
   var TOKENS = {};
   /* e-mail -> acesso. Quem não está aqui não entra. */
   var EQUIPE = {
@@ -1035,6 +1109,40 @@ main{padding:0 0 24px}
 
   /* ─── as funções que existem no Codigo.gs ─── */
   var API = {
+    listarGrade: function(){
+      var h = hoje(), feitas = {}, salas = {};
+      CHAMADAS.forEach(function(c){ if (c.data === h) feitas[c.turma] = 1; });
+      GRADE.forEach(function(g){ if (g.sala) salas[g.sala] = 1; });
+      return { hoje:h, dia:new Date().getDay(), dias:DIAS_GRADE,
+        horarios: GRADE.slice().sort(function(a,b){ return a.dia - b.dia || minG(a.inicio) - minG(b.inicio) || pt(a.turma, b.turma); }),
+        turmas: TURMAS.filter(function(t){ return t.ativa; }).map(function(t){ return t.nome; }).sort(pt),
+        professores: PROFS.slice().sort(pt), salas: Object.keys(salas).sort(pt), feitasHoje: Object.keys(feitas) };
+    },
+    criarHorario: function(d){
+      d = d || {};
+      var e = validarG(d), dias = (d.dias || []).filter(function(x, i, l){ return x >= 0 && x <= 6 && l.indexOf(x) === i; });
+      if (!dias.length) throw new Error('Escolha pelo menos um dia da semana.');
+      var novos = dias.map(function(dia){ var x = {}; for (var k in e) x[k] = e[k]; x.dia = dia; return x; });
+      if (!d.forcar){ var c = conflitosG(novos, ''); if (c.length) throw new Error('CONFLITO: ' + c.join(' ')); }
+      var ids = novos.map(function(n){ var g = hg(0, n.turma, n.dia, n.inicio, n.fim, n.sala, n.professor); g.obs = n.obs; GRADE.push(g); return g.id; });
+      return { ok:true, ids:ids, criados:ids.length };
+    },
+    editarHorario: function(id, d){
+      d = d || {};
+      var h = GRADE.filter(function(x){ return x.id === id; })[0];
+      if (!h) throw new Error('Esse horário não está mais na grade. Alguém pode ter mexido na planilha.');
+      var e = validarG(d, h), dia = d.dia !== undefined ? d.dia : (d.dias && d.dias.length ? d.dias[0] : h.dia);
+      e.dia = dia;
+      if (!d.forcar){ var c = conflitosG([e], h.id); if (c.length) throw new Error('CONFLITO: ' + c.join(' ')); }
+      for (var k in e) h[k] = e[k];
+      return { ok:true, id:h.id };
+    },
+    excluirHorario: function(id){
+      var i = GRADE.findIndex(function(x){ return x.id === id; });
+      if (i < 0) throw new Error('Esse horário não está mais na grade. Alguém pode ter mexido na planilha.');
+      GRADE.splice(i, 1);
+      return { ok:true };
+    },
     /* Só usado pelo preview --lazy: devolve o módulo embutido. */
     modulo: function(nome){
       if (!window.__MODULOS || !window.__MODULOS[nome]) throw new Error('Parte do app desconhecida: ' + nome);
@@ -1055,8 +1163,18 @@ main{padding:0 0 24px}
       if (k && minhas.length) turmas = minhas;
       var destaque = null;
       var deHoje = prox.filter(function(e){ return e.data <= h; })[0];
+      /* Como o servidor (aulaDaGrade_): com grade, ela manda. */
+      var agoraMin = new Date().getHours() * 60 + new Date().getMinutes();
+      var doDia = GRADE.filter(function(g){ return g.dia === dia && !feitas[g.turma]; });
+      var minhasG = doDia.filter(function(g){ return chave(g.professor) === k; });
+      if (k && minhasG.length) doDia = minhasG;
+      var ac = doDia.filter(function(g){ return agoraMin >= minG(g.inicio) - 30 && agoraMin <= minG(g.fim); });
+      var lg = (ac.length ? ac : doDia.filter(function(g){ return minG(g.inicio) > agoraMin; }))
+        .sort(function(a,b){ return minG(a.inicio) - minG(b.inicio); });
       if (deHoje) destaque = {tipo:'evento', hoje:true, titulo:deHoje.titulo, data:deHoje.data, tipoEvento:deHoje.tipo};
-      else if (turmas.length) destaque = {tipo:'aula', turma:turmas.sort(pt)[0], hora:'15h', agora:new Date().getHours() === 15};
+      else if (GRADE.length && lg.length) destaque = {tipo:'aula', origem:'grade', turma:lg[0].turma, agora:ac.length > 0,
+        hora:horaCurta(lg[0].inicio), fim:horaCurta(lg[0].fim), sala:lg[0].sala, professor:lg[0].professor};
+      else if (!GRADE.length && turmas.length) destaque = {tipo:'aula', turma:turmas.sort(pt)[0], hora:'15h', agora:new Date().getHours() === 15};
       else if (prox[0]) destaque = {tipo:'evento', hoje:false, titulo:prox[0].titulo, data:prox[0].data, tipoEvento:prox[0].tipo};
       return { turmas: API.listarTurmas().length,
                proximo: prox[0] ? {titulo:prox[0].titulo, data:prox[0].data} : null,
@@ -1166,6 +1284,17 @@ main{padding:0 0 24px}
         turma:turma, alunos:alunos, professores:PROFS.slice().sort(pt),
         professorSugerido:ult, data:hoje(),
         jaRegistrada: CHAMADAS.some(function(c){ return c.data===hoje() && c.turma===turma; }),
+        /* Como o servidor: a chamada salva hoje, para corrigir. */
+        chamadaDeHoje: (function(){
+          var h = hoje(), ls = REGISTROS.filter(function(r){ return r.data === h && r.turma === turma; });
+          if (!ls.length) return null;
+          var rg = Math.max.apply(null, ls.map(function(r){ return r.rg || 0; }));
+          var desta = ls.filter(function(r){ return (r.rg || 0) === rg; });
+          var d = new Date(rg || Date.now());
+          return { professor: desta[0].professor, hora: String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'),
+                   presencas: desta.map(function(r){ return { aluno:r.aluno, status:r.status }; }).sort(function(a,b){ return pt(a.aluno,b.aluno); }),
+                   varias: desta.length !== ls.length };
+        })(),
         aniversarios: aniversariosEntre(0, 0, turma)
       };
     },
@@ -1178,16 +1307,38 @@ main{padding:0 0 24px}
       d.presencas.forEach(function(p){
         if (VALIDOS.indexOf(p.status) === -1) throw new Error('Status inválido: '+p.status);
       });
-      if (!d.forcar && CHAMADAS.some(function(c){ return c.data===hoje() && c.turma===d.turma; }))
-        throw new Error('DUPLICADA: já existe chamada de '+d.turma+' hoje.');
-      CHAMADAS.push({ data:hoje(), turma:d.turma, professor:d.professor });
+      /* Como o servidor: registro vem do PWA com a hora real da aula. */
+      var dia = hoje();
+      if (d.registro){
+        var rg = new Date(Math.min(Number(d.registro), Date.now()));
+        dia = rg.getFullYear() + '-' + String(rg.getMonth()+1).padStart(2,'0') + '-' + String(rg.getDate()).padStart(2,'0');
+        if (Date.now() - rg.getTime() > 14 * 86400000)
+          throw new Error('ANTIGA: esta chamada é de ' + dia.split('-').reverse().join('/') + ', mais de 14 dias atrás. Passe para a coordenação lançar na planilha.');
+      }
+      var corrigida = false;
+      if (d.substituir){
+        if (dia !== hoje()) throw new Error('Só dá para corrigir a chamada de hoje. Para outro dia, fale com a coordenação.');
+        var doDia = REGISTROS.filter(function(r){ return r.data === dia && r.turma === d.turma; });
+        if (doDia.length){
+          var rgMax = Math.max.apply(null, doDia.map(function(r){ return r.rg || 0; }));
+          REGISTROS = REGISTROS.filter(function(r){ return !(r.data === dia && r.turma === d.turma && (r.rg || 0) === rgMax); });
+          var ic = -1; CHAMADAS.forEach(function(c, i){ if (c.data === dia && c.turma === d.turma) ic = i; });
+          if (ic >= 0) CHAMADAS.splice(ic, 1);
+          corrigida = true;
+        }
+      }
+      if (!corrigida && !d.forcar && CHAMADAS.some(function(c){ return c.data===dia && c.turma===d.turma; }))
+        throw new Error('DUPLICADA: já existe chamada de '+d.turma+(dia === hoje() ? ' hoje.' : ' em ' + dia.split('-').reverse().join('/') + '.'));
+      var rgAgora = d.registro ? Math.min(Number(d.registro), Date.now()) : Date.now();
+      CHAMADAS.push({ data:dia, turma:d.turma, professor:d.professor });
       d.presencas.forEach(function(p){
-        REGISTROS.push({ data:hoje(), turma:d.turma, professor:d.professor,
-                         aluno:p.aluno, status:p.status });
+        REGISTROS.push({ data:dia, turma:d.turma, professor:d.professor,
+                         aluno:p.aluno, status:p.status, rg:rgAgora });
       });
       var pres = d.presencas.filter(function(p){ return p.status==='Presente'; }).length;
-      var r = { ok:true, turma:d.turma, professor:d.professor, data:hoje(),
+      var r = { ok:true, turma:d.turma, professor:d.professor, data:dia,
                 total:d.presencas.length, presentes:pres, faltas:d.presencas.length-pres };
+      if (corrigida) r.corrigida = true;
       if (d.token) TOKENS[d.token] = r;
       return r;
     },
@@ -1544,7 +1695,7 @@ main{padding:0 0 24px}
     }
   };
 
-  var ABERTAS_SESSAO = { modulo:1, resumoInicial:1, listarAgenda:1, listarAgendaAno:1, datasFixas:1,
+  var ABERTAS_SESSAO = { listarGrade:1, criarHorario:1, editarHorario:1, excluirHorario:1, modulo:1, resumoInicial:1, listarAgenda:1, listarAgendaAno:1, datasFixas:1,
     listarMateriais:1, listarCategorias:1, listarLocais:1, listarTurmas:1, carregarTurma:1, salvarChamada:1 };
 
   /* ─── a ponte, igualzinha à do Apps Script ─── */
@@ -1851,7 +2002,8 @@ var LEITURAS = {
   entrarNaGestao:1, listarTurmasCompleto:1, listarAlunos:1, listarProfessores:1,
   mesesCaixa:1, listarCaixa:1, resumoCaixa:1, mesesComChamada:1, resumoHistorico:1,
   alunosParaCertificado:1, alunosEmRisco:1, contarRisco:1, aniversariantesSemana:1,
-  relatorioPeriodo:1, obterUrlApp:1, obterLinkPlanilha:1, listarEquipe:1, quemSou:1
+  relatorioPeriodo:1, obterUrlApp:1, obterLinkPlanilha:1, listarEquipe:1, quemSou:1,
+  listarGrade:1
 };
 var MEM = {}, PEND = {}, MEM_GEN = 0;
 
@@ -1865,12 +2017,16 @@ var CHAMADAS_L = ['carregarTurma','resumoInicial','contarRisco','alunosEmRisco',
 var CAIXA_L = ['mesesCaixa','listarCaixa','resumoCaixa','resumoInicial'];
 var MATERIAIS_L = ['listarMateriais','listarCategorias','listarLocais','resumoInicial'];
 var AGENDA_L = ['listarAgenda','listarAgendaAno','datasFixas','resumoInicial'];
+/* A grade muda o cartão "Aula agora" da tela inicial. */
+var GRADE_L = ['listarGrade','resumoInicial'];
 var INVALIDA = {
-  salvarChamada:CHAMADAS_L,
+  /* listarGrade traz quais turmas já tiveram chamada hoje. */
+  salvarChamada:CHAMADAS_L.concat(['listarGrade']),
   lancarCaixa:CAIXA_L, apagarLancamento:CAIXA_L,
   criarMaterial:MATERIAIS_L, editarMaterial:MATERIAIS_L, ajustarQuantidade:MATERIAIS_L,
   inativarMaterial:MATERIAIS_L, renomearNaLista:MATERIAIS_L,
   criarEvento:AGENDA_L, editarEvento:AGENDA_L, excluirEvento:AGENDA_L, precarregarDatas:AGENDA_L,
+  criarHorario:GRADE_L, editarHorario:GRADE_L, excluirHorario:GRADE_L,
   gerarCertificado:[], gerarCalendarioPdf:[], sair:[]
 };
 function esquecer(fn){
@@ -1971,6 +2127,8 @@ function abrirFolha(titulo, corpoHtml, aoFechar){
      explodia num campo que não existe mais. */
   el('folhaCorpo').onclick = null;
   el('folhaCorpo').onkeydown = null;
+  /* Toast por cima da folha escondia as opções dela. */
+  fecharToast();
   el('folha').hidden = false;
   el('folhaTitulo').textContent = titulo;
   el('folhaCorpo').innerHTML = corpoHtml;
@@ -2078,11 +2236,14 @@ function pedirTexto(titulo, rotulo, valor, rotuloBotao, fn){
 }
 
 /* confirmacao de acao destrutiva */
-function confirmar(titulo, texto, rotulo, fn){
+/* neutro: a confirmação não é perigosa (ex.: "Salvar mesmo assim") e o
+   botão sai roxo, não vermelho. */
+function confirmar(titulo, texto, rotulo, fn, neutro){
   abrirFolha(titulo,
     '<p class="sub">'+esc(texto)+'</p>'+
     '<div class="acoes"><button type="button" class="cancelar" data-c="0">Cancelar</button>'+
-    '<button type="button" class="confirmar" data-c="1">'+esc(rotulo)+'</button></div>');
+    '<button type="button" class="confirmar" data-c="1"' + (neutro ? ' style="background:var(--roxo)"' : '') + '>' +
+    esc(rotulo)+'</button></div>');
   el('folhaCorpo').onclick = function(e){
     var b = e.target.closest('[data-c]');
     if (!b) return;
@@ -2153,7 +2314,7 @@ function modPronto(nome){
   if (fila && fila.forEach) fila.forEach(function(f){ f.ok(); });
 }
 function modDaTela(t){
-  return /^ag/.test(t) ? 'agenda' : /^mt/.test(t) ? 'materiais' : 'gestao';
+  return /^ag/.test(t) ? 'agenda' : /^mt/.test(t) ? 'materiais' : /^gr/.test(t) ? 'grade' : 'gestao';
 }
 /* O primeiro pedido de cada tela que mora num módulo sob demanda. */
 function primeiraLeitura(a){
@@ -2167,6 +2328,7 @@ function primeiraLeitura(a){
     case 'agenda':  var m = (a.p && a.p.mes) || h.slice(0, 7);
                     return ['listarAgenda', [+m.slice(0, 4), +m.slice(5, 7)]];
     case 'mtLista': return ['listarMateriais', [{}]];
+    case 'grDia': case 'grForm': return ['listarGrade', []];
   }
   return null;
 }
@@ -2198,6 +2360,9 @@ function carregarModulo(nome, ok, erro){
 }
 
 ACOES.copiarLink = function(b){ copiar(b.getAttribute('data-u')); };
+/* A grade é aberta de vários lugares (chamada, agenda, gestão, que moram
+   em módulos diferentes): a entrada fica aqui no núcleo. */
+ACOES.irGrade = function(){ ir('grDia', {}); };
 
 function desenhar(){
   var a = atual();
@@ -2606,13 +2771,13 @@ function preCarregar(d){
 }
 
 /* O código das seções não depende do resumo: sai logo depois da
-   primeira pintura, as três juntas. Em fila, a gestão (a maior, atrás
+   primeira pintura, todas juntas. Em fila, a gestão (a maior, atrás
    de metade dos blocos) só chegava depois de três idas ao servidor. */
 function preCarregarModulos(){
   if (S.modulosPedidos) return;
   S.modulosPedidos = true;
   setTimeout(function(){
-    carregarModulo('gestao'); carregarModulo('agenda'); carregarModulo('materiais');
+    carregarModulo('gestao'); carregarModulo('agenda'); carregarModulo('materiais'); carregarModulo('grade');
   }, 300);
 }
 
@@ -2626,7 +2791,11 @@ function pintarDestaque(d){
   if (d.tipo === 'aula'){
     rotulo = d.agora ? 'Aula agora' : 'Próxima aula';
     titulo = d.turma;
-    sub = (d.hora ? 'costuma começar às ' + d.hora : 'costuma ter aula hoje') + ' · abrir chamada';
+    var sala = d.sala ? ' · ' + d.sala : '';
+    /* Pela grade é hora marcada; pelo palpite, "costuma". */
+    sub = d.origem === 'grade'
+      ? (d.agora ? 'agora · até ' + d.fim + sala : 'começa às ' + d.hora + sala + ' · abrir chamada')
+      : (d.hora ? 'costuma começar às ' + d.hora : 'costuma ter aula hoje') + ' · abrir chamada';
     icone = 'relogio';
   } else {
     rotulo = d.hoje ? 'Hoje na agenda' : 'Próximo na agenda';
@@ -2670,11 +2839,14 @@ TELAS.turmas = function(){
     capa:'<div class="capa"><div class="topo"><div style="flex:1;min-width:0">' +
          '<h1>Chamada</h1><p class="data">Qual turma está entrando agora?</p>' +
          '</div></div></div>',
-    html: esqueleto(4),
+    /* "Aulas de hoje" chega da grade, por cima da lista: com grade
+       cadastrada, a turma da hora está no primeiro toque. */
+    html: '<div id="grHoje"></div><div id="trLista">' + esqueleto(4) + '</div>',
     depois: function(){
       ler('listarTurmas', [], function(turmas){
+        if (!el('trLista')) return;
         if (!turmas.length){
-          el('palco').querySelector('.corpo').innerHTML =
+          el('trLista').innerHTML =
             estado('grupo','Nenhuma turma ainda',
                    'Volte para o início e entre em Gestão para criar a primeira turma e cadastrar os alunos.');
           return;
@@ -2685,18 +2857,53 @@ TELAS.turmas = function(){
                '<span class="txt">' + esc(t) + '</span>' +
                '<span class="seta">' + ico('dir') + '</span></button></li>';
         });
-        el('palco').querySelector('.corpo').innerHTML = h + '</ul>';
+        el('trLista').innerHTML = h + '</ul>';
         /* Quem abriu a lista vai tocar numa turma. Com elenco e histórico
            em cache no servidor, cada busca é barata: vão todas por trás,
            e a chamada abre sem espera. Teto de 8 para não enfileirar. */
         turmas.slice(0, 8).forEach(function(t){ preler('carregarTurma', [t]); });
       }, function(e){
-        el('palco').querySelector('.corpo').innerHTML =
-          estado('alerta','Não deu para carregar', textoErro(e));
+        if (el('trLista')) el('trLista').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
       });
+      /* A grade é extra: se falhar, a lista de turmas segue sozinha. */
+      ler('listarGrade', [], pintarAulasDeHoje, function(){});
     }
   };
 };
+
+/* Aulas de hoje pela grade: hora, turma, sala, e o que já teve chamada.
+   Sem grade cadastrada não aparece nada (nem o link): a lista de turmas
+   de sempre continua sendo o caminho. */
+function pintarAulasDeHoje(r){
+  var a = atual(), box = el('grHoje');
+  if (!a || a.t !== 'turmas' || !box) return;
+  if (!(r.horarios || []).length){ box.innerHTML = ''; return; }
+  var hoje = r.horarios.filter(function(x){ return x.dia === r.dia; });
+  var feitas = r.feitasHoje || [];
+  var d = new Date(), agora = d.getHours() * 60 + d.getMinutes();
+  function min(s){ var p = String(s).split(':'); return (+p[0]) * 60 + (+p[1]); }
+  var h = '';
+  if (hoje.length){
+    h += '<div class="secao">' + ico('relogio', 18) + 'Aulas de hoje</div><ul class="lista sem-avatar">';
+    hoje.forEach(function(x){
+      var feita = feitas.indexOf(x.turma) !== -1;
+      var agoraSim = !feita && agora >= min(x.inicio) - 15 && agora <= min(x.fim);
+      var passou = !feita && agora > min(x.fim);
+      h += '<li class="li" role="button" tabindex="0" data-acao="abrirTurma" data-t="' + esc(x.turma) + '"' +
+           ' aria-label="' + esc(x.inicio + ', ' + x.turma + (feita ? ', chamada feita' : agoraSim ? ', agora' : '')) + '">' +
+           '<span class="gr-h">' + esc(x.inicio) + '<small>' + esc(x.fim) + '</small></span>' +
+           '<span class="nome">' + esc(x.turma) + (x.sala ? '<small>' + esc(x.sala) + '</small>' : '') + '</span>' +
+           (feita ? '<span class="gr-selo feita">' + ico('cheque', 14) + ' Feita</span>'
+            : agoraSim ? '<span class="gr-selo agora">Agora</span>'
+            : passou ? '<span class="gr-selo passou">Passou</span>' : '<span class="seta">' + ico('dir') + '</span>') +
+           '</li>';
+    });
+    h += '</ul>';
+  }
+  h += '<button type="button" class="link-grade" data-acao="irGrade">' + ico('calendario', 18) + 'Ver a grade da semana</button>';
+  if (hoje.length) h += '<div class="secao">Todas as turmas</div>';
+  box.innerHTML = h;
+}
 /* O dedo encosta na turma e a busca já sai: os ~150 ms entre encostar e
    soltar são adiantados de graça. */
 document.addEventListener('pointerdown', function(e){
@@ -2738,16 +2945,34 @@ function montarChamada(d){
 
   S.turma = d.turma; S.data = d.data;
   S.professores = d.professores || [];
+  S.dTurma = d;
+  el('capaData').textContent = dataExtenso(d.data);
+  /* Já tem chamada hoje: abre a que foi salva, para conferir e corrigir.
+     Salvar troca a chamada em vez de somar outra (substituir). */
+  pintarChamada(d, !!d.chamadaDeHoje);
+}
+
+/* Desenha a lista. corrigindo: com as marcações da chamada salva hoje.
+   Sem isso: todo mundo em falta, como sempre. */
+function pintarChamada(d, corrigindo){
+  var salva = corrigindo ? d.chamadaDeHoje : null;
+  var antes = {};
+  if (salva) salva.presencas.forEach(function(p){ antes[p.aluno] = p.status; });
+  S.corrigindo = !!salva;
   /* Quem abriu pelo próprio link (?prof=) já vem escolhido. O cartão
-     continua tocável: professora substituta troca num toque. */
-  S.professor = profDoLink(S.professores) || d.professorSugerido || '';
+     continua tocável: professora substituta troca num toque. Na correção,
+     vale quem deu a aula salva, se ainda estiver na equipe. */
+  var daSalva = salva && S.professores.indexOf(salva.professor) !== -1 ? salva.professor : '';
+  S.professor = daSalva || profDoLink(S.professores) || d.professorSugerido || '';
   S.jaRegistrada = !!d.jaRegistrada; S.forcar = false; S.confirmouVazia = false;
   S.token = sorteioToken();
   /* Pedido das professoras: todo mundo começa com falta e o toque dá
-     presença. Assim ninguém recebe presença por esquecimento. */
-  S.alunos = (d.alunos || []).map(function(n){ return {aluno:n, status:'Falta'}; });
-
-  el('capaData').textContent = dataExtenso(d.data);
+     presença. Assim ninguém recebe presença por esquecimento. Aluno que
+     entrou na turma depois da chamada salva também começa em falta. */
+  S.alunos = (d.alunos || []).map(function(n){
+    var st = antes[n];
+    return {aluno:n, status: (st === 'Presente' || st === 'Justificada') ? st : 'Falta'};
+  });
 
   if (!S.alunos.length){
     el('palco').querySelector('.corpo').innerHTML =
@@ -2766,7 +2991,15 @@ function montarChamada(d){
     });
     h += '</div></div>';
   }
-  if (S.jaRegistrada){
+  if (S.corrigindo){
+    h += '<div class="aviso info">' + ico('renomear', 18) +
+         '<span>Corrigindo a chamada de hoje' +
+         (salva.professor ? ' — feita por ' + esc(primeiroNome(salva.professor)) : '') +
+         (salva.hora ? ' às ' + esc(salva.hora) : '') + '. Ao salvar, ela é trocada e não conta duas vezes.' +
+         (salva.varias ? ' (Hoje houve mais de uma; esta é a mais recente.)' : '') +
+         '<button type="button" class="acao-texto" data-acao="novaChamada">É outra aula? Começar uma chamada nova</button>' +
+         '</span></div>';
+  } else if (S.jaRegistrada){
     h += '<div class="aviso">' + ico('alerta', 18) +
          '<span>Esta turma já teve chamada salva hoje. Se salvar de novo, vai contar duas vezes.</span></div>';
   }
@@ -2779,19 +3012,19 @@ function montarChamada(d){
        '<button type="button" id="btTodos" data-acao="todosPresentes" hidden>Todos presentes</button></div>';
   h += '<ul class="lista">';
   S.alunos.forEach(function(a, i){
-    h += '<li class="li" data-st="Falta" id="li' + i + '" data-acao="ciclar" data-i="' + i + '"' +
-         ' role="button" tabindex="0" aria-label="' + esc(a.aluno) + ', faltou">' +
+    h += '<li class="li" data-st="' + a.status + '" id="li' + i + '" data-acao="ciclar" data-i="' + i + '"' +
+         ' role="button" tabindex="0" aria-label="' + esc(a.aluno) + ', ' + falado(a.status) + '">' +
          '<span class="ini">' + esc(iniciais(a.aluno)) + '</span>' +
          '<span class="nome">' + esc(a.aluno) + '</span>' +
-         '<span class="marca" id="mk' + i + '"><span class="selo">Faltou</span></span></li>';
+         '<span class="marca" id="mk' + i + '">' + marcaHtml(a.status) + '</span></li>';
   });
-  /* A lista já nasce pintada (todo mundo em falta): repintar aluno por
-     aluno logo depois eram duas buscas no DOM e um innerHTML por linha. */
+  /* A lista já nasce pintada: repintar aluno por aluno logo depois eram
+     duas buscas no DOM e um innerHTML por linha. */
   el('palco').querySelector('.corpo').innerHTML = h + '</ul>';
   atualizarPlacar();
 
   el('barraDentro').innerHTML =
-    '<button type="button" class="salvar" id="btSalvar" data-acao="salvar">Salvar chamada</button>';
+    '<button type="button" class="salvar" id="btSalvar" data-acao="salvar">' + rotuloSalvar() + '</button>';
   el('barra').hidden = false;
   medirBarra();
 
@@ -2815,15 +3048,29 @@ function naChamada(){
   return !!a && a.t === 'chamada' && !!el('li0');
 }
 
-function pintar(i){
-  var st = S.alunos[i].status, li = el('li' + i);
-  li.dataset.st = st;
-  li.setAttribute('aria-label', S.alunos[i].aluno + ', ' +
-    (st === 'Presente' ? 'presente' : st === 'Falta' ? 'faltou' : 'falta justificada'));
-  el('mk' + i).innerHTML = st === 'Presente'
+function falado(st){ return st === 'Presente' ? 'presente' : st === 'Falta' ? 'faltou' : 'falta justificada'; }
+function marcaHtml(st){
+  return st === 'Presente'
     ? '<span class="ok">' + ico('cheque', 16) + '</span>'
     : '<span class="selo">' + (st === 'Falta' ? 'Faltou' : 'Justificada') + '</span>';
 }
+function rotuloSalvar(){ return S.corrigindo ? 'Salvar correção' : 'Salvar chamada'; }
+
+function pintar(i){
+  var st = S.alunos[i].status, li = el('li' + i);
+  li.dataset.st = st;
+  li.setAttribute('aria-label', S.alunos[i].aluno + ', ' + falado(st));
+  el('mk' + i).innerHTML = marcaHtml(st);
+}
+
+/* "É outra aula": a turma teve duas aulas hoje. Deixa a salva como está e
+   começa uma nova, do jeito de sempre (todos em falta, confirma e soma). */
+ACOES.novaChamada = function(){
+  if (!S.dTurma || !naChamada()) return;
+  pintarChamada(S.dTurma, false);
+  window.scrollTo(0, 0);
+  toast('Chamada nova: a de antes continua salva.', 'ok');
+};
 
 ACOES.ciclar = function(b){
   var i = +b.getAttribute('data-i');
@@ -2884,7 +3131,7 @@ ACOES.salvar = function(){
       'Salvar com todos em falta', function(){ S.confirmouVazia = true; ACOES.salvar(); });
     return;
   }
-  if (S.jaRegistrada && !S.forcar){
+  if (S.jaRegistrada && !S.forcar && !S.corrigindo){
     confirmar('Salvar de novo?',
       'Esta turma já teve chamada salva hoje. Salvar de novo cria um segundo registro e conta em dobro nos relatórios.',
       'Salvar assim mesmo', function(){ S.forcar = true; ACOES.salvar(); });
@@ -2906,13 +3153,13 @@ function enviarChamada(){
   if (b){ b.disabled = true; b.textContent = 'Salvando…'; }
   api('salvarChamada',
     [{turma:S.turma, professor:S.professor, token:S.token,
-      presencas:S.alunos, forcar: !!S.forcar}],
+      presencas:S.alunos, forcar: !!S.forcar, substituir: !!S.corrigindo}],
     function(r){ S.salvando = false; vibrar(); ir('fim', {r:r}, true); },
     function(e){
       /* Nada de re-render aqui: as marcacoes do professor continuam na tela. */
       S.salvando = false;
       var bb = el('btSalvar');
-      if (bb){ bb.disabled = false; bb.textContent = 'Salvar chamada'; }
+      if (bb){ bb.disabled = false; bb.textContent = rotuloSalvar(); }
       /* Se o servidor recusou por duplicidade, oferecer "tentar de novo"
          seria empurrar o professor para o erro que acabamos de evitar. */
       var msg = textoErro(e);
@@ -2937,9 +3184,21 @@ TELAS.fim = function(p){
     html:'<div class="fim"><div class="selo-ok">' +
       '<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" ' +
       'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>' +
-      '</div><h2>Chamada salva</h2><p>' + esc(r.turma || S.turma) + '<br>' + esc(resumo) + '</p>' +
-      '<button type="button" class="botao" data-acao="outraChamada">Fazer outra chamada</button></div>'
+      '</div><h2>' + (r.corrigida ? 'Chamada corrigida' : 'Chamada salva') + '</h2><p>' +
+      esc(r.turma || S.turma) + '<br>' + esc(resumo) + '</p>' +
+      '<button type="button" class="botao" data-acao="outraChamada">Fazer outra chamada</button>' +
+      /* Errou alguém? Reabre a turma já com o que foi salvo, para corrigir. */
+      '<button type="button" class="botao leve" data-acao="corrigirChamada" data-t="' + esc(r.turma || S.turma) + '">' +
+      'Corrigir esta chamada</button></div>'
   };
+};
+ACOES.corrigirChamada = function(b){
+  var t = b.getAttribute('data-t') || S.turma;
+  /* salvarChamada já derrubou carregarTurma da memória (INVALIDA): a
+     turma reabre com a chamada recém-salva, não com a cópia de antes. */
+  if (S.viaQr){ ir('chamada', {turma:t}, true); return; }
+  S.pilha = [{t:'inicio', p:{}}, {t:'turmas', p:{}}];
+  ir('chamada', {turma:t});
 };
 ACOES.outraChamada = function(){
   if (S.viaQr){ ir('chamada', {turma:S.turma}, true); return; }
@@ -2965,6 +3224,7 @@ TELAS.gestao = function(){
   var c = contadoresGestao(S.gest);
   var itens = [
     {ic:'prancheta', t:'Turmas', s:c.itTurmas, a:'gTurmas', id:'itTurmas'},
+    {ic:'relogio', t:'Grade de aulas', s:'dia, hora e sala de cada turma', a:'irGrade'},
     {ic:'grupo', t:'Alunos', s:c.itAlunos, a:'gAlunos', id:'itAlunos'},
     {ic:'pessoa', t:'Equipe e acessos', s:c.itEquipe, a:'gProfs', id:'itEquipe'},
     {ic:'qr', t:'QR do app', s:'cartaz para abrir o app no celular', a:'gQr'},
@@ -4563,7 +4823,8 @@ function qrSvg(txt){
 <script>modPronto("gestao");</script>
 <style>
 /* ─────────── agenda ─────────── */
-.atalhos{display:flex;gap:8px;margin-bottom:16px}
+.atalhos{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.atalhos button.largo{flex-basis:100%}
 .atalhos button{
   flex:1;min-height:48px;border-radius:var(--r-m);
   display:flex;align-items:center;justify-content:center;gap:8px;
@@ -4690,7 +4951,9 @@ TELAS.agenda = function(p){
         '<button type="button" data-acao="agMes" data-n="1" aria-label="Próximo mês">' + ico('dir', 22) + '</button></div>' +
       '<div class="atalhos">' +
         '<button type="button" data-acao="agAno">' + ico('tabela', 18) + ' Ver o ano</button>' +
-        '<button type="button" data-acao="agImprimir">' + ico('impressora', 18) + ' Imprimir</button></div>' +
+        '<button type="button" data-acao="agImprimir">' + ico('impressora', 18) + ' Imprimir</button>' +
+        /* A agenda é o que muda; a grade é o que se repete toda semana. */
+        '<button type="button" class="largo" data-acao="irGrade">' + ico('relogio', 18) + ' Grade de aulas da semana</button></div>' +
       '<div id="agLista">' + esqueleto(3) + '</div>',
     barra:'<button type="button" class="salvar" data-acao="agNovo">' + ico('mais') + 'Novo evento</button>',
     depois:function(){ carregarAgMes(mes); }
@@ -5683,6 +5946,423 @@ ACOES.mtListaResumo = function(b){
 </script>
 
 <script>modPronto("materiais");</script>
+<style>
+/* ─────────── grade semanal ─────────── */
+.gr-dias{display:flex;gap:6px;margin:0 0 16px;overflow-x:auto;scrollbar-width:none;padding:2px}
+.gr-dias::-webkit-scrollbar{display:none}
+.gr-dias button{
+  flex:1 0 48px;min-height:56px;border-radius:var(--r-m);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-size:15px;font-weight:700;color:var(--tinta);
+  background:var(--papel);border:1px solid var(--borda);
+  transition:background 160ms var(--curva),color 160ms var(--curva);
+}
+.gr-dias button small{font-size:12px;font-weight:600;color:var(--apagado);font-variant-numeric:tabular-nums}
+.gr-dias button.hoje{border:2px solid var(--roxo)}
+.gr-dias button[aria-selected="true"]{background:var(--roxo);border-color:var(--roxo);color:#fff}
+.gr-dias button[aria-selected="true"] small{color:var(--roxo-claro)}
+
+.gr-aulas{list-style:none;margin:0;padding:0}
+.gr-aulas li{margin-bottom:10px}
+.gr-aula{
+  width:100%;display:flex;align-items:stretch;text-align:left;
+  background:var(--papel);border:1px solid var(--borda);
+  border-radius:var(--r-m);box-shadow:var(--sombra);overflow:hidden;
+  transition:background 160ms var(--curva);
+}
+.gr-aula:active{background:var(--fundo)}
+.gr-aula .gr-hora{
+  flex:0 0 76px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:12px 4px;background:var(--roxo-fraco);color:var(--roxo);font-variant-numeric:tabular-nums;
+}
+.gr-aula .gr-hora b{font-size:18px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.gr-aula .gr-hora small{font-size:13px;font-weight:600;margin-top:2px}
+.gr-aula .gr-txt{flex:1;min-width:0;padding:12px 14px;align-self:center}
+.gr-aula .gr-txt b{display:block;font-size:16px;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.gr-aula .gr-txt small{display:block;font-size:13px;color:var(--apagado);margin-top:2px;line-height:1.4}
+.gr-aula .gr-fim{align-self:center;padding-right:12px;flex-shrink:0}
+.gr-aula.passou .gr-hora{background:var(--fundo);color:var(--apagado)}
+.gr-aula.agora{border:2px solid var(--roxo)}
+
+.gr-semana .gr-linha{min-height:56px}
+.gr-semana .gr-h{font-size:14px}
+
+.gr-det{list-style:none;margin:0 8px 8px;padding:0}
+.gr-det li{display:flex;gap:12px;align-items:flex-start;padding:8px 0;font-size:15px;line-height:1.45}
+.gr-det li svg{flex-shrink:0;margin-top:2px;color:var(--apagado)}
+
+.gr-escolha{
+  width:100%;display:flex;align-items:center;gap:12px;min-height:56px;
+  padding:12px 16px;text-align:left;
+  background:var(--papel);border:1px solid var(--borda);border-radius:var(--r-m);
+  transition:background 160ms var(--curva);
+}
+.gr-escolha:active{background:var(--fundo)}
+.gr-escolha .txt{flex:1;min-width:0;font-size:16px;font-weight:600;overflow-wrap:anywhere}
+.gr-escolha[data-vazio="true"] .txt{color:var(--apagado);font-weight:400}
+.gr-escolha .seta{color:var(--apagado);flex-shrink:0}
+.gr-semanal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.gr-semanal .chip{padding:10px 0;text-align:center}
+.campo .chips.gr-salas{margin-top:8px}
+.campo .chips.gr-salas .chip{min-height:40px;padding:8px 12px;font-size:13px}
+</style>
+<script>
+/* Grade semanal de aulas: que turma tem aula em que dia e hora, em que
+   sala e com quem. O servidor (Grade.gs) também usa a grade para o
+   cartão "Aula agora" da tela inicial. */
+
+var GR_CURTO = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+/* Semana de trabalho começa na segunda; domingo vai no fim. */
+var GR_ORDEM = [1, 2, 3, 4, 5, 6, 0];
+
+function grMin(hhmm){
+  var p = String(hhmm || '').split(':');
+  return p.length === 2 ? (+p[0]) * 60 + (+p[1]) : -1;
+}
+function grAgoraMin(){ var d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+function grDoDia(r, dia){
+  return (r.horarios || []).filter(function(h){ return h.dia === dia; });
+}
+/* Domingo só aparece se tiver aula (ou se hoje for domingo). */
+function grDiasVisiveis(r){
+  return GR_ORDEM.filter(function(d){ return d !== 0 || r.dia === 0 || grDoDia(r, 0).length; });
+}
+/* Situação de uma aula de hoje: feita, agora ou já passou. */
+function grSituacao(r, h){
+  if (h.dia !== r.dia) return '';
+  if ((r.feitasHoje || []).indexOf(h.turma) !== -1) return 'feita';
+  var m = grAgoraMin(), ini = grMin(h.inicio), fim = grMin(h.fim);
+  if (m >= ini - 15 && m <= fim) return 'agora';
+  if (m > fim) return 'passou';
+  return '';
+}
+function grSelo(sit){
+  if (sit === 'feita') return '<span class="gr-selo feita">' + ico('cheque', 14) + ' Chamada feita</span>';
+  if (sit === 'agora') return '<span class="gr-selo agora">Agora</span>';
+  if (sit === 'passou') return '<span class="gr-selo passou">Já passou</span>';
+  return '';
+}
+function grQuem(h){
+  return [h.sala, h.professor].filter(Boolean).join(' · ');
+}
+
+/* ══════════════ GRADE: dia e semana ══════════════ */
+TELAS.grDia = function(p){
+  if (!p.vista) p.vista = S.grVista || 'dia';
+  return {
+    titulo:'Grade de aulas',
+    html:'<div class="filtro" role="tablist">' +
+        '<button type="button" role="tab" data-acao="grVista" data-v="dia" aria-selected="' + (p.vista === 'dia') + '">Dia</button>' +
+        '<button type="button" role="tab" data-acao="grVista" data-v="semana" aria-selected="' + (p.vista === 'semana') + '">Semana</button>' +
+      '</div><div id="grCorpo">' + esqueleto(4) + '</div>',
+    barra:'<button type="button" class="salvar" data-acao="grNovo">' + ico('mais') + 'Novo horário</button>',
+    depois:function(){
+      ler('listarGrade', [], function(r){ pintarGrade(p, r); }, function(e){
+        if (el('grCorpo')) el('grCorpo').innerHTML = estado('alerta', 'Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+
+function pintarGrade(p, r){
+  var a = atual();
+  if (!a || a.t !== 'grDia' || a.p !== p || !el('grCorpo')) return;
+  S.grade = r;
+  if (p.dia === undefined) p.dia = r.dia;
+
+  if (!(r.horarios || []).length){
+    el('grCorpo').innerHTML = estado('relogio', 'A grade ainda está vazia',
+      'Coloque o dia e a hora de cada turma. A tela inicial passa a mostrar a aula certa na hora certa.',
+      {acao:'grNovo', txt:'Cadastrar o primeiro horário'});
+    return;
+  }
+
+  if (p.vista === 'semana'){
+    var h = '<div class="gr-semana">';
+    grDiasVisiveis(r).forEach(function(d){
+      var aulas = grDoDia(r, d);
+      h += '<div class="dia">' + esc(r.dias[d]) + (d === r.dia ? ' · hoje' : '') + '</div>';
+      if (!aulas.length){
+        h += '<p style="margin:0 4px 8px;font-size:14px;color:var(--apagado)">Sem aula</p>';
+        return;
+      }
+      h += '<ul class="lista sem-avatar">';
+      aulas.forEach(function(x){
+        h += '<li class="li gr-linha" role="button" tabindex="0" data-acao="grVer" data-id="' + esc(x.id) + '">' +
+             '<span class="gr-h">' + esc(x.inicio) + '<small>' + esc(x.fim) + '</small></span>' +
+             '<span class="nome">' + esc(x.turma) + (grQuem(x) ? '<small>' + esc(grQuem(x)) + '</small>' : '') + '</span>' +
+             grSelo(grSituacao(r, x)) + '</li>';
+      });
+      h += '</ul>';
+    });
+    el('grCorpo').innerHTML = h + '</div>';
+    return;
+  }
+
+  var dias = grDiasVisiveis(r);
+  if (dias.indexOf(p.dia) === -1) p.dia = dias[0];
+  var h2 = '<div class="gr-dias" role="tablist" aria-label="Dia da semana">';
+  dias.forEach(function(d){
+    var n = grDoDia(r, d).length;
+    h2 += '<button type="button" role="tab" data-acao="grEscolheDia" data-d="' + d + '"' +
+          (d === r.dia ? ' class="hoje"' : '') + ' aria-selected="' + (d === p.dia) + '"' +
+          ' aria-label="' + esc(r.dias[d] + (d === r.dia ? ', hoje' : '') + ', ' + plural(n, 'aula', 'aulas')) + '">' +
+          GR_CURTO[d] + '<small>' + (n || '–') + '</small></button>';
+  });
+  h2 += '</div>';
+  var aulas = grDoDia(r, p.dia);
+  if (!aulas.length){
+    h2 += estado('relogio', 'Nenhuma aula ' + (p.dia === 0 || p.dia === 6 ? 'no ' : 'na ') + r.dias[p.dia].toLowerCase(),
+      'Toque em "Novo horário" aqui embaixo para colocar uma.');
+  } else {
+    h2 += '<ul class="gr-aulas">';
+    aulas.forEach(function(x){
+      var sit = grSituacao(r, x);
+      h2 += '<li><button type="button" class="gr-aula' + (sit === 'passou' || sit === 'feita' ? ' passou' : '') +
+            (sit === 'agora' ? ' agora' : '') + '" data-acao="grVer" data-id="' + esc(x.id) + '">' +
+            '<span class="gr-hora"><b>' + esc(x.inicio) + '</b><small>' + esc(x.fim) + '</small></span>' +
+            '<span class="gr-txt"><b>' + esc(x.turma) + '</b>' +
+            (grQuem(x) ? '<small>' + esc(grQuem(x)) + '</small>' : '') + '</span>' +
+            (sit ? '<span class="gr-fim">' + grSelo(sit) + '</span>' : '') + '</button></li>';
+    });
+    h2 += '</ul>';
+  }
+  el('grCorpo').innerHTML = h2;
+}
+
+ACOES.grVista = function(b){
+  var v = b.getAttribute('data-v'), a = atual();
+  if (a.p.vista === v) return;
+  S.grVista = v; vibrar();
+  trocar('grDia', {vista:v, dia:a.p.dia});
+};
+ACOES.grEscolheDia = function(b){
+  var a = atual();
+  a.p.dia = +b.getAttribute('data-d');
+  vibrar();
+  if (S.grade) pintarGrade(a.p, S.grade);
+};
+ACOES.grNovo = function(){
+  var a = atual();
+  var dia = a && a.t === 'grDia' && a.p.vista === 'dia' ? a.p.dia : undefined;
+  ir('grForm', {dia:dia});
+};
+
+/* ─── ver uma aula ─── */
+ACOES.grVer = function(b){
+  var r = S.grade, id = b.getAttribute('data-id');
+  var x = r && (r.horarios || []).filter(function(h){ return h.id === id; })[0];
+  if (!x) return;
+  var feita = x.dia === r.dia && (r.feitasHoje || []).indexOf(x.turma) !== -1;
+  var h = '<ul class="gr-det">' +
+    '<li>' + ico('relogio', 18) + '<span>' + esc(r.dias[x.dia]) + ', das ' + esc(x.inicio) + ' às ' + esc(x.fim) + '</span></li>' +
+    (x.sala ? '<li>' + ico('local', 18) + '<span>' + esc(x.sala) + '</span></li>' : '') +
+    '<li>' + ico('pessoa', 18) + '<span>' + esc(x.professor || 'Sem professora definida') + '</span></li>' +
+    (x.obs ? '<li>' + ico('documento', 18) + '<span>' + esc(x.obs) + '</span></li>' : '') +
+    '</ul><ul>' +
+    '<li><button type="button" class="opc" data-gr="chamada">' + ico('prancheta') +
+      '<span>Fazer chamada' + (feita ? '<small>esta turma já teve chamada hoje</small>' : '') + '</span></button></li>' +
+    '<li><button type="button" class="opc" data-gr="editar">' + ico('renomear') + '<span>Editar horário</span></button></li>' +
+    '<li><button type="button" class="opc perigo" data-gr="tirar">' + ico('lixo') +
+      '<span>Tirar da grade<small>a frequência da turma continua guardada</small></span></button></li></ul>';
+  abrirFolha(x.turma, h);
+  el('folhaCorpo').onclick = function(e){
+    var o = e.target.closest('[data-gr]');
+    if (!o) return;
+    var qual = o.getAttribute('data-gr');
+    fecharFolha();
+    setTimeout(function(){
+      if (qual === 'chamada') ir('chamada', {turma:x.turma});
+      else if (qual === 'editar') ir('grForm', {id:x.id});
+      else confirmar('Tirar da grade',
+        x.turma + ' sai da ' + r.dias[x.dia].toLowerCase() + ' das ' + x.inicio + '. As chamadas já salvas não mudam.',
+        'Tirar da grade', function(){
+          api('excluirHorario', [x.id], function(){
+            vibrar(); toast(x.turma + ' saiu da grade');
+            if (atual().t === 'grDia') desenhar();
+          }, function(e2){ toast(textoErro(e2), 'erro'); });
+        });
+    }, 60);
+  };
+};
+
+/* ══════════════ GRADE: novo / editar horário ══════════════ */
+TELAS.grForm = function(p){
+  return {
+    titulo: p.id ? 'Editar horário' : 'Novo horário',
+    html: esqueleto(4),
+    barra:'<button type="button" class="salvar" id="btGrSalvar" data-acao="grSalvar" disabled>Salvar horário</button>',
+    depois:function(){
+      /* Uma resposta só: formulário não pode ser repintado por cima do digitado. */
+      ler('listarGrade', [], function(r){ montarFormGrade(p, r); }, function(e){
+        el('palco').querySelector('.corpo').innerHTML = estado('alerta', 'Não deu para abrir', textoErro(e));
+      }, {fresco:300000});
+    }
+  };
+};
+
+function montarFormGrade(p, r){
+  var a = atual();
+  if (!a || a.t !== 'grForm' || a.p !== p) return;
+  S.grade = r;
+  var x = p.id ? (r.horarios || []).filter(function(h){ return h.id === p.id; })[0] : null;
+  if (p.id && !x){
+    el('palco').querySelector('.corpo').innerHTML = estado('alerta', 'Horário não encontrado',
+      'Alguém pode ter mudado a grade. Volte e abra de novo.');
+    return;
+  }
+  /* Quem está cadastrando costuma ser quem dá a aula: já vem escolhida. */
+  var euNaEquipe = (r.professores || []).filter(function(n){ return semAcento(n) === semAcento(S.prof); })[0] || '';
+  var f = x ? JSON.parse(JSON.stringify(x))
+            : {turma:'', dia:null, inicio:'', fim:'', sala:'', professor:euNaEquipe, obs:''};
+  f.dias = x ? [x.dia] : (p.dia !== undefined && p.dia !== null ? [p.dia] : []);
+  S.grForm = f;
+
+  var h = '<div class="campo"><label>Turma</label>' +
+    '<button type="button" class="gr-escolha" id="grTurma" data-acao="grEscolheTurma" data-vazio="' + !f.turma + '">' +
+    ico('grupo', 20) + '<span class="txt">' + esc(f.turma || 'Escolher a turma') + '</span>' +
+    '<span class="seta">' + ico('dir') + '</span></button></div>';
+
+  h += '<div class="campo"><label>' + (x ? 'Dia da semana' : 'Dias da semana <i>(pode marcar mais de um)</i>') + '</label>' +
+    '<div class="chips gr-semanal" id="grDias">';
+  GR_ORDEM.forEach(function(d){
+    h += '<button type="button" class="chip' + (f.dias.indexOf(d) !== -1 ? ' on' : '') + '" data-gd="' + d + '"' +
+         ' aria-pressed="' + (f.dias.indexOf(d) !== -1) + '" aria-label="' + esc(r.dias[d]) + '">' + GR_CURTO[d] + '</button>';
+  });
+  h += '</div></div>';
+
+  h += '<div class="periodo">' +
+    '<div class="campo"><label for="grIni">Começa</label><input id="grIni" type="time" step="300" value="' + esc(f.inicio) + '"></div>' +
+    '<div class="campo"><label for="grFim">Termina</label><input id="grFim" type="time" step="300" value="' + esc(f.fim) + '"></div></div>';
+
+  h += '<div class="campo"><label for="grSala">Sala <i>(opcional)</i></label>' +
+    '<input id="grSala" type="text" autocomplete="off" autocapitalize="sentences" maxlength="40" ' +
+    'placeholder="Sala 1" value="' + esc(f.sala) + '">';
+  if ((r.salas || []).length){
+    h += '<div class="chips gr-salas" id="grSalas">';
+    r.salas.forEach(function(s){ h += '<button type="button" class="chip" data-gs="' + esc(s) + '">' + esc(s) + '</button>'; });
+    h += '</div>';
+  }
+  h += '</div>';
+
+  h += '<div class="campo"><label>Professora <i>(opcional)</i></label>' +
+    '<button type="button" class="gr-escolha" id="grProf" data-acao="grEscolheProf" data-vazio="' + !f.professor + '">' +
+    ico('pessoa', 20) + '<span class="txt">' + esc(f.professor || 'Sem professora') + '</span>' +
+    '<span class="seta">' + ico('dir') + '</span></button></div>';
+
+  h += '<div class="campo"><label for="grObs">Observação <i>(opcional)</i></label>' +
+    '<input id="grObs" type="text" autocomplete="off" maxlength="200" placeholder="trazer sapatilha" value="' + esc(f.obs) + '"></div>';
+
+  var corpo = el('palco').querySelector('.corpo');
+  corpo.innerHTML = h;
+  el('btGrSalvar').disabled = false;
+  /* Quem marca 14:00 no começo quase sempre quer 1 h de aula. */
+  el('grIni').onchange = function(){
+    if (!el('grFim').value && this.value){
+      var m = grMin(this.value) + 60;
+      if (m < 24 * 60) el('grFim').value = String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0');
+    }
+  };
+  corpo.onclick = function(e){
+    var d = e.target.closest('[data-gd]');
+    if (d){
+      var dia = +d.getAttribute('data-gd');
+      if (x){
+        /* Editar mexe em um horário só: um dia de cada vez. */
+        f.dias = [dia];
+      } else {
+        var i = f.dias.indexOf(dia);
+        if (i === -1) f.dias.push(dia); else f.dias.splice(i, 1);
+      }
+      el('grDias').querySelectorAll('[data-gd]').forEach(function(c){
+        var on = f.dias.indexOf(+c.getAttribute('data-gd')) !== -1;
+        c.classList.toggle('on', on); c.setAttribute('aria-pressed', on);
+      });
+      vibrar(); return;
+    }
+    var s = e.target.closest('[data-gs]');
+    if (s){ el('grSala').value = s.getAttribute('data-gs'); vibrar(); }
+  };
+}
+
+ACOES.grEscolheTurma = function(){
+  var r = S.grade, f = S.grForm;
+  if (!r || !f) return;
+  if (!(r.turmas || []).length){ toast('Nenhuma turma ativa. Crie em Gestão → Turmas.', 'erro'); return; }
+  folhaOpcoes('Qual turma', r.turmas.map(function(t){
+    return {txt:t, marcado:(t === f.turma), fn:function(){
+      f.turma = t;
+      var b = el('grTurma');
+      if (b){ b.querySelector('.txt').textContent = t; b.dataset.vazio = 'false'; }
+      vibrar();
+    }};
+  }));
+};
+ACOES.grEscolheProf = function(){
+  var r = S.grade, f = S.grForm;
+  if (!r || !f) return;
+  function marca(nome){
+    f.professor = nome;
+    var b = el('grProf');
+    if (b){ b.querySelector('.txt').textContent = nome || 'Sem professora'; b.dataset.vazio = String(!nome); }
+    vibrar();
+  }
+  folhaOpcoes('Quem dá a aula', [{txt:'Sem professora', marcado:!f.professor, fn:function(){ marca(''); }}]
+    .concat((r.professores || []).map(function(n){
+      return {txt:n, ini:n, marcado:(n === f.professor), fn:function(){ marca(n); }};
+    })));
+};
+
+ACOES.grSalvar = function(forcar){
+  var p = atual().p, f = S.grForm;
+  if (!f || !el('grIni')) return;
+  var dados = {
+    turma: f.turma,
+    inicio: el('grIni').value, fim: el('grFim').value,
+    sala: el('grSala').value.trim(),
+    professor: f.professor || '',
+    obs: el('grObs').value.trim()
+  };
+  if (p.id) dados.dia = f.dias[0]; else dados.dias = f.dias.slice();
+  if (forcar === true) dados.forcar = true;
+
+  /* Sem turma, a lista de turmas abre sozinha: é a resposta, não um aviso. */
+  if (!dados.turma){ ACOES.grEscolheTurma(); return; }
+  if (!f.dias.length){ toast('Marque o dia da semana.', 'erro'); return; }
+  if (!dados.inicio){ toast('Escolha a hora em que a aula começa.', 'erro'); el('grIni').focus(); return; }
+  if (!dados.fim){ toast('Escolha a hora em que a aula termina.', 'erro'); el('grFim').focus(); return; }
+  if (grMin(dados.fim) <= grMin(dados.inicio)){ toast('A aula termina antes de começar. Confira os horários.', 'erro'); return; }
+
+  fecharToast();
+  var bt = el('btGrSalvar');
+  bt.disabled = true; bt.textContent = 'Salvando…';
+  api(p.id ? 'editarHorario' : 'criarHorario', p.id ? [p.id, dados] : [dados], function(r){
+    vibrar();
+    toast(p.id ? 'Horário salvo'
+      : r.criados > 1 ? dados.turma + ' entrou na grade em ' + r.criados + ' dias' : dados.turma + ' entrou na grade');
+    /* Volta para a grade no dia que acabou de receber a aula. */
+    var dia = f.dias.slice().sort(function(a, b){ return GR_ORDEM.indexOf(a) - GR_ORDEM.indexOf(b); })[0];
+    S.pilha.pop();
+    var baixo = atual();
+    if (baixo && baixo.t === 'grDia'){ baixo.p.dia = dia; desenhar(); }
+    else { S.pilha.push({t:'grDia', p:{vista:'dia', dia:dia}}); desenhar(); }
+  }, function(e){
+    var b2 = el('btGrSalvar');
+    if (b2){ b2.disabled = false; b2.textContent = 'Salvar horário'; }
+    var msg = textoErro(e);
+    /* Sala, professora ou turma ocupada: decide quem está cadastrando.
+       Às vezes é de propósito (duas turmas pequenas dividindo a sala). */
+    if (msg.indexOf('CONFLITO:') === 0){
+      confirmar('Horário ocupado', msg.replace(/^CONFLITO:\s*/, '') + ' Salvar mesmo assim?',
+        'Salvar mesmo assim', function(){ ACOES.grSalvar(true); }, true);
+      return;
+    }
+    toast(msg, 'erro');
+  });
+};
+</script>
+
+<script>modPronto("grade");</script>
 <script>
 /* Partida: lê a turma da URL, confere a sessão e abre a primeira tela. Roda por último. */
 /* ══════════════ partida ══════════════ */

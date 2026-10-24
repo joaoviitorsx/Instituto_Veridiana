@@ -107,7 +107,11 @@ function destaque_(prof, eventos, hj) {
   const deHoje = eventos.filter(function (ev) { return ev.data <= hj && ev.fim >= hj; })[0];
   if (deHoje) return eventoCurto_(deHoje, true);
 
-  const aula = proximaAula_(prof, hj);
+  /* Com grade cadastrada, ela manda: é a hora certa, não um palpite.
+     Sem grade nenhuma (undefined), vale o palpite pelas chamadas. */
+  let aula = null;
+  try { aula = aulaDaGrade_(prof, hj); } catch (e) { aula = undefined; }
+  if (aula === undefined) aula = proximaAula_(prof, hj);
   if (aula) return aula;
 
   const limite = somarDias_(hj, DIAS_EVENTO_DESTAQUE);
@@ -199,6 +203,7 @@ function padraoAulas_(hj) {
     const aba = planilha().getSheetByName(ABA_CHAMADAS);
     if (!aba || aba.getLastRow() < 2) return {};
     const limite = diasAtras_(SEMANAS_PADRAO_AULA * 7);
+    const parada = antesDoAtraso_(limite);   // chamada que chegou atrasada (ver lerChamadasDesde_)
     const dia = diaDaSemana_(hj);
     const aulas = {};
     const BLOCO = 2000, TETO = 12000;
@@ -211,7 +216,10 @@ function padraoAulas_(hj) {
       for (let i = vals.length - 1; i >= 0; i--) {
         const data = textoData(vals[i][1]);
         if (!data) continue;
-        if (data < limite) { passou = true; break; }
+        if (data < limite) {
+          if (data < parada) { passou = true; break; }
+          continue;
+        }
         const turma = String(vals[i][2] || '').trim();
         if (!turma) continue;
         if (data === hj) continue;             // hoje vem de mapaRecentes_

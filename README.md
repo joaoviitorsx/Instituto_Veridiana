@@ -15,6 +15,11 @@
 > **Manual do usuário:** [`manual/Veridiana-Manual-do-Usuario.pdf`](manual/Veridiana-Manual-do-Usuario.pdf)
 > — o guia para a equipe, tela por tela. Este README é para quem mantém o código.
 
+> **Duas interfaces, um backend.** O mesmo `/exec` serve o app HTML (este
+> README) e uma API JSON para o PWA em React no Vercel, que funciona sem
+> internet: ver [`frontend/README.md`](frontend/README.md). As funções de
+> negócio são as mesmas — o `Api.gs` é só transporte.
+
 ---
 
 ## O problema
@@ -60,6 +65,14 @@ marcado.
 
 ---
 
+**Corrigir a chamada do dia.** Errou uma marcação? Reabrir a turma no
+mesmo dia traz a chamada já salva, marcada como estava, com o aviso
+"Corrigindo a chamada de hoje". Salvar troca as linhas daquela chamada na
+aba `Chamadas` em vez de somar outra — relatório, histórico e certificado
+não contam a aula duas vezes. Duas aulas de verdade no mesmo dia: "É outra
+aula? Começar uma chamada nova". Dia que já passou se corrige na planilha,
+com a coordenação.
+
 ## A entrada
 
 A tela inicial traz saudação, a data, um cartão com a aula que deve
@@ -93,6 +106,21 @@ página por trimestre, com espaço em branco em cada dia para escrever.
 Só o Dia Internacional da Dança está nas datas fixas. As demais esperam
 confirmação da coordenação (`DATAS_FIXAS` em `Agenda.gs`) — lista
 genérica de internet vira ruído que ela teria que limpar.
+
+## Grade de aulas
+
+O retrato da semana: que turma tem aula em que dia, de que hora a que
+hora, em que sala e com quem. Mora na aba **Grade** da planilha (criada
+no primeiro uso), escrita de um jeito que qualquer pessoa conserta à mão:
+dia por extenso ("Segunda"), hora como "14:00".
+
+- Cadastro em vários dias de uma vez ("Ballet I, segunda e quarta, 14h às 15h").
+- Antes de salvar, avisa se a sala, a professora ou a turma já estão
+  ocupadas naquele horário — e deixa salvar assim mesmo, se for o caso.
+- A tela da chamada mostra **Aulas de hoje** em cima, com ✓ nas que já
+  tiveram chamada.
+- Com grade cadastrada, o cartão "Aula agora" da tela inicial usa a hora
+  certa. Sem grade, continua o palpite pelas chamadas salvas (abaixo).
 
 ## Materiais
 
@@ -251,8 +279,9 @@ mínimo 44px.
 ## Estrutura
 
 ```
-apps-script/        cole estes 25 arquivos no editor do Apps Script
-  Codigo.gs           constantes, doGet, montagem da página e módulos
+apps-script/        cole estes 28 arquivos no editor do Apps Script
+  Codigo.gs           constantes, doGet/doPost (modo duplo), montagem da página e módulos
+  Api.gs              API JSON do PWA: roteador {fn, args} sobre as mesmas funções
   Util.gs             planilha, datas, cache e trava
   Inicio.gs           números da tela inicial e "próxima aula"
   Chamada.gs          abrir a turma e salvar a chamada
@@ -264,6 +293,7 @@ apps-script/        cole estes 25 arquivos no editor do Apps Script
   Certificado.gs      certificado em PDF com carga horária
   Caixa.gs            entradas, saídas, comprovantes e resumo
   Agenda.gs           agenda anual e calendário em PDF
+  Grade.gs            grade semanal de aulas e o "Aula agora" pela grade
   Materiais.gs        lista de materiais
   Index.html          casca da página
   Estilo.html         CSS da casca, da entrada, da chamada e da gestão
@@ -277,7 +307,10 @@ apps-script/        cole estes 25 arquivos no editor do Apps Script
   AppQr.html          encoder de QR                    (sob demanda)
   AppAgenda.html      telas da agenda, com o CSS dela  (sob demanda)
   AppMateriais.html   telas de materiais, com o CSS    (sob demanda)
+  AppGrade.html       telas da grade de aulas, com o CSS (sob demanda)
 
+frontend/           PWA em React (Vercel) — ver frontend/README.md
+testes/             testes de servidor no Node (node testes/teste-api.js)
 mock.js             mock do google.script.run, só para o navegador
 manual/             manual do usuário: manual.html (fonte), o PDF e o
                     gerador (python3 manual/gerar-manual.py [pasta-de-prints])
@@ -346,7 +379,7 @@ módulos chegam pelo mock, para testar o carregamento sob demanda.
 > o app. Cadastro, agenda, materiais, caixa — tudo pelo celular ou
 > direto na planilha, sem abrir editor de script nenhum.
 
-São 23 arquivos. Colar isso à mão é caminho garantido para erro (um
+São 28 arquivos. Colar isso à mão é caminho garantido para erro (um
 arquivo esquecido, um colado no lugar do outro). Use o
 [`clasp`](https://github.com/google/clasp), a ferramenta de linha de
 comando do próprio Google.
@@ -397,6 +430,13 @@ publicar uma nova.
 
 ### Publicar com segurança
 
+> **Modo duplo.** Desde a v3 o mesmo `/exec` atende o app HTML e o PWA
+> (`frontend/`). Toda publicação confere as **duas** entradas: o app HTML
+> abrindo e fazendo chamada, e `/dev?fn=ping` (depois `/exec?fn=ping`)
+> devolvendo JSON. O quebrado costuma ser o que ninguém abriu naquele dia.
+> E é sempre **Nova versão** na implantação existente: implantação nova
+> muda a URL e derruba o PWA.
+
 Autorização no Apps Script é **do projeto inteiro, não da função**. Se
 o código novo usa um serviço que o dono ainda não autorizou (como o
 `DocumentApp` do calendário, na v2), **toda execução** passa a exigir a
@@ -406,6 +446,8 @@ professores por causa de um recurso que ninguém usou ainda.
 
 A sequência:
 
+0. `node testes/teste-api.js` — testes de servidor no Node, com planilha
+   falsa (API, app HTML, chamada atrasada, duplicidade). Tudo `ok`
 1. `clasp push` (ou colar no editor e salvar)
 2. Abrir a URL `/dev` do app, logado como dono — ela força o pedido de
    autorização
@@ -435,10 +477,10 @@ Saiba disso antes de publicar, não durante o problema.
 Dá para colar à mão: no editor, **+** ao lado de "Arquivos" cria cada um.
 
 **Script** (`+` → **Script**, nome sem `.gs`):
-`Codigo` · `Util` · `Acesso` · `Inicio` · `Chamada` · `Gestao` · `Planilha` · `Historico` · `Impacto` · `Certificado` · `Caixa` · `Agenda` · `Materiais`
+`Codigo` · `Api` · `Util` · `Acesso` · `Inicio` · `Chamada` · `Gestao` · `Planilha` · `Historico` · `Impacto` · `Certificado` · `Caixa` · `Agenda` · `Grade` · `Materiais`
 
 **HTML** (`+` → **HTML**, nome sem `.html`):
-`Index` · `Estilo` · `AppNucleo` · `AppEntrada` · `AppInicio` · `AppChamada` · `AppPartida` · `AppGestao` · `AppCaixa` · `AppQr` · `AppAgenda` · `AppMateriais`
+`Index` · `Estilo` · `AppNucleo` · `AppEntrada` · `AppInicio` · `AppChamada` · `AppPartida` · `AppGestao` · `AppCaixa` · `AppQr` · `AppAgenda` · `AppGrade` · `AppMateriais`
 
 Em cada um: `Ctrl+A`, `Delete`, cole o arquivo de mesmo nome, `Ctrl+S`.
 Depois, a mesma sequência de publicação acima.

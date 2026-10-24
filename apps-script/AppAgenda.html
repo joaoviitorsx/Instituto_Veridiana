@@ -1,6 +1,7 @@
 <style>
 /* ─────────── agenda ─────────── */
-.atalhos{display:flex;gap:8px;margin-bottom:16px}
+.atalhos{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.atalhos button.largo{flex-basis:100%}
 .atalhos button{
   flex:1;min-height:48px;border-radius:var(--r-m);
   display:flex;align-items:center;justify-content:center;gap:8px;
@@ -127,7 +128,9 @@ TELAS.agenda = function(p){
         '<button type="button" data-acao="agMes" data-n="1" aria-label="Próximo mês">' + ico('dir', 22) + '</button></div>' +
       '<div class="atalhos">' +
         '<button type="button" data-acao="agAno">' + ico('tabela', 18) + ' Ver o ano</button>' +
-        '<button type="button" data-acao="agImprimir">' + ico('impressora', 18) + ' Imprimir</button></div>' +
+        '<button type="button" data-acao="agImprimir">' + ico('impressora', 18) + ' Imprimir</button>' +
+        /* A agenda é o que muda; a grade é o que se repete toda semana. */
+        '<button type="button" class="largo" data-acao="irGrade">' + ico('relogio', 18) + ' Grade de aulas da semana</button></div>' +
       '<div id="agLista">' + esqueleto(3) + '</div>',
     barra:'<button type="button" class="salvar" data-acao="agNovo">' + ico('mais') + 'Novo evento</button>',
     depois:function(){ carregarAgMes(mes); }

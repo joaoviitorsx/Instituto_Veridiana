@@ -135,6 +135,10 @@ main{padding:0 0 24px}
   padding:12px 16px;border-radius:var(--r-m);font-size:14px;margin-bottom:16px;
 }
 .aviso svg{flex-shrink:0;margin-top:2px}
+/* Informativo, não alerta: corrigir a chamada de hoje não é problema. */
+.aviso.info{background:var(--roxo-fraco);border-color:#D9C8E8;color:var(--roxo)}
+.aviso .acao-texto{display:block;margin:4px 0 -8px -8px;min-height:44px;padding:0 8px;
+  font-size:14px;font-weight:700;color:var(--roxo);text-decoration:underline;text-align:left}
 
 /* ─────────── lista agrupada ─────────── */
 /* Uma superficie so, com fios internos. Vinte cartoes flutuando cada um
@@ -327,6 +331,7 @@ main{padding:0 0 24px}
   transition:background 160ms var(--curva);
 }
 .fim .botao:active{background:rgba(255,255,255,.14)}
+.fim .botao.leve{margin-top:8px;border-color:transparent;color:var(--roxo-claro);font-weight:600}
 
 /* ─────────── cartoes de navegacao ─────────── */
 .cartoes{list-style:none;margin:0;padding:0}
@@ -664,6 +669,20 @@ main{padding:0 0 24px}
 .bloco small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
   min-height:1.45em;font-size:13px;line-height:1.45;color:var(--apagado)}
 .rodape{margin:32px 0 8px;text-align:center;font-size:12px;color:var(--apagado)}
+
+/* ─────────── grade: hora e situação ───────────
+   Aqui e não no AppGrade: a seção "Aulas de hoje" da chamada usa, e a
+   chamada não carrega o módulo da grade. */
+.gr-h{flex:0 0 52px;font-size:15px;font-weight:700;color:var(--roxo);font-variant-numeric:tabular-nums;line-height:1.2}
+.gr-h small{display:block;font-size:12px;font-weight:600;color:var(--apagado)}
+.gr-selo{flex-shrink:0;display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;
+  font-size:12px;font-weight:700;white-space:nowrap}
+.gr-selo.agora{background:var(--roxo);color:#fff}
+.gr-selo.feita{background:var(--presente-fraco);color:var(--presente)}
+.gr-selo.passou{background:var(--fundo);color:var(--apagado);border:1px solid var(--borda)}
+.link-grade{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:44px;
+  margin:-4px 0 20px;font-size:14px;font-weight:600;color:var(--roxo);border-radius:var(--r-p)}
+.link-grade:active{background:var(--roxo-fraco)}
 
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}

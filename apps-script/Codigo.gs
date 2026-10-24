@@ -47,6 +47,12 @@ const FUSO = 'America/Fortaleza';
 const DIAS_RECENTES = 60;   // dias lidos para 'já teve chamada hoje' e sugestão de professora
 const TTL_TOKEN = 21600;    // 6 h de proteção contra gravação duplicada
 const TTL_CACHE = 300;      // 5 min de cache das listas
+/* A chamada feita sem internet no PWA chega depois, e entra no FIM da
+   aba com a data real da aula: a aba deixa de estar em ordem de data.
+   Toda leitura que anda de trás para frente e para "na primeira linha
+   mais velha" passa a parar só ATRASO_MAX_DIAS antes, e o servidor
+   recusa chamada mais velha que isso. Ver lerChamadasDesde_. */
+const ATRASO_MAX_DIAS = 14;
 
 /**
  * ÍCONE DO ATALHO NA TELA INICIAL
@@ -79,7 +85,8 @@ const PARTES = ['AppNucleo', 'AppEntrada', 'AppInicio', 'AppChamada', 'AppPartid
 const MODULOS = {
   gestao:    ['AppGestao', 'AppCaixa', 'AppQr'],
   agenda:    ['AppAgenda'],
-  materiais: ['AppMateriais']
+  materiais: ['AppMateriais'],
+  grade:     ['AppGrade']
 };
 
 /**
@@ -95,7 +102,34 @@ function modulo(sessao, nome) {
     '\n<script>modPronto(' + JSON.stringify(nome) + ');</script>';
 }
 
+/**
+ * Modo duplo: o mesmo /exec serve o app HTML e a API JSON do PWA.
+ *   /exec                        -> app HTML (como sempre)
+ *   /exec?turma=Ballet           -> app HTML já na turma (QR impresso)
+ *   /exec?fn=ping                -> JSON, para depurar no navegador
+ *   POST /exec  {fn, args}       -> JSON, caminho normal do PWA (Api.gs)
+ *
+ * A chave da bifurcação é fn porque não colide com turma nem com prof:
+ * todo QR já impresso continua caindo no HTML.
+ */
 function doGet(e) {
+  const p = (e && e.parameter) || {};
+  if (p.fn) return responderJson(roteador(p.fn, argsDaUrl_(p.args)));
+  return servirHtml(e);
+}
+
+function doPost(e) {
+  let corpo;
+  try {
+    corpo = JSON.parse(e.postData.contents);
+  } catch (err) {
+    return responderJson({ ok: false, erro: 'Requisição inválida: ' + err.message });
+  }
+  return responderJson(roteador(corpo && corpo.fn, corpo && corpo.args));
+}
+
+/* O app HTML. É o doGet de antes, sem mudar uma linha. */
+function servirHtml(e) {
   let html = arquivo('Index');
   conferirCasca(html);
   html = inserirAntes(html, '</head>', arquivo('Estilo'));

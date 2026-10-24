@@ -261,6 +261,61 @@
     return m;
   }
 
+  /* ─── grade semanal (Grade.gs) ─── */
+  var DIAS_GRADE = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  var seqGrade = 0;
+  function hg(id, turma, dia, ini, fim, sala, prof){ return { id:id || ('G' + (++seqGrade)), turma:turma, dia:dia, inicio:ini, fim:fim, sala:sala, professor:prof, obs:'' }; }
+  var GRADE = [
+    hg(0,'Ballet Infantil I',1,'14:00','15:00','Sala 1','Vera Lúcia Sampaio'),
+    hg(0,'Ballet Infantil I',3,'14:00','15:00','Sala 1','Vera Lúcia Sampaio'),
+    hg(0,'Ballet Infantil II',1,'15:00','16:00','Sala 1','Vera Lúcia Sampaio'),
+    hg(0,'Ballet Infantil II',3,'15:00','16:00','Sala 1','Vera Lúcia Sampaio'),
+    hg(0,'Jazz Juvenil',2,'15:00','16:30','Sala 2','Aline Ferreira'),
+    hg(0,'Jazz Juvenil',4,'15:00','16:30','Sala 2','Aline Ferreira'),
+    hg(0,'Danças Urbanas',2,'17:00','18:30','Palco','Bruno Tavares'),
+    hg(0,'Danças Urbanas',5,'17:00','18:30','Palco','Bruno Tavares'),
+    hg(0,'Contemporâneo Avançado',4,'18:00','20:00','Sala 1','Cláudia Nogueira'),
+    hg(0,'Contemporâneo Avançado',6,'09:00','11:00','Sala 1','Cláudia Nogueira'),
+    hg(0,'Teatro',5,'14:00','15:30','Sala 2','Denise Rocha'),
+    hg(0,'Teatro',6,'11:00','12:30','Palco','Denise Rocha')
+  ];
+  /* Um horário em cada dia, perto de agora: o preview sempre tem "Aula agora". */
+  (function(){
+    var d = new Date(), m = d.getHours() * 60 + d.getMinutes();
+    function hh(x){ x = Math.max(0, Math.min(23 * 60 + 59, x)); return String(Math.floor(x / 60)).padStart(2,'0') + ':' + String(x % 60).padStart(2,'0'); }
+    if (m > 60 && m < 22 * 60) GRADE.push(hg(0,'Teatro', d.getDay(), hh(m - 20), hh(m + 70), 'Sala 3', 'Denise Rocha'));
+  })();
+  function minG(s){ var p = String(s || '').split(':'); return p.length === 2 ? (+p[0]) * 60 + (+p[1]) : -1; }
+  function horaCurta(s){ var p = String(s).split(':'); return (+p[0]) + 'h' + (+p[1] ? p[1] : ''); }
+  function conflitosG(novos, ignorar){
+    var fr = [];
+    novos.forEach(function(n){
+      GRADE.forEach(function(h){
+        if (h.id === ignorar || h.dia !== n.dia) return;
+        if (!(minG(h.inicio) < minG(n.fim) && minG(n.inicio) < minG(h.fim))) return;
+        var q = DIAS_GRADE[h.dia].toLowerCase() + ', das ' + horaCurta(h.inicio) + ' às ' + horaCurta(h.fim);
+        if (chave(h.turma) === chave(n.turma)) fr.push(h.turma + ' já tem aula na ' + q + '.');
+        else if (n.sala && chave(h.sala) === chave(n.sala)) fr.push('A sala ' + h.sala + ' já tem ' + h.turma + ' na ' + q + '.');
+        else if (n.professor && chave(h.professor) === chave(n.professor)) fr.push(h.professor + ' já dá ' + h.turma + ' na ' + q + '.');
+      });
+    });
+    return fr.filter(function(f, i){ return fr.indexOf(f) === i; }).slice(0, 4);
+  }
+  function validarG(d, base){
+    base = base || {};
+    var t = d.turma !== undefined ? d.turma : base.turma;
+    if (!t) throw new Error('Escolha a turma.');
+    var ini = d.inicio !== undefined ? d.inicio : base.inicio, fim = d.fim !== undefined ? d.fim : base.fim;
+    if (minG(ini) < 0) throw new Error('Escolha a hora em que a aula começa.');
+    if (minG(fim) < 0) throw new Error('Escolha a hora em que a aula termina.');
+    if (minG(fim) <= minG(ini)) throw new Error('A aula termina antes de começar. Confira os horários.');
+    if (minG(fim) - minG(ini) > 360) throw new Error('Essa aula ficou com mais de 6 horas. Confira os horários.');
+    return { turma:t, inicio:ini, fim:fim,
+             sala: String(d.sala !== undefined ? d.sala : (base.sala || '')).trim(),
+             professor: String(d.professor !== undefined ? d.professor : (base.professor || '')).trim(),
+             obs: String(d.obs !== undefined ? d.obs : (base.obs || '')).trim() };
+  }
+
   var TOKENS = {};
   /* e-mail -> acesso. Quem não está aqui não entra. */
   var EQUIPE = {
@@ -340,6 +395,40 @@
 
   /* ─── as funções que existem no Codigo.gs ─── */
   var API = {
+    listarGrade: function(){
+      var h = hoje(), feitas = {}, salas = {};
+      CHAMADAS.forEach(function(c){ if (c.data === h) feitas[c.turma] = 1; });
+      GRADE.forEach(function(g){ if (g.sala) salas[g.sala] = 1; });
+      return { hoje:h, dia:new Date().getDay(), dias:DIAS_GRADE,
+        horarios: GRADE.slice().sort(function(a,b){ return a.dia - b.dia || minG(a.inicio) - minG(b.inicio) || pt(a.turma, b.turma); }),
+        turmas: TURMAS.filter(function(t){ return t.ativa; }).map(function(t){ return t.nome; }).sort(pt),
+        professores: PROFS.slice().sort(pt), salas: Object.keys(salas).sort(pt), feitasHoje: Object.keys(feitas) };
+    },
+    criarHorario: function(d){
+      d = d || {};
+      var e = validarG(d), dias = (d.dias || []).filter(function(x, i, l){ return x >= 0 && x <= 6 && l.indexOf(x) === i; });
+      if (!dias.length) throw new Error('Escolha pelo menos um dia da semana.');
+      var novos = dias.map(function(dia){ var x = {}; for (var k in e) x[k] = e[k]; x.dia = dia; return x; });
+      if (!d.forcar){ var c = conflitosG(novos, ''); if (c.length) throw new Error('CONFLITO: ' + c.join(' ')); }
+      var ids = novos.map(function(n){ var g = hg(0, n.turma, n.dia, n.inicio, n.fim, n.sala, n.professor); g.obs = n.obs; GRADE.push(g); return g.id; });
+      return { ok:true, ids:ids, criados:ids.length };
+    },
+    editarHorario: function(id, d){
+      d = d || {};
+      var h = GRADE.filter(function(x){ return x.id === id; })[0];
+      if (!h) throw new Error('Esse horário não está mais na grade. Alguém pode ter mexido na planilha.');
+      var e = validarG(d, h), dia = d.dia !== undefined ? d.dia : (d.dias && d.dias.length ? d.dias[0] : h.dia);
+      e.dia = dia;
+      if (!d.forcar){ var c = conflitosG([e], h.id); if (c.length) throw new Error('CONFLITO: ' + c.join(' ')); }
+      for (var k in e) h[k] = e[k];
+      return { ok:true, id:h.id };
+    },
+    excluirHorario: function(id){
+      var i = GRADE.findIndex(function(x){ return x.id === id; });
+      if (i < 0) throw new Error('Esse horário não está mais na grade. Alguém pode ter mexido na planilha.');
+      GRADE.splice(i, 1);
+      return { ok:true };
+    },
     /* Só usado pelo preview --lazy: devolve o módulo embutido. */
     modulo: function(nome){
       if (!window.__MODULOS || !window.__MODULOS[nome]) throw new Error('Parte do app desconhecida: ' + nome);
@@ -360,8 +449,18 @@
       if (k && minhas.length) turmas = minhas;
       var destaque = null;
       var deHoje = prox.filter(function(e){ return e.data <= h; })[0];
+      /* Como o servidor (aulaDaGrade_): com grade, ela manda. */
+      var agoraMin = new Date().getHours() * 60 + new Date().getMinutes();
+      var doDia = GRADE.filter(function(g){ return g.dia === dia && !feitas[g.turma]; });
+      var minhasG = doDia.filter(function(g){ return chave(g.professor) === k; });
+      if (k && minhasG.length) doDia = minhasG;
+      var ac = doDia.filter(function(g){ return agoraMin >= minG(g.inicio) - 30 && agoraMin <= minG(g.fim); });
+      var lg = (ac.length ? ac : doDia.filter(function(g){ return minG(g.inicio) > agoraMin; }))
+        .sort(function(a,b){ return minG(a.inicio) - minG(b.inicio); });
       if (deHoje) destaque = {tipo:'evento', hoje:true, titulo:deHoje.titulo, data:deHoje.data, tipoEvento:deHoje.tipo};
-      else if (turmas.length) destaque = {tipo:'aula', turma:turmas.sort(pt)[0], hora:'15h', agora:new Date().getHours() === 15};
+      else if (GRADE.length && lg.length) destaque = {tipo:'aula', origem:'grade', turma:lg[0].turma, agora:ac.length > 0,
+        hora:horaCurta(lg[0].inicio), fim:horaCurta(lg[0].fim), sala:lg[0].sala, professor:lg[0].professor};
+      else if (!GRADE.length && turmas.length) destaque = {tipo:'aula', turma:turmas.sort(pt)[0], hora:'15h', agora:new Date().getHours() === 15};
       else if (prox[0]) destaque = {tipo:'evento', hoje:false, titulo:prox[0].titulo, data:prox[0].data, tipoEvento:prox[0].tipo};
       return { turmas: API.listarTurmas().length,
                proximo: prox[0] ? {titulo:prox[0].titulo, data:prox[0].data} : null,
@@ -471,6 +570,17 @@
         turma:turma, alunos:alunos, professores:PROFS.slice().sort(pt),
         professorSugerido:ult, data:hoje(),
         jaRegistrada: CHAMADAS.some(function(c){ return c.data===hoje() && c.turma===turma; }),
+        /* Como o servidor: a chamada salva hoje, para corrigir. */
+        chamadaDeHoje: (function(){
+          var h = hoje(), ls = REGISTROS.filter(function(r){ return r.data === h && r.turma === turma; });
+          if (!ls.length) return null;
+          var rg = Math.max.apply(null, ls.map(function(r){ return r.rg || 0; }));
+          var desta = ls.filter(function(r){ return (r.rg || 0) === rg; });
+          var d = new Date(rg || Date.now());
+          return { professor: desta[0].professor, hora: String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'),
+                   presencas: desta.map(function(r){ return { aluno:r.aluno, status:r.status }; }).sort(function(a,b){ return pt(a.aluno,b.aluno); }),
+                   varias: desta.length !== ls.length };
+        })(),
         aniversarios: aniversariosEntre(0, 0, turma)
       };
     },
@@ -483,16 +593,38 @@
       d.presencas.forEach(function(p){
         if (VALIDOS.indexOf(p.status) === -1) throw new Error('Status inválido: '+p.status);
       });
-      if (!d.forcar && CHAMADAS.some(function(c){ return c.data===hoje() && c.turma===d.turma; }))
-        throw new Error('DUPLICADA: já existe chamada de '+d.turma+' hoje.');
-      CHAMADAS.push({ data:hoje(), turma:d.turma, professor:d.professor });
+      /* Como o servidor: registro vem do PWA com a hora real da aula. */
+      var dia = hoje();
+      if (d.registro){
+        var rg = new Date(Math.min(Number(d.registro), Date.now()));
+        dia = rg.getFullYear() + '-' + String(rg.getMonth()+1).padStart(2,'0') + '-' + String(rg.getDate()).padStart(2,'0');
+        if (Date.now() - rg.getTime() > 14 * 86400000)
+          throw new Error('ANTIGA: esta chamada é de ' + dia.split('-').reverse().join('/') + ', mais de 14 dias atrás. Passe para a coordenação lançar na planilha.');
+      }
+      var corrigida = false;
+      if (d.substituir){
+        if (dia !== hoje()) throw new Error('Só dá para corrigir a chamada de hoje. Para outro dia, fale com a coordenação.');
+        var doDia = REGISTROS.filter(function(r){ return r.data === dia && r.turma === d.turma; });
+        if (doDia.length){
+          var rgMax = Math.max.apply(null, doDia.map(function(r){ return r.rg || 0; }));
+          REGISTROS = REGISTROS.filter(function(r){ return !(r.data === dia && r.turma === d.turma && (r.rg || 0) === rgMax); });
+          var ic = -1; CHAMADAS.forEach(function(c, i){ if (c.data === dia && c.turma === d.turma) ic = i; });
+          if (ic >= 0) CHAMADAS.splice(ic, 1);
+          corrigida = true;
+        }
+      }
+      if (!corrigida && !d.forcar && CHAMADAS.some(function(c){ return c.data===dia && c.turma===d.turma; }))
+        throw new Error('DUPLICADA: já existe chamada de '+d.turma+(dia === hoje() ? ' hoje.' : ' em ' + dia.split('-').reverse().join('/') + '.'));
+      var rgAgora = d.registro ? Math.min(Number(d.registro), Date.now()) : Date.now();
+      CHAMADAS.push({ data:dia, turma:d.turma, professor:d.professor });
       d.presencas.forEach(function(p){
-        REGISTROS.push({ data:hoje(), turma:d.turma, professor:d.professor,
-                         aluno:p.aluno, status:p.status });
+        REGISTROS.push({ data:dia, turma:d.turma, professor:d.professor,
+                         aluno:p.aluno, status:p.status, rg:rgAgora });
       });
       var pres = d.presencas.filter(function(p){ return p.status==='Presente'; }).length;
-      var r = { ok:true, turma:d.turma, professor:d.professor, data:hoje(),
+      var r = { ok:true, turma:d.turma, professor:d.professor, data:dia,
                 total:d.presencas.length, presentes:pres, faltas:d.presencas.length-pres };
+      if (corrigida) r.corrigida = true;
       if (d.token) TOKENS[d.token] = r;
       return r;
     },
@@ -849,7 +981,7 @@
     }
   };
 
-  var ABERTAS_SESSAO = { modulo:1, resumoInicial:1, listarAgenda:1, listarAgendaAno:1, datasFixas:1,
+  var ABERTAS_SESSAO = { listarGrade:1, criarHorario:1, editarHorario:1, excluirHorario:1, modulo:1, resumoInicial:1, listarAgenda:1, listarAgendaAno:1, datasFixas:1,
     listarMateriais:1, listarCategorias:1, listarLocais:1, listarTurmas:1, carregarTurma:1, salvarChamada:1 };
 
   /* ─── a ponte, igualzinha à do Apps Script ─── */
