@@ -1,6 +1,6 @@
 /* Peças da agenda usadas por mais de uma tela. */
 import type { CSSProperties, ReactNode } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CircleAlert } from 'lucide-react';
 import { clsx } from 'clsx';
 import { CARTAO } from '../../../ui/kit';
 import { hojeISO } from '../../../util';
@@ -75,5 +75,17 @@ export function Passo({ rotulo, onAnterior, onProximo, nomeAnterior, nomeProximo
       <b className="flex-1 text-center text-base font-bold tracking-tight" aria-live="polite">{rotulo}</b>
       <button type="button" className={bt} onClick={onProximo} aria-label={nomeProximo}><ChevronRight size={22} /></button>
     </div>
+  );
+}
+
+/* Erro embaixo de um grupo de botões (tipo, turmas), no mesmo jeito do
+   erro de campo do kit: ícone + texto em vermelho, lido pelo leitor de tela. */
+export function ErroGrupo({ id, erro }: { id?: string; erro?: string }) {
+  if (!erro) return null;
+  return (
+    <span id={id ? id + '-erro' : undefined} role="alert"
+      className="mt-2 flex items-start gap-1.5 text-[13px] leading-snug font-medium text-falta">
+      <CircleAlert size={16} className="mt-px shrink-0" />{erro}
+    </span>
   );
 }

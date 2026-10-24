@@ -25,7 +25,7 @@
 /* Sobe junto com cada mudança na API. /exec?fn=ping mostra qual está no
    ar: é o jeito mais rápido de saber se a URL do PWA aponta para a
    implantação certa. */
-const VERSAO_API = '3.0.0';
+const VERSAO_API = '3.1.0';   // 3.1: grade semanal
 
 function responderJson(obj) {
   return ContentService
@@ -54,6 +54,10 @@ function funcoesDaApi_() {
     listarAgenda: listarAgenda, listarAgendaAno: listarAgendaAno, datasFixas: datasFixas,
     criarEvento: criarEvento, editarEvento: editarEvento, excluirEvento: excluirEvento,
     precarregarDatas: precarregarDatas, gerarCalendarioPdf: gerarCalendarioPdf,
+
+    // grade semanal
+    listarGrade: listarGrade, criarHorario: criarHorario, editarHorario: editarHorario,
+    excluirHorario: excluirHorario,
 
     // materiais
     listarMateriais: listarMateriais, listarCategorias: listarCategorias, listarLocais: listarLocais,

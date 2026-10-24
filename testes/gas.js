@@ -29,6 +29,7 @@ class Sheet {
   getDataRange() { return new Range(this, 1, 1, Math.max(1, this.getLastRow()), Math.max(1, ...this.rows.map(l => l.length))); }
   appendRow(l) { const r = this.getLastRow() + 1; if (r > this.maxRows) this.maxRows = r; l.forEach((x, j) => this.set(r, j + 1, x)); }
   insertRowsAfter(_, n) { this.maxRows += n; }
+  deleteRow(r) { this.rows.splice(r - 1, 1); }
   clearContents() { this.rows = []; } setFrozenRows() {} hideSheet() {} getName() { return this.name; }
 }
 

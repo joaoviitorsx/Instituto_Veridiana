@@ -1,7 +1,7 @@
 """Monta o preview.html: o app inteiro num arquivo, com o mock do
 google.script.run, para abrir no navegador sem servidor.
 
-No preview os módulos sob demanda (gestão, agenda, materiais) já vêm
+No preview os módulos sob demanda (gestão, agenda, materiais, grade) já vêm
 dentro da página, marcados como prontos: o carregador não pede nada.
 
     python3 gerar-preview.py            -> preview.html
@@ -16,6 +16,7 @@ MODULOS = {                                                 # espelha MODULOS em
     'gestao': ['AppGestao', 'AppCaixa', 'AppQr'],
     'agenda': ['AppAgenda'],
     'materiais': ['AppMateriais'],
+    'grade': ['AppGrade'],
 }
 
 def ler(n):

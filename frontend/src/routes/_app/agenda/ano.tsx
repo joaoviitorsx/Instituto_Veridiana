@@ -6,7 +6,7 @@ import { Cake, Printer } from 'lucide-react';
 import { clsx } from 'clsx';
 import { leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { CARTAO, CartaoNav, Esqueleto } from '../../../ui/kit';
+import { CARTAO, Esqueleto, GrupoNav } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { MESES, plural, vibrar } from '../../../util';
 import { anoDeHoje, anoValido, comCor, MES_CURTO, Passo, type AgendaAno } from './-comum';
@@ -57,12 +57,12 @@ function Ano() {
       ) : (
         <Esqueleto n={3} />
       )}
-      <ul>
-        <CartaoNav icone={Cake} titulo="Datas comemorativas" sub="colocar as datas fixas do ano"
-          onClick={() => navigate({ to: '/agenda/datas', search: { ano } })} />
-        <CartaoNav icone={Printer} titulo="Calendário para imprimir" sub="PDF em A4 deitado, com espaço para escrever"
-          onClick={() => navigate({ to: '/agenda/imprimir', search: { ano } })} />
-      </ul>
+      <GrupoNav titulo={'Planejar ' + ano} itens={[
+        { icone: Cake, titulo: 'Datas comemorativas', sub: 'colocar as datas que se repetem todo ano',
+          onClick: () => navigate({ to: '/agenda/datas', search: { ano } }) },
+        { icone: Printer, titulo: 'Calendário para imprimir', sub: 'PDF em A4 deitado, com espaço para escrever',
+          onClick: () => navigate({ to: '/agenda/imprimir', search: { ano } }) },
+      ]} />
     </Tela>
   );
 }

@@ -7,11 +7,14 @@ TELAS.turmas = function(){
     capa:'<div class="capa"><div class="topo"><div style="flex:1;min-width:0">' +
          '<h1>Chamada</h1><p class="data">Qual turma está entrando agora?</p>' +
          '</div></div></div>',
-    html: esqueleto(4),
+    /* "Aulas de hoje" chega da grade, por cima da lista: com grade
+       cadastrada, a turma da hora está no primeiro toque. */
+    html: '<div id="grHoje"></div><div id="trLista">' + esqueleto(4) + '</div>',
     depois: function(){
       ler('listarTurmas', [], function(turmas){
+        if (!el('trLista')) return;
         if (!turmas.length){
-          el('palco').querySelector('.corpo').innerHTML =
+          el('trLista').innerHTML =
             estado('grupo','Nenhuma turma ainda',
                    'Volte para o início e entre em Gestão para criar a primeira turma e cadastrar os alunos.');
           return;
@@ -22,18 +25,53 @@ TELAS.turmas = function(){
                '<span class="txt">' + esc(t) + '</span>' +
                '<span class="seta">' + ico('dir') + '</span></button></li>';
         });
-        el('palco').querySelector('.corpo').innerHTML = h + '</ul>';
+        el('trLista').innerHTML = h + '</ul>';
         /* Quem abriu a lista vai tocar numa turma. Com elenco e histórico
            em cache no servidor, cada busca é barata: vão todas por trás,
            e a chamada abre sem espera. Teto de 8 para não enfileirar. */
         turmas.slice(0, 8).forEach(function(t){ preler('carregarTurma', [t]); });
       }, function(e){
-        el('palco').querySelector('.corpo').innerHTML =
-          estado('alerta','Não deu para carregar', textoErro(e));
+        if (el('trLista')) el('trLista').innerHTML = estado('alerta','Não deu para carregar', textoErro(e));
       });
+      /* A grade é extra: se falhar, a lista de turmas segue sozinha. */
+      ler('listarGrade', [], pintarAulasDeHoje, function(){});
     }
   };
 };
+
+/* Aulas de hoje pela grade: hora, turma, sala, e o que já teve chamada.
+   Sem grade cadastrada não aparece nada (nem o link): a lista de turmas
+   de sempre continua sendo o caminho. */
+function pintarAulasDeHoje(r){
+  var a = atual(), box = el('grHoje');
+  if (!a || a.t !== 'turmas' || !box) return;
+  if (!(r.horarios || []).length){ box.innerHTML = ''; return; }
+  var hoje = r.horarios.filter(function(x){ return x.dia === r.dia; });
+  var feitas = r.feitasHoje || [];
+  var d = new Date(), agora = d.getHours() * 60 + d.getMinutes();
+  function min(s){ var p = String(s).split(':'); return (+p[0]) * 60 + (+p[1]); }
+  var h = '';
+  if (hoje.length){
+    h += '<div class="secao">' + ico('relogio', 18) + 'Aulas de hoje</div><ul class="lista sem-avatar">';
+    hoje.forEach(function(x){
+      var feita = feitas.indexOf(x.turma) !== -1;
+      var agoraSim = !feita && agora >= min(x.inicio) - 15 && agora <= min(x.fim);
+      var passou = !feita && agora > min(x.fim);
+      h += '<li class="li" role="button" tabindex="0" data-acao="abrirTurma" data-t="' + esc(x.turma) + '"' +
+           ' aria-label="' + esc(x.inicio + ', ' + x.turma + (feita ? ', chamada feita' : agoraSim ? ', agora' : '')) + '">' +
+           '<span class="gr-h">' + esc(x.inicio) + '<small>' + esc(x.fim) + '</small></span>' +
+           '<span class="nome">' + esc(x.turma) + (x.sala ? '<small>' + esc(x.sala) + '</small>' : '') + '</span>' +
+           (feita ? '<span class="gr-selo feita">' + ico('cheque', 14) + ' Feita</span>'
+            : agoraSim ? '<span class="gr-selo agora">Agora</span>'
+            : passou ? '<span class="gr-selo passou">Passou</span>' : '<span class="seta">' + ico('dir') + '</span>') +
+           '</li>';
+    });
+    h += '</ul>';
+  }
+  h += '<button type="button" class="link-grade" data-acao="irGrade">' + ico('calendario', 18) + 'Ver a grade da semana</button>';
+  if (hoje.length) h += '<div class="secao">Todas as turmas</div>';
+  box.innerHTML = h;
+}
 /* O dedo encosta na turma e a busca já sai: os ~150 ms entre encostar e
    soltar são adiantados de graça. */
 document.addEventListener('pointerdown', function(e){

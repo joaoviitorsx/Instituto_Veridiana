@@ -5,11 +5,11 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Copy, KeyRound, MessageCircle, Pencil, Plus, User, UserMinus } from 'lucide-react';
+import { ChevronRight, Copy, KeyRound, Mail, MessageCircle, Pencil, Plus, User, UserMinus } from 'lucide-react';
 import { leitura } from '../../../api/cliente';
 import { useSessao } from '../../../sessao';
 import { Tela } from '../../../ui/Tela';
-import { Avatar, BotaoCheio, BotaoContorno, CLASSE_INPUT, Esqueleto, Estado, Linha, Lista } from '../../../ui/kit';
+import { Avatar, Banner, BotaoCheio, BotaoContorno, Campo, Esqueleto, Estado, Linha, Lista } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { Acoes, folha, type Opcao } from '../../../ui/folha';
 import { toast } from '../../../ui/toast';
@@ -59,7 +59,7 @@ function Equipe() {
   }
 
   function nova() {
-    fichaAcesso('Adicionar professora', null, 'Adicionar e gerar senha', async (nome, email) => {
+    fichaAcesso('Adicionar professora', null, 'Criar acesso', async (nome, email) => {
       if (await gravar('adicionarProfessor', [nome], '')) gerarAcesso(nome, email);
     });
   }
@@ -70,19 +70,20 @@ function Equipe() {
       {q.data ? (
         q.data.length ? (
           <>
-            <p className="mx-1 mb-4 flex items-center gap-2 text-[13px] leading-normal text-apagado">
-              <span className="size-2.5 shrink-0 rounded-full bg-justif" /> ainda não fez o primeiro acesso
-            </p>
             <Lista>
               {q.data.map((p) => (
                 <Linha key={p.nome}
                   esquerda={<Avatar nome={p.nome} />}
                   titulo={p.nome}
-                  sub={<span className="block truncate">{p.email || SITUACAO['sem-acesso']}</span>}
+                  sub={<span className="block truncate">{p.email || 'sem e-mail'}</span>}
                   rotulo={p.nome + ', ' + SITUACAO[p.situacao]}
                   direita={<>
+                    {/* Situação escrita, não só um pontinho de cor. */}
                     {p.situacao === 'pendente' && (
-                      <span className="size-2.5 shrink-0 rounded-full bg-justif" title={SITUACAO.pendente} />
+                      <span className="shrink-0 rounded-full bg-justif-fraco px-2.5 py-1 text-xs font-bold text-justif-tinta">Falta entrar</span>
+                    )}
+                    {p.situacao === 'sem-acesso' && (
+                      <span className="shrink-0 rounded-full bg-fundo px-2.5 py-1 text-xs font-bold text-apagado">Sem acesso</span>
                     )}
                     <ChevronRight size={18} className="shrink-0 text-apagado" />
                   </>}
@@ -91,7 +92,7 @@ function Equipe() {
             </Lista>
           </>
         ) : (
-          <Estado icone={User} titulo="Ninguém na equipe ainda" texto='Toque em "Adicionar professora" aqui embaixo.' />
+          <Estado icone={User} titulo="Ninguém na equipe ainda" texto='Toque em "Adicionar professora", aqui embaixo. Ela recebe uma senha para entrar no app.' />
         )
       ) : q.isError ? <ErroTela erro={q.error} tentar={() => q.refetch()} /> : <Esqueleto n={4} />}
     </Tela>
@@ -115,6 +116,7 @@ function FichaAcesso({ p, rotulo, fechar, fn }: {
 }) {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState(p?.email || '');
+  const [erro, setErro] = useState<{ campo: 'nome' | 'email'; msg: string } | null>(null);
   const primeiro = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const t = setTimeout(() => primeiro.current?.focus(), 320);
@@ -123,27 +125,26 @@ function FichaAcesso({ p, rotulo, fechar, fn }: {
   function enviar() {
     const n = p ? p.nome : nome.trim().replace(/\s+/g, ' ');
     const e = email.trim().toLowerCase();
-    if (n.length < 2) { toast('Escreva o nome.', 'erro'); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { toast('Esse e-mail não parece certo.', 'erro'); return; }
+    if (n.length < 2) { setErro({ campo: 'nome', msg: 'Escreva o nome, como aparece na chamada.' }); vibrar(); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
+      setErro({ campo: 'email', msg: e ? 'Esse e-mail não parece completo. Confira o @ e o final.' : 'Escreva o e-mail que ela usa.' });
+      vibrar(); return;
+    }
     fechar();
     setTimeout(() => fn(n, e), 60);
   }
   return (
-    <form onSubmit={(ev) => { ev.preventDefault(); enviar(); }}>
+    <form onSubmit={(ev) => { ev.preventDefault(); enviar(); }} noValidate>
       <div className="px-2">
         {!p && (
-          <div className="mb-4">
-            <label htmlFor="acNome" className="mb-2 block text-[13px] font-semibold text-apagado">Nome</label>
-            <input id="acNome" ref={primeiro} type="text" autoComplete="off" autoCapitalize="words"
-              value={nome} onChange={(e) => setNome(e.target.value)} className={CLASSE_INPUT} />
-          </div>
+          <Campo id="acNome" rotulo="Nome" icone={User} ref={primeiro} type="text" autoComplete="off" autoCapitalize="words"
+            enterKeyHint="next" erro={erro?.campo === 'nome' ? erro.msg : undefined}
+            value={nome} onChange={(e) => { setNome(e.target.value); setErro(null); }} />
         )}
-        <div className="mb-4">
-          <label htmlFor="acEmail" className="mb-2 block text-[13px] font-semibold text-apagado">E-mail</label>
-          <input id="acEmail" ref={p ? primeiro : undefined} type="email" inputMode="email" autoComplete="off"
-            autoCapitalize="none" autoCorrect="off" spellCheck={false}
-            value={email} onChange={(e) => setEmail(e.target.value)} className={CLASSE_INPUT} />
-        </div>
+        <Campo id="acEmail" rotulo="E-mail" icone={Mail} ref={p ? primeiro : undefined} type="email" inputMode="email" autoComplete="off"
+          autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="done" placeholder="nome@email.com"
+          erro={erro?.campo === 'email' ? erro.msg : undefined}
+          value={email} onChange={(e) => { setEmail(e.target.value); setErro(null); }} />
       </div>
       <Acoes rotulo={rotulo} perigo={false} onCancelar={fechar} onConfirmar={enviar} />
       <button type="submit" hidden />
@@ -159,14 +160,25 @@ function mostrarSenha(r: { nome: string; email: string; senha: string }) {
     '\nNo primeiro acesso o app pede para você criar a sua senha.';
   folha.abrir('Acesso de ' + primeiroNome(r.nome), (
     <div className="px-2 pb-1">
-      <p className="mb-3 text-sm text-apagado">
-        Mande para {primeiroNome(r.nome)}. Essa senha não aparece de novo; se perder, é só gerar outra.
-      </p>
-      <div className="mb-4 grid gap-0.5 rounded-m border border-borda bg-fundo px-4 py-3.5">
-        <small className="text-xs text-apagado">E-mail</small>
-        <b className="text-base break-all">{r.email}</b>
-        <small className="mt-2 text-xs text-apagado">Senha temporária</small>
-        <b className="font-mono text-2xl tracking-[.12em] text-roxo select-text">{r.senha}</b>
+      <Banner tom="sucesso" titulo="Acesso pronto">
+        Mande agora para {primeiroNome(r.nome)}: esta senha não aparece de novo. Se perder, é só gerar outra.
+      </Banner>
+      {/* Cartão de credencial: o que a pessoa vai digitar, grande e separado. */}
+      <div className="mb-4 overflow-hidden rounded-g border border-borda bg-papel shadow-cartao">
+        <div className="flex items-center gap-3 border-b border-borda px-4 py-3">
+          <Mail size={18} className="shrink-0 text-apagado" />
+          <span className="min-w-0">
+            <small className="block text-xs text-apagado">E-mail</small>
+            <b className="block text-base break-all select-text">{r.email}</b>
+          </span>
+        </div>
+        <div className="flex items-center gap-3 bg-roxo-fraco/60 px-4 py-3">
+          <KeyRound size={18} className="shrink-0 text-roxo" />
+          <span className="min-w-0">
+            <small className="block text-xs text-apagado">Senha temporária</small>
+            <b className="block font-mono text-[26px] leading-tight tracking-[.14em] text-roxo select-text">{r.senha}</b>
+          </span>
+        </div>
       </div>
       <a href={'https://wa.me/?text=' + encodeURIComponent(texto)} target="_blank" rel="noopener"
         className="flex min-h-13 w-full items-center justify-center gap-2 rounded-m bg-presente p-3.5 text-base font-bold text-white active:bg-presente-fundo">

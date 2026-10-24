@@ -7,7 +7,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Check } from 'lucide-react';
+import { Camera, Check, CircleAlert, ImageOff, LoaderCircle } from 'lucide-react';
 import { clsx } from 'clsx';
 import { escrever, leitura } from '../../../api/cliente';
 import { useSessao } from '../../../sessao';
@@ -44,6 +44,8 @@ function Lancar() {
   const [data, setData] = useState(hojeISO());
   const [foto, setFoto] = useState<Foto>({ estado: 'nada', dados: '' });
   const [salvando, setSalvando] = useState(false);
+  /* Erro embaixo do campo que precisa de atenção, não num toast. */
+  const [erro, setErro] = useState<{ campo: 'valor' | 'foto' | 'data'; msg: string } | null>(null);
   const campoValor = useRef<HTMLInputElement>(null);
 
   /* A primeira categoria vem marcada, como no app HTML. Só quando elas
@@ -59,8 +61,14 @@ function Lancar() {
   }
 
   async function salvar() {
-    if (!valor.trim()) { toast('Escreva o valor.', 'erro'); campoValor.current?.focus(); return; }
-    if (foto.estado === 'reduzindo') { toast('Espere a foto ficar pronta.', 'erro'); return; }
+    const v = valor.trim();
+    /* Só para saber se tem número maior que zero; quem converte é o servidor. */
+    const n = Number(v.replace(/\./g, '').replace(',', '.'));
+    if (!v) return falhou('valor', 'Escreva quanto foi.');
+    if (!(n > 0)) return falhou('valor', 'Escreva um valor maior que zero, como 25 ou 25,50.');
+    if (!data) return falhou('data', 'Escolha o dia em que o dinheiro ' + (entrada ? 'entrou.' : 'saiu.'));
+    if (foto.estado === 'reduzindo') return falhou('foto', 'A foto ainda está sendo preparada. Espere uns segundos e toque em salvar de novo.');
+    setErro(null);
     setSalvando(true);
     /* A tela fica aberta até o servidor confirmar. Fechar antes fazia um
        4G que cai apagar valor, descrição e a foto da nota que acabou de
@@ -76,8 +84,16 @@ function Lancar() {
       navigate({ to: '/caixa', search: {}, replace: true });
     } catch (e) {
       setSalvando(false);
-      toast(textoErro(e), 'erro');
+      /* Tudo continua na tela, inclusive a foto: é só tocar em salvar de novo. */
+      toast('Não salvou. ' + textoErro(e), 'erro');
     }
+  }
+
+  function falhou(campo: 'valor' | 'foto' | 'data', msg: string) {
+    setErro({ campo, msg });
+    vibrar();
+    if (campo === 'valor') campoValor.current?.focus();
+    else document.getElementById(campo === 'data' ? 'cxData' : 'cxFotoRotulo')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 
   return (
@@ -85,11 +101,12 @@ function Lancar() {
       titulo={entrada ? 'Entrou dinheiro' : 'Saiu dinheiro'}
       voltar="/caixa"
       barra={
-        <button type="button" onClick={salvar} disabled={salvando}
+        <button type="button" onClick={salvar} disabled={salvando} aria-busy={salvando || undefined}
           className={clsx('flex min-h-13 w-full items-center justify-center gap-2 rounded-m p-4 text-[17px] font-bold text-white',
-            'transition-colors duration-150 disabled:bg-roxo-apagado',
-            entrada ? 'bg-presente active:bg-presente-fundo' : 'bg-falta active:bg-falta-fundo')}>
-          {salvando ? 'Salvando…' : entrada ? 'Salvar entrada' : 'Salvar saída'}
+            'transition-colors duration-150 baixo:min-h-11 baixo:py-2.5',
+            entrada ? 'bg-presente active:bg-presente-fundo disabled:bg-presente/75' : 'bg-falta active:bg-falta-fundo disabled:bg-falta/75')}>
+          {salvando && <LoaderCircle size={20} className="animate-spin" />}
+          {salvando ? (foto.dados ? 'Enviando a foto…' : 'Salvando…') : entrada ? 'Salvar entrada' : 'Salvar saída'}
         </button>
       }
     >
@@ -99,10 +116,14 @@ function Lancar() {
           <div className="relative">
             <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-lg font-bold text-apagado">R$</span>
             <input id="cxValor" ref={campoValor} type="text" inputMode="decimal" placeholder="0,00" autoComplete="off"
-              value={valor} onChange={(e) => setValor(e.target.value.replace(/[^0-9.,]/g, ''))}
-              className={clsx('min-h-14 w-full rounded-m border border-borda bg-papel py-3 pr-4 pl-13 text-2xl font-bold tabular-nums text-tinta',
-                'focus:border-roxo focus:ring-3 focus:ring-roxo-fraco focus:outline-none')} />
+              enterKeyHint="next" aria-invalid={erro?.campo === 'valor' || undefined}
+              aria-describedby={erro?.campo === 'valor' ? 'cxValor-erro' : undefined}
+              value={valor} onChange={(e) => { setValor(e.target.value.replace(/[^0-9.,]/g, '')); if (erro?.campo === 'valor') setErro(null); }}
+              className={clsx('min-h-14 w-full rounded-m border bg-papel py-3 pr-4 pl-13 text-2xl font-bold tabular-nums text-tinta',
+                'focus:ring-3 focus:outline-none',
+                erro?.campo === 'valor' ? 'border-falta focus:border-falta focus:ring-falta-fraco' : 'border-borda focus:border-roxo focus:ring-roxo-fraco')} />
           </div>
+          <ErroDoCampo id="cxValor-erro" msg={erro?.campo === 'valor' ? erro.msg : ''} />
         </div>
 
         <div className="mb-4">
@@ -120,38 +141,60 @@ function Lancar() {
         </div>
 
         <Campo id="cxDesc" rotulo={<>Do que se trata <i className="font-normal not-italic text-apagado">(opcional)</i></>}
-          autoComplete="off" placeholder={entrada ? 'doação da vizinha do bazar' : 'sapatilhas do infantil'}
+          autoComplete="off" enterKeyHint="next" autoCapitalize="sentences"
+          placeholder={entrada ? 'doação da vizinha do bazar' : 'sapatilhas do infantil'}
           value={descricao} onChange={(e) => setDescricao(e.target.value)} />
 
         <Campo id="cxFonte" rotulo={<>Fonte <i className="font-normal not-italic text-apagado">(opcional)</i></>}
-          autoComplete="off" list="cxFontes" placeholder={entrada ? 'de onde veio' : 'que bolso pagou'}
+          autoComplete="off" list="cxFontes" enterKeyHint="done" placeholder={entrada ? 'de onde veio' : 'que bolso pagou'}
           value={fonte} onChange={(e) => setFonte(e.target.value)}
           dica="Separa dinheiro de edital do resto. É isso que a prestação de contas cobra." />
         <datalist id="cxFontes">{fontes.map((f) => <option key={f} value={f} />)}</datalist>
 
         {!entrada && (
           <div className="mb-4">
-            <span className="mb-2 block text-[13px] font-semibold text-apagado">Comprovante</span>
+            <span id="cxFotoRotulo" className="mb-2 block text-[13px] font-semibold text-apagado">
+              Comprovante <i className="font-normal not-italic text-apagado">(foto da nota)</i>
+            </span>
             <label htmlFor="cxFoto"
               className={clsx('flex min-h-13 cursor-pointer items-center justify-center gap-2 rounded-m border px-4 py-3 text-center text-[15px] font-semibold',
-                foto.estado === 'pronta' ? 'border-presente bg-presente-fraco text-presente' : 'border-dashed border-borda bg-fundo text-apagado')}>
-              {foto.estado === 'pronta' ? <Check size={20} /> : <Camera size={20} />}
+                'transition-colors duration-150 active:bg-borda',
+                foto.estado === 'pronta' ? 'border-presente bg-presente-fraco text-presente'
+                  : foto.estado === 'falhou' ? 'border-falta/40 bg-falta-fraco text-falta'
+                    : 'border-dashed border-borda bg-fundo text-roxo')}>
+              {foto.estado === 'pronta' ? <Check size={20} /> : foto.estado === 'reduzindo' ? <LoaderCircle size={20} className="animate-spin" />
+                : foto.estado === 'falhou' ? <ImageOff size={20} /> : <Camera size={20} />}
               <span>
                 {foto.estado === 'reduzindo' ? 'Reduzindo a foto…'
                   : foto.estado === 'pronta' ? 'Foto pronta — tocar para trocar'
-                    : foto.estado === 'falhou' ? 'Não deu para ler a foto. Salve sem ela.'
+                    : foto.estado === 'falhou' ? 'Não deu para usar essa foto. Tocar para tirar outra'
                       : 'Fotografar a nota'}
               </span>
             </label>
             <input id="cxFoto" type="file" accept="image/*" capture="environment" hidden
-              onChange={(e) => escolherFoto(e.target.files?.[0])} />
-            <span className="mt-2 block text-[13px] leading-normal text-apagado">Despesa sem nota não entra na prestação de contas.</span>
+              onChange={(e) => { if (erro?.campo === 'foto') setErro(null); escolherFoto(e.target.files?.[0]); }} />
+            {erro?.campo === 'foto'
+              ? <ErroDoCampo id="cxFoto-erro" msg={erro.msg} />
+              : <span className="mt-2 block text-[13px] leading-normal text-apagado">Despesa sem nota não entra na prestação de contas.</span>}
           </div>
         )}
 
-        <Campo id="cxData" rotulo="Quando" type="date" value={data} onChange={(e) => setData(e.target.value)} />
+        <Campo id="cxData" rotulo="Quando" type="date" value={data}
+          erro={erro?.campo === 'data' ? erro.msg : undefined}
+          onChange={(e) => { setData(e.target.value); if (erro?.campo === 'data') setErro(null); }} />
         <button type="submit" hidden />
       </form>
     </Tela>
+  );
+}
+
+/* Mesmo desenho do erro de campo do kit, para o campo de valor, que tem
+   o "R$" dentro e por isso não usa o Campo. */
+function ErroDoCampo({ id, msg }: { id: string; msg: string }) {
+  if (!msg) return null;
+  return (
+    <span id={id} role="alert" className="mt-2 flex items-start gap-1.5 text-[13px] leading-snug font-medium text-falta">
+      <CircleAlert size={16} className="mt-px shrink-0" />{msg}
+    </span>
   );
 }

@@ -107,7 +107,11 @@ function destaque_(prof, eventos, hj) {
   const deHoje = eventos.filter(function (ev) { return ev.data <= hj && ev.fim >= hj; })[0];
   if (deHoje) return eventoCurto_(deHoje, true);
 
-  const aula = proximaAula_(prof, hj);
+  /* Com grade cadastrada, ela manda: é a hora certa, não um palpite.
+     Sem grade nenhuma (undefined), vale o palpite pelas chamadas. */
+  let aula = null;
+  try { aula = aulaDaGrade_(prof, hj); } catch (e) { aula = undefined; }
+  if (aula === undefined) aula = proximaAula_(prof, hj);
   if (aula) return aula;
 
   const limite = somarDias_(hj, DIAS_EVENTO_DESTAQUE);

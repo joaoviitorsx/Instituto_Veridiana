@@ -1,0 +1,415 @@
+<style>
+/* ─────────── grade semanal ─────────── */
+.gr-dias{display:flex;gap:6px;margin:0 0 16px;overflow-x:auto;scrollbar-width:none;padding:2px}
+.gr-dias::-webkit-scrollbar{display:none}
+.gr-dias button{
+  flex:1 0 48px;min-height:56px;border-radius:var(--r-m);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-size:15px;font-weight:700;color:var(--tinta);
+  background:var(--papel);border:1px solid var(--borda);
+  transition:background 160ms var(--curva),color 160ms var(--curva);
+}
+.gr-dias button small{font-size:12px;font-weight:600;color:var(--apagado);font-variant-numeric:tabular-nums}
+.gr-dias button.hoje{border:2px solid var(--roxo)}
+.gr-dias button[aria-selected="true"]{background:var(--roxo);border-color:var(--roxo);color:#fff}
+.gr-dias button[aria-selected="true"] small{color:var(--roxo-claro)}
+
+.gr-aulas{list-style:none;margin:0;padding:0}
+.gr-aulas li{margin-bottom:10px}
+.gr-aula{
+  width:100%;display:flex;align-items:stretch;text-align:left;
+  background:var(--papel);border:1px solid var(--borda);
+  border-radius:var(--r-m);box-shadow:var(--sombra);overflow:hidden;
+  transition:background 160ms var(--curva);
+}
+.gr-aula:active{background:var(--fundo)}
+.gr-aula .gr-hora{
+  flex:0 0 76px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:12px 4px;background:var(--roxo-fraco);color:var(--roxo);font-variant-numeric:tabular-nums;
+}
+.gr-aula .gr-hora b{font-size:18px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.gr-aula .gr-hora small{font-size:13px;font-weight:600;margin-top:2px}
+.gr-aula .gr-txt{flex:1;min-width:0;padding:12px 14px;align-self:center}
+.gr-aula .gr-txt b{display:block;font-size:16px;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.gr-aula .gr-txt small{display:block;font-size:13px;color:var(--apagado);margin-top:2px;line-height:1.4}
+.gr-aula .gr-fim{align-self:center;padding-right:12px;flex-shrink:0}
+.gr-aula.passou .gr-hora{background:var(--fundo);color:var(--apagado)}
+.gr-aula.agora{border:2px solid var(--roxo)}
+
+.gr-semana .gr-linha{min-height:56px}
+.gr-semana .gr-h{font-size:14px}
+
+.gr-det{list-style:none;margin:0 8px 8px;padding:0}
+.gr-det li{display:flex;gap:12px;align-items:flex-start;padding:8px 0;font-size:15px;line-height:1.45}
+.gr-det li svg{flex-shrink:0;margin-top:2px;color:var(--apagado)}
+
+.gr-escolha{
+  width:100%;display:flex;align-items:center;gap:12px;min-height:56px;
+  padding:12px 16px;text-align:left;
+  background:var(--papel);border:1px solid var(--borda);border-radius:var(--r-m);
+  transition:background 160ms var(--curva);
+}
+.gr-escolha:active{background:var(--fundo)}
+.gr-escolha .txt{flex:1;min-width:0;font-size:16px;font-weight:600;overflow-wrap:anywhere}
+.gr-escolha[data-vazio="true"] .txt{color:var(--apagado);font-weight:400}
+.gr-escolha .seta{color:var(--apagado);flex-shrink:0}
+.gr-semanal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.gr-semanal .chip{padding:10px 0;text-align:center}
+.campo .chips.gr-salas{margin-top:8px}
+.campo .chips.gr-salas .chip{min-height:40px;padding:8px 12px;font-size:13px}
+</style>
+<script>
+/* Grade semanal de aulas: que turma tem aula em que dia e hora, em que
+   sala e com quem. O servidor (Grade.gs) também usa a grade para o
+   cartão "Aula agora" da tela inicial. */
+
+var GR_CURTO = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+/* Semana de trabalho começa na segunda; domingo vai no fim. */
+var GR_ORDEM = [1, 2, 3, 4, 5, 6, 0];
+
+function grMin(hhmm){
+  var p = String(hhmm || '').split(':');
+  return p.length === 2 ? (+p[0]) * 60 + (+p[1]) : -1;
+}
+function grAgoraMin(){ var d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+function grDoDia(r, dia){
+  return (r.horarios || []).filter(function(h){ return h.dia === dia; });
+}
+/* Domingo só aparece se tiver aula (ou se hoje for domingo). */
+function grDiasVisiveis(r){
+  return GR_ORDEM.filter(function(d){ return d !== 0 || r.dia === 0 || grDoDia(r, 0).length; });
+}
+/* Situação de uma aula de hoje: feita, agora ou já passou. */
+function grSituacao(r, h){
+  if (h.dia !== r.dia) return '';
+  if ((r.feitasHoje || []).indexOf(h.turma) !== -1) return 'feita';
+  var m = grAgoraMin(), ini = grMin(h.inicio), fim = grMin(h.fim);
+  if (m >= ini - 15 && m <= fim) return 'agora';
+  if (m > fim) return 'passou';
+  return '';
+}
+function grSelo(sit){
+  if (sit === 'feita') return '<span class="gr-selo feita">' + ico('cheque', 14) + ' Chamada feita</span>';
+  if (sit === 'agora') return '<span class="gr-selo agora">Agora</span>';
+  if (sit === 'passou') return '<span class="gr-selo passou">Já passou</span>';
+  return '';
+}
+function grQuem(h){
+  return [h.sala, h.professor].filter(Boolean).join(' · ');
+}
+
+/* ══════════════ GRADE: dia e semana ══════════════ */
+TELAS.grDia = function(p){
+  if (!p.vista) p.vista = S.grVista || 'dia';
+  return {
+    titulo:'Grade de aulas',
+    html:'<div class="filtro" role="tablist">' +
+        '<button type="button" role="tab" data-acao="grVista" data-v="dia" aria-selected="' + (p.vista === 'dia') + '">Dia</button>' +
+        '<button type="button" role="tab" data-acao="grVista" data-v="semana" aria-selected="' + (p.vista === 'semana') + '">Semana</button>' +
+      '</div><div id="grCorpo">' + esqueleto(4) + '</div>',
+    barra:'<button type="button" class="salvar" data-acao="grNovo">' + ico('mais') + 'Novo horário</button>',
+    depois:function(){
+      ler('listarGrade', [], function(r){ pintarGrade(p, r); }, function(e){
+        if (el('grCorpo')) el('grCorpo').innerHTML = estado('alerta', 'Não deu para carregar', textoErro(e));
+      });
+    }
+  };
+};
+
+function pintarGrade(p, r){
+  var a = atual();
+  if (!a || a.t !== 'grDia' || a.p !== p || !el('grCorpo')) return;
+  S.grade = r;
+  if (p.dia === undefined) p.dia = r.dia;
+
+  if (!(r.horarios || []).length){
+    el('grCorpo').innerHTML = estado('relogio', 'A grade ainda está vazia',
+      'Coloque o dia e a hora de cada turma. A tela inicial passa a mostrar a aula certa na hora certa.',
+      {acao:'grNovo', txt:'Cadastrar o primeiro horário'});
+    return;
+  }
+
+  if (p.vista === 'semana'){
+    var h = '<div class="gr-semana">';
+    grDiasVisiveis(r).forEach(function(d){
+      var aulas = grDoDia(r, d);
+      h += '<div class="dia">' + esc(r.dias[d]) + (d === r.dia ? ' · hoje' : '') + '</div>';
+      if (!aulas.length){
+        h += '<p style="margin:0 4px 8px;font-size:14px;color:var(--apagado)">Sem aula</p>';
+        return;
+      }
+      h += '<ul class="lista sem-avatar">';
+      aulas.forEach(function(x){
+        h += '<li class="li gr-linha" role="button" tabindex="0" data-acao="grVer" data-id="' + esc(x.id) + '">' +
+             '<span class="gr-h">' + esc(x.inicio) + '<small>' + esc(x.fim) + '</small></span>' +
+             '<span class="nome">' + esc(x.turma) + (grQuem(x) ? '<small>' + esc(grQuem(x)) + '</small>' : '') + '</span>' +
+             grSelo(grSituacao(r, x)) + '</li>';
+      });
+      h += '</ul>';
+    });
+    el('grCorpo').innerHTML = h + '</div>';
+    return;
+  }
+
+  var dias = grDiasVisiveis(r);
+  if (dias.indexOf(p.dia) === -1) p.dia = dias[0];
+  var h2 = '<div class="gr-dias" role="tablist" aria-label="Dia da semana">';
+  dias.forEach(function(d){
+    var n = grDoDia(r, d).length;
+    h2 += '<button type="button" role="tab" data-acao="grEscolheDia" data-d="' + d + '"' +
+          (d === r.dia ? ' class="hoje"' : '') + ' aria-selected="' + (d === p.dia) + '"' +
+          ' aria-label="' + esc(r.dias[d] + (d === r.dia ? ', hoje' : '') + ', ' + plural(n, 'aula', 'aulas')) + '">' +
+          GR_CURTO[d] + '<small>' + (n || '–') + '</small></button>';
+  });
+  h2 += '</div>';
+  var aulas = grDoDia(r, p.dia);
+  if (!aulas.length){
+    h2 += estado('relogio', 'Nenhuma aula ' + (p.dia === 0 || p.dia === 6 ? 'no ' : 'na ') + r.dias[p.dia].toLowerCase(),
+      'Toque em "Novo horário" aqui embaixo para colocar uma.');
+  } else {
+    h2 += '<ul class="gr-aulas">';
+    aulas.forEach(function(x){
+      var sit = grSituacao(r, x);
+      h2 += '<li><button type="button" class="gr-aula' + (sit === 'passou' || sit === 'feita' ? ' passou' : '') +
+            (sit === 'agora' ? ' agora' : '') + '" data-acao="grVer" data-id="' + esc(x.id) + '">' +
+            '<span class="gr-hora"><b>' + esc(x.inicio) + '</b><small>' + esc(x.fim) + '</small></span>' +
+            '<span class="gr-txt"><b>' + esc(x.turma) + '</b>' +
+            (grQuem(x) ? '<small>' + esc(grQuem(x)) + '</small>' : '') + '</span>' +
+            (sit ? '<span class="gr-fim">' + grSelo(sit) + '</span>' : '') + '</button></li>';
+    });
+    h2 += '</ul>';
+  }
+  el('grCorpo').innerHTML = h2;
+}
+
+ACOES.grVista = function(b){
+  var v = b.getAttribute('data-v'), a = atual();
+  if (a.p.vista === v) return;
+  S.grVista = v; vibrar();
+  trocar('grDia', {vista:v, dia:a.p.dia});
+};
+ACOES.grEscolheDia = function(b){
+  var a = atual();
+  a.p.dia = +b.getAttribute('data-d');
+  vibrar();
+  if (S.grade) pintarGrade(a.p, S.grade);
+};
+ACOES.grNovo = function(){
+  var a = atual();
+  var dia = a && a.t === 'grDia' && a.p.vista === 'dia' ? a.p.dia : undefined;
+  ir('grForm', {dia:dia});
+};
+
+/* ─── ver uma aula ─── */
+ACOES.grVer = function(b){
+  var r = S.grade, id = b.getAttribute('data-id');
+  var x = r && (r.horarios || []).filter(function(h){ return h.id === id; })[0];
+  if (!x) return;
+  var feita = x.dia === r.dia && (r.feitasHoje || []).indexOf(x.turma) !== -1;
+  var h = '<ul class="gr-det">' +
+    '<li>' + ico('relogio', 18) + '<span>' + esc(r.dias[x.dia]) + ', das ' + esc(x.inicio) + ' às ' + esc(x.fim) + '</span></li>' +
+    (x.sala ? '<li>' + ico('local', 18) + '<span>' + esc(x.sala) + '</span></li>' : '') +
+    '<li>' + ico('pessoa', 18) + '<span>' + esc(x.professor || 'Sem professora definida') + '</span></li>' +
+    (x.obs ? '<li>' + ico('documento', 18) + '<span>' + esc(x.obs) + '</span></li>' : '') +
+    '</ul><ul>' +
+    '<li><button type="button" class="opc" data-gr="chamada">' + ico('prancheta') +
+      '<span>Fazer chamada' + (feita ? '<small>esta turma já teve chamada hoje</small>' : '') + '</span></button></li>' +
+    '<li><button type="button" class="opc" data-gr="editar">' + ico('renomear') + '<span>Editar horário</span></button></li>' +
+    '<li><button type="button" class="opc perigo" data-gr="tirar">' + ico('lixo') +
+      '<span>Tirar da grade<small>a frequência da turma continua guardada</small></span></button></li></ul>';
+  abrirFolha(x.turma, h);
+  el('folhaCorpo').onclick = function(e){
+    var o = e.target.closest('[data-gr]');
+    if (!o) return;
+    var qual = o.getAttribute('data-gr');
+    fecharFolha();
+    setTimeout(function(){
+      if (qual === 'chamada') ir('chamada', {turma:x.turma});
+      else if (qual === 'editar') ir('grForm', {id:x.id});
+      else confirmar('Tirar da grade',
+        x.turma + ' sai da ' + r.dias[x.dia].toLowerCase() + ' das ' + x.inicio + '. As chamadas já salvas não mudam.',
+        'Tirar da grade', function(){
+          api('excluirHorario', [x.id], function(){
+            vibrar(); toast(x.turma + ' saiu da grade');
+            if (atual().t === 'grDia') desenhar();
+          }, function(e2){ toast(textoErro(e2), 'erro'); });
+        });
+    }, 60);
+  };
+};
+
+/* ══════════════ GRADE: novo / editar horário ══════════════ */
+TELAS.grForm = function(p){
+  return {
+    titulo: p.id ? 'Editar horário' : 'Novo horário',
+    html: esqueleto(4),
+    barra:'<button type="button" class="salvar" id="btGrSalvar" data-acao="grSalvar" disabled>Salvar horário</button>',
+    depois:function(){
+      /* Uma resposta só: formulário não pode ser repintado por cima do digitado. */
+      ler('listarGrade', [], function(r){ montarFormGrade(p, r); }, function(e){
+        el('palco').querySelector('.corpo').innerHTML = estado('alerta', 'Não deu para abrir', textoErro(e));
+      }, {fresco:300000});
+    }
+  };
+};
+
+function montarFormGrade(p, r){
+  var a = atual();
+  if (!a || a.t !== 'grForm' || a.p !== p) return;
+  S.grade = r;
+  var x = p.id ? (r.horarios || []).filter(function(h){ return h.id === p.id; })[0] : null;
+  if (p.id && !x){
+    el('palco').querySelector('.corpo').innerHTML = estado('alerta', 'Horário não encontrado',
+      'Alguém pode ter mudado a grade. Volte e abra de novo.');
+    return;
+  }
+  /* Quem está cadastrando costuma ser quem dá a aula: já vem escolhida. */
+  var euNaEquipe = (r.professores || []).filter(function(n){ return semAcento(n) === semAcento(S.prof); })[0] || '';
+  var f = x ? JSON.parse(JSON.stringify(x))
+            : {turma:'', dia:null, inicio:'', fim:'', sala:'', professor:euNaEquipe, obs:''};
+  f.dias = x ? [x.dia] : (p.dia !== undefined && p.dia !== null ? [p.dia] : []);
+  S.grForm = f;
+
+  var h = '<div class="campo"><label>Turma</label>' +
+    '<button type="button" class="gr-escolha" id="grTurma" data-acao="grEscolheTurma" data-vazio="' + !f.turma + '">' +
+    ico('grupo', 20) + '<span class="txt">' + esc(f.turma || 'Escolher a turma') + '</span>' +
+    '<span class="seta">' + ico('dir') + '</span></button></div>';
+
+  h += '<div class="campo"><label>' + (x ? 'Dia da semana' : 'Dias da semana <i>(pode marcar mais de um)</i>') + '</label>' +
+    '<div class="chips gr-semanal" id="grDias">';
+  GR_ORDEM.forEach(function(d){
+    h += '<button type="button" class="chip' + (f.dias.indexOf(d) !== -1 ? ' on' : '') + '" data-gd="' + d + '"' +
+         ' aria-pressed="' + (f.dias.indexOf(d) !== -1) + '" aria-label="' + esc(r.dias[d]) + '">' + GR_CURTO[d] + '</button>';
+  });
+  h += '</div></div>';
+
+  h += '<div class="periodo">' +
+    '<div class="campo"><label for="grIni">Começa</label><input id="grIni" type="time" step="300" value="' + esc(f.inicio) + '"></div>' +
+    '<div class="campo"><label for="grFim">Termina</label><input id="grFim" type="time" step="300" value="' + esc(f.fim) + '"></div></div>';
+
+  h += '<div class="campo"><label for="grSala">Sala <i>(opcional)</i></label>' +
+    '<input id="grSala" type="text" autocomplete="off" autocapitalize="sentences" maxlength="40" ' +
+    'placeholder="Sala 1" value="' + esc(f.sala) + '">';
+  if ((r.salas || []).length){
+    h += '<div class="chips gr-salas" id="grSalas">';
+    r.salas.forEach(function(s){ h += '<button type="button" class="chip" data-gs="' + esc(s) + '">' + esc(s) + '</button>'; });
+    h += '</div>';
+  }
+  h += '</div>';
+
+  h += '<div class="campo"><label>Professora <i>(opcional)</i></label>' +
+    '<button type="button" class="gr-escolha" id="grProf" data-acao="grEscolheProf" data-vazio="' + !f.professor + '">' +
+    ico('pessoa', 20) + '<span class="txt">' + esc(f.professor || 'Sem professora') + '</span>' +
+    '<span class="seta">' + ico('dir') + '</span></button></div>';
+
+  h += '<div class="campo"><label for="grObs">Observação <i>(opcional)</i></label>' +
+    '<input id="grObs" type="text" autocomplete="off" maxlength="200" placeholder="trazer sapatilha" value="' + esc(f.obs) + '"></div>';
+
+  var corpo = el('palco').querySelector('.corpo');
+  corpo.innerHTML = h;
+  el('btGrSalvar').disabled = false;
+  /* Quem marca 14:00 no começo quase sempre quer 1 h de aula. */
+  el('grIni').onchange = function(){
+    if (!el('grFim').value && this.value){
+      var m = grMin(this.value) + 60;
+      if (m < 24 * 60) el('grFim').value = String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0');
+    }
+  };
+  corpo.onclick = function(e){
+    var d = e.target.closest('[data-gd]');
+    if (d){
+      var dia = +d.getAttribute('data-gd');
+      if (x){
+        /* Editar mexe em um horário só: um dia de cada vez. */
+        f.dias = [dia];
+      } else {
+        var i = f.dias.indexOf(dia);
+        if (i === -1) f.dias.push(dia); else f.dias.splice(i, 1);
+      }
+      el('grDias').querySelectorAll('[data-gd]').forEach(function(c){
+        var on = f.dias.indexOf(+c.getAttribute('data-gd')) !== -1;
+        c.classList.toggle('on', on); c.setAttribute('aria-pressed', on);
+      });
+      vibrar(); return;
+    }
+    var s = e.target.closest('[data-gs]');
+    if (s){ el('grSala').value = s.getAttribute('data-gs'); vibrar(); }
+  };
+}
+
+ACOES.grEscolheTurma = function(){
+  var r = S.grade, f = S.grForm;
+  if (!r || !f) return;
+  if (!(r.turmas || []).length){ toast('Nenhuma turma ativa. Crie em Gestão → Turmas.', 'erro'); return; }
+  folhaOpcoes('Qual turma', r.turmas.map(function(t){
+    return {txt:t, marcado:(t === f.turma), fn:function(){
+      f.turma = t;
+      var b = el('grTurma');
+      if (b){ b.querySelector('.txt').textContent = t; b.dataset.vazio = 'false'; }
+      vibrar();
+    }};
+  }));
+};
+ACOES.grEscolheProf = function(){
+  var r = S.grade, f = S.grForm;
+  if (!r || !f) return;
+  function marca(nome){
+    f.professor = nome;
+    var b = el('grProf');
+    if (b){ b.querySelector('.txt').textContent = nome || 'Sem professora'; b.dataset.vazio = String(!nome); }
+    vibrar();
+  }
+  folhaOpcoes('Quem dá a aula', [{txt:'Sem professora', marcado:!f.professor, fn:function(){ marca(''); }}]
+    .concat((r.professores || []).map(function(n){
+      return {txt:n, ini:n, marcado:(n === f.professor), fn:function(){ marca(n); }};
+    })));
+};
+
+ACOES.grSalvar = function(forcar){
+  var p = atual().p, f = S.grForm;
+  if (!f || !el('grIni')) return;
+  var dados = {
+    turma: f.turma,
+    inicio: el('grIni').value, fim: el('grFim').value,
+    sala: el('grSala').value.trim(),
+    professor: f.professor || '',
+    obs: el('grObs').value.trim()
+  };
+  if (p.id) dados.dia = f.dias[0]; else dados.dias = f.dias.slice();
+  if (forcar === true) dados.forcar = true;
+
+  /* Sem turma, a lista de turmas abre sozinha: é a resposta, não um aviso. */
+  if (!dados.turma){ ACOES.grEscolheTurma(); return; }
+  if (!f.dias.length){ toast('Marque o dia da semana.', 'erro'); return; }
+  if (!dados.inicio){ toast('Escolha a hora em que a aula começa.', 'erro'); el('grIni').focus(); return; }
+  if (!dados.fim){ toast('Escolha a hora em que a aula termina.', 'erro'); el('grFim').focus(); return; }
+  if (grMin(dados.fim) <= grMin(dados.inicio)){ toast('A aula termina antes de começar. Confira os horários.', 'erro'); return; }
+
+  fecharToast();
+  var bt = el('btGrSalvar');
+  bt.disabled = true; bt.textContent = 'Salvando…';
+  api(p.id ? 'editarHorario' : 'criarHorario', p.id ? [p.id, dados] : [dados], function(r){
+    vibrar();
+    toast(p.id ? 'Horário salvo'
+      : r.criados > 1 ? dados.turma + ' entrou na grade em ' + r.criados + ' dias' : dados.turma + ' entrou na grade');
+    /* Volta para a grade no dia que acabou de receber a aula. */
+    var dia = f.dias.slice().sort(function(a, b){ return GR_ORDEM.indexOf(a) - GR_ORDEM.indexOf(b); })[0];
+    S.pilha.pop();
+    var baixo = atual();
+    if (baixo && baixo.t === 'grDia'){ baixo.p.dia = dia; desenhar(); }
+    else { S.pilha.push({t:'grDia', p:{vista:'dia', dia:dia}}); desenhar(); }
+  }, function(e){
+    var b2 = el('btGrSalvar');
+    if (b2){ b2.disabled = false; b2.textContent = 'Salvar horário'; }
+    var msg = textoErro(e);
+    /* Sala, professora ou turma ocupada: decide quem está cadastrando.
+       Às vezes é de propósito (duas turmas pequenas dividindo a sala). */
+    if (msg.indexOf('CONFLITO:') === 0){
+      confirmar('Horário ocupado', msg.replace(/^CONFLITO:\s*/, '') + ' Salvar mesmo assim?',
+        'Salvar mesmo assim', function(){ ACOES.grSalvar(true); });
+      return;
+    }
+    toast(msg, 'erro');
+  });
+};
+</script>

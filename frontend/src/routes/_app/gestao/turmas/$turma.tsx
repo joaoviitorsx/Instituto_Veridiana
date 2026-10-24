@@ -9,7 +9,6 @@ import { Tela, useVoltar } from '../../../../ui/Tela';
 import { BotaoCheio, BotaoContorno, Esqueleto, Estado, Secao } from '../../../../ui/kit';
 import { ErroTela } from '../../../../ui/ErroTela';
 import { folha } from '../../../../ui/folha';
-import { toast } from '../../../../ui/toast';
 import { plural } from '../../../../util';
 import { gravar, type Aluno } from '../-comum';
 import { LinhasAlunos, novoAluno } from '../-alunos';
@@ -33,7 +32,19 @@ function FichaTurma() {
     });
   }
   function arquivar() {
-    if (ativos.length) { toast('Mova ou desative os alunos antes de arquivar.', 'erro'); return; }
+    /* Não é erro, é um passo que falta: explica numa folha, sem toast vermelho. */
+    if (ativos.length) {
+      folha.abrir('Antes de arquivar', (fechar) => (
+        <>
+          <p className="mx-2 mb-4 text-[15px] leading-normal text-apagado">
+            {turma} ainda tem {plural(ativos.length, 'aluno', 'alunos')} na chamada. Mova cada um para outra turma
+            ou desative (toque no nome do aluno). Depois, a turma pode ser arquivada.
+          </p>
+          <div className="px-2"><BotaoCheio onClick={fechar}>Entendi</BotaoCheio></div>
+        </>
+      ));
+      return;
+    }
     folha.confirmar('Arquivar turma',
       'A turma ' + turma + ' sai da lista de chamada. As chamadas antigas dela continuam guardadas.',
       'Arquivar', async () => { if (await gravar('arquivarTurma', [turma], 'Turma ' + turma + ' arquivada')) voltar(); });
@@ -54,7 +65,7 @@ function FichaTurma() {
               <LinhasAlunos lista={ativos} />
             </>
           ) : (
-            <Estado icone={Users} titulo="Turma sem alunos" texto='Toque em "Adicionar aluno" aqui embaixo.' />
+            <Estado icone={Users} titulo="Ninguém nesta turma ainda" texto='Toque em "Adicionar aluno", aqui embaixo, para montar a lista da chamada.' />
           )}
           {inativos.length > 0 && (
             <>

@@ -73,4 +73,28 @@
 }
 
 /* Altura da barra de ação fixa: o conteúdo e o toast sobem por ela. */
-:root { --barra-h: 0px; }
+:root { --barra-h: 0px; --fab-h: 0px; }
+
+/* ─── transições entre telas (DESIGN.md §6) ───
+   "Shared axis" do Material: a tela velha some rápido (90 ms) andando
+   30px, a nova entra esmaecendo e andando 30px (210 ms depois de 90).
+   O rodapé (abas e barra de ação) não participa: fica parado. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(root) { animation-duration: 300ms; }
+  html:active-view-transition-type(ir)::view-transition-old(root) { animation: 90ms ease-in both vt-some, 300ms var(--ease-curva) both vt-para-esq; }
+  html:active-view-transition-type(ir)::view-transition-new(root) { animation: 210ms ease-out 90ms both vt-aparece, 300ms var(--ease-curva) both vt-da-dir; }
+  html:active-view-transition-type(voltar)::view-transition-old(root) { animation: 90ms ease-in both vt-some, 300ms var(--ease-curva) both vt-para-dir; }
+  html:active-view-transition-type(voltar)::view-transition-new(root) { animation: 210ms ease-out 90ms both vt-aparece, 300ms var(--ease-curva) both vt-da-esq; }
+  html:active-view-transition-type(aba)::view-transition-old(root) { animation: 120ms ease-in both vt-some; }
+  html:active-view-transition-type(aba)::view-transition-new(root) { animation: 180ms ease-out 60ms both vt-aparece; }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}
+::view-transition-group(rodape) { animation: none; }
+@keyframes vt-some { to { opacity: 0 } }
+@keyframes vt-aparece { from { opacity: 0 } }
+@keyframes vt-para-esq { to { transform: translateX(-30px) } }
+@keyframes vt-da-dir { from { transform: translateX(30px) } }
+@keyframes vt-para-dir { to { transform: translateX(30px) } }
+@keyframes vt-da-esq { from { transform: translateX(-30px) } }

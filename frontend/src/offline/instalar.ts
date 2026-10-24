@@ -34,14 +34,16 @@ export function ouvirInstalacao() {
   window.addEventListener('appinstalled', () => { instalado = true; evento = null; avisar(); });
 }
 
-export async function instalar() {
-  if (!evento) return;
+/* Abre o diálogo de instalação do sistema. true se a pessoa aceitou. */
+export async function instalar(): Promise<boolean> {
+  if (!evento) return false;
   const e = evento;
   evento = null;
   avisar();
   await e.prompt();
   const r = await e.userChoice.catch(() => ({ outcome: '' }));
-  if (r.outcome === 'accepted') { instalado = true; avisar(); }
+  if (r.outcome === 'accepted') { instalado = true; avisar(); return true; }
+  return false;
 }
 
 type Situacao = 'instalado' | 'android' | 'iphone' | 'nada';

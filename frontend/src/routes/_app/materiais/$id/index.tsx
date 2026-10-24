@@ -60,7 +60,7 @@ function Ficha() {
 
   return (
     <Tela titulo={item.item} voltar="/materiais"
-      barra={<BotaoCheio icone={Pencil}
+      barra={<BotaoCheio icone={Pencil} className="text-[17px]"
         onClick={() => { aj.enviar(); navigate({ to: '/materiais/$id/editar', params: { id: item.id } }); }}>Editar</BotaoCheio>}>
       <h2 className="pt-2 pb-1 text-center text-[22px] font-bold tracking-tight [overflow-wrap:anywhere]">{item.item}</h2>
 
@@ -85,12 +85,12 @@ function Ficha() {
 
       {item.estado !== 'Inservível' && (
         <button type="button" onClick={inservivel}
-          className="mt-4 flex min-h-13 w-full items-center justify-center gap-2 rounded-m border border-dashed border-borda bg-fundo p-3.5 text-base font-bold text-apagado active:bg-borda">
+          className="mt-4 flex min-h-13 w-full items-center justify-center gap-2 rounded-m border border-borda bg-papel p-3.5 text-base font-bold text-tinta transition-colors duration-150 active:bg-fundo">
           <CircleAlert size={18} /> Marcar como inservível
         </button>
       )}
       <button type="button" onClick={descartar}
-        className="mt-3 flex min-h-13 w-full items-center justify-center gap-2 rounded-m border border-dashed border-[#EDC6CE] bg-fundo p-3.5 text-base font-bold text-falta active:bg-borda">
+        className="mt-3 flex min-h-13 w-full items-center justify-center gap-2 rounded-m border border-falta/30 bg-papel p-3.5 text-base font-bold text-falta transition-colors duration-150 active:bg-falta-fraco">
         <Trash2 size={18} /> Tirar da lista
       </button>
     </Tela>

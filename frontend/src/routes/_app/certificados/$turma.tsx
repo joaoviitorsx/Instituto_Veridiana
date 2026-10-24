@@ -10,11 +10,11 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { ChevronRight, CircleAlert, Copy, ExternalLink, Medal, MessageCircle, Share2, User } from 'lucide-react';
+import { ChevronRight, Copy, ExternalLink, FolderLock, LoaderCircle, Medal, MessageCircle, Share2, UserPlus, UserX } from 'lucide-react';
 import { clsx } from 'clsx';
 import { escrever, leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { Avatar, Aviso, BotaoCheio, Esqueleto, Estado, Linha, Lista, Osso } from '../../../ui/kit';
+import { Avatar, Banner, BotaoCheio, Esqueleto, Estado, Linha, Lista } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { folha } from '../../../ui/folha';
 import { toast } from '../../../ui/toast';
@@ -50,9 +50,13 @@ function CertTurma() {
     if (gerando) return;
     setGerando(true);
     folha.abrir(umNome ? 'Gerando o certificado…' : 'Gerando ' + nomes.length + ' certificados…', (
-      <div className="px-2 pb-2">
-        <p className="mb-4 text-sm text-apagado">Pode levar alguns segundos. Pode fechar: o aviso aparece quando ficar pronto.</p>
-        <Osso className="h-13 rounded-m" />
+      <div className="flex items-center gap-3 px-2 pb-3">
+        <span className="grid size-11 shrink-0 place-items-center rounded-full bg-roxo-fraco text-roxo">
+          <LoaderCircle size={22} className="animate-spin" />
+        </span>
+        <p className="text-sm leading-snug text-apagado">
+          O Drive leva alguns segundos para montar o PDF. Pode fechar esta janela: quando ficar pronto, ela abre sozinha.
+        </p>
       </div>
     ));
     try {
@@ -63,16 +67,15 @@ function CertTurma() {
         <Pronto r={r} umNome={umNome} ficha={ficha} turma={turma} />);
     } catch (e) {
       folha.fechar();
-      toast(textoErro(e), 'erro');
+      toast('Não deu para gerar. ' + textoErro(e), 'erro');
     } finally {
       setGerando(false);
     }
   }
 
   function todos() {
-    if (!as) { toast('Espere a lista carregar.', 'erro'); return; }
-    if (!com.length) { toast('Ninguém da turma tem presença registrada ainda.', 'erro'); return; }
-    folha.confirmar('Gerar ' + com.length + ' certificados',
+    if (!as || !com.length) return;
+    folha.confirmar('Gerar ' + com.length + ' certificados?',
       'Sai um PDF com uma página por aluna, de ' + turma + '. Bom para imprimir e entregar no fim do ano.',
       'Gerar', () => emitir(com.map((a) => a.nome), ''), { perigo: false });
   }
@@ -82,7 +85,7 @@ function CertTurma() {
   else if (!as) corpo = <Esqueleto n={5} />;
   else if (!com.length) {
     corpo = <Estado icone={Medal} titulo="Ninguém com presença ainda"
-      texto="O certificado conta aulas frequentadas. Salve algumas chamadas primeiro." />;
+      texto="O certificado conta as aulas em que a aluna esteve presente. Assim que esta turma tiver chamadas salvas, os certificados aparecem aqui." />;
   } else {
     corpo = (
       <>
@@ -107,7 +110,11 @@ function CertTurma() {
 
   return (
     <Tela titulo={turma} voltar="/certificados"
-      barra={<BotaoCheio icone={Medal} onClick={todos} disabled={!as || gerando}>Gerar da turma inteira</BotaoCheio>}>
+      barra={com.length > 0 && (
+        <BotaoCheio icone={Medal} onClick={todos} carregando={gerando}>
+          {gerando ? 'Gerando…' : 'Gerar da turma inteira (' + com.length + ')'}
+        </BotaoCheio>
+      )}>
       {corpo}
     </Tela>
   );
@@ -131,9 +138,9 @@ function Pronto({ r, umNome, ficha, turma }: { r: Gerado; umNome: string; ficha?
     <div className="px-2 pb-1">
       <p className="mb-3 text-sm text-apagado [overflow-wrap:anywhere]">{r.nome}</p>
       {r.completo === false && (
-        <Aviso icone={CircleAlert} className="mb-3">
-          O histórico é grande demais e a leitura parou antes do fim. As horas podem estar por baixo.
-        </Aviso>
+        <Banner tom="atencao" titulo="As horas podem estar a menos" className="mb-3">
+          O histórico é longo e a conta parou antes do fim. Na planilha, use Veridiana → Recontar horas dos certificados e gere de novo.
+        </Banner>
       )}
       <a href={r.url} target="_blank" rel="noopener" className={clsx(BOTAO, 'bg-roxo text-white active:bg-roxo-fundo')}>
         <ExternalLink size={18} /> Abrir o PDF
@@ -145,7 +152,7 @@ function Pronto({ r, umNome, ficha, turma }: { r: Gerado; umNome: string; ficha?
       ) : umNome && r.publico ? (
         <button type="button" onClick={() => { folha.fechar(); setTimeout(() => editarContato(umNome, turma), 80); }}
           className={clsx(BOTAO, 'mt-2 border border-dashed border-borda bg-fundo text-apagado active:bg-borda')}>
-          <User size={18} /> Sem telefone — cadastrar
+          <UserPlus size={18} /> Cadastrar telefone para o WhatsApp
         </button>
       ) : null}
       <div className="mt-2 flex gap-2">
@@ -159,13 +166,15 @@ function Pronto({ r, umNome, ficha, turma }: { r: Gerado; umNome: string; ficha?
         </button>
       </div>
       {!r.publico && r.quantidade > 1 && (
-        <p className="mx-1 mt-4 text-[13px] leading-normal text-apagado">
-          O PDF da turma inteira fica só no seu Drive, sem link público — ele tem o nome de {r.quantidade} crianças.
-          Certificado individual sai com link para enviar à família.
-        </p>
+        <Banner tom="info" icone={FolderLock} titulo="Este PDF fica só no Drive" className="mt-4 mb-0">
+          Ele tem o nome de {r.quantidade} crianças, por isso não ganha link aberto. É para imprimir. Para mandar à família,
+          gere o certificado de cada aluna.
+        </Banner>
       )}
       {r.ignorados?.length > 0 && (
-        <p className="mx-1 mt-3 text-[13px] text-apagado">Fora: {r.ignorados.join(', ')} — sem presença registrada.</p>
+        <Banner tom="info" icone={UserX} titulo="Ficaram de fora" className="mt-3 mb-0">
+          {r.ignorados.join(', ')} — ainda sem presença registrada.
+        </Banner>
       )}
     </div>
   );

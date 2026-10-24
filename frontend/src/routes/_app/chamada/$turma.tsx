@@ -10,7 +10,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { Cake, Check, ChevronRight, CircleAlert, CloudOff, User, Users } from 'lucide-react';
+import { Cake, Check, ChevronRight, CloudOff, User, Users } from 'lucide-react';
 import { clsx } from 'clsx';
 import { api, ehErroRede, ehErroSessao, invalidarDepoisDe, leitura, ErroConfig } from '../../../api/cliente';
 import { guardarNaFila, tirarDaFila, dadosDoItem, type Presenca, type Resposta } from '../../../offline/fila';
@@ -18,7 +18,7 @@ import { emMaos, pedirSincronizacao, useFila } from '../../../offline/envio';
 import { FaixaSemInternet, useOnline, usandoCopia } from '../../../offline/rede';
 import { useSessao } from '../../../sessao';
 import { Tela, Capa } from '../../../ui/Tela';
-import { Avatar, Aviso, CARTAO, Esqueleto, Estado, Lista } from '../../../ui/kit';
+import { Avatar, Banner, BotaoCheio, CARTAO, Esqueleto, Estado, Lista } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { folha } from '../../../ui/folha';
 import { toast } from '../../../ui/toast';
@@ -61,7 +61,7 @@ function Chamada() {
     <Capa titulo={turma} sub={sub ?? 'carregando…'}
       direita={<>
         <b className="text-[32px] font-bold tracking-tighter tabular-nums">{n ?? '—'}</b>
-        <span className="mt-1 block text-[13px] font-medium text-roxo-claro">{r ?? ' '}</span>
+        <span className="mt-1 block text-[13px] font-medium text-apagado">{r ?? ' '}</span>
       </>} />
   );
 
@@ -70,8 +70,9 @@ function Chamada() {
     return (
       <Tela titulo={turma} capa={capa()} voltar={qr ? false : '/chamada'}>
         {semCopia ? (
-          <Estado icone={CloudOff} titulo="Esta turma não está no celular"
-            texto="Sem internet agora, e esta turma nunca foi aberta neste aparelho. Abra a lista uma vez com internet: depois disso ela funciona mesmo sem sinal." />
+          <Estado icone={CloudOff} titulo="Esta turma ainda não está no celular"
+            texto="Ela nunca foi aberta neste aparelho e agora está sem internet. Abra esta turma uma vez com internet: depois, a chamada funciona até sem sinal."
+            botao={{ txt: 'Tentar de novo', fn: () => q.refetch() }} />
         ) : q.isError && !q.data ? (
           <ErroTela erro={q.error} tentar={() => q.refetch()} />
         ) : (
@@ -120,7 +121,7 @@ function ChamadaAberta({ turma, base, viaQr, capa }: {
   const rotulo = faltas === 0 ? 'turma completa' : presentes === 0 ? 'toque em quem veio' : plural(faltas, 'faltou', 'faltaram');
 
   function escolherProf() {
-    if (!professores.length) { toast('Nenhum professor cadastrado. Use a engrenagem na tela inicial.', 'erro'); return; }
+    if (!professores.length) { toast('Ninguém da equipe cadastrado ainda. Peça para a gestão cadastrar em Gestão → Equipe.', 'erro'); return; }
     folha.opcoes('Quem está dando a aula', professores.map((nome) => ({
       txt: nome, ini: nome, marcado: nome === professor, fn: () => { setProfessor(nome); vibrar(); },
     })));
@@ -148,19 +149,20 @@ function ChamadaAberta({ turma, base, viaQr, capa }: {
   }
 
   function salvar() {
-    if (!professor) { toast('Escolha quem está dando a aula', 'erro'); escolherProf(); return; }
+    /* Sem toast: a folha de escolha já abre e diz o que falta. */
+    if (!professor) { vibrar(); escolherProf(); return; }
     /* Com falta de ponto de partida, salvar sem tocar em ninguém dá falta
        para a turma inteira. Pode ser verdade, mas quase sempre é esquecimento. */
     if (!confirmouVazia.current && !alunos.some((a) => a.status !== 'Falta')) {
       folha.confirmar('Ninguém presente?',
-        'Nenhum aluno foi marcado como presente. Se salvar assim, a turma inteira fica com falta.',
-        'Salvar com todos em falta', () => { confirmouVazia.current = true; salvar(); });
+        'Ninguém foi marcado como presente. Se salvar assim, a turma inteira fica com falta hoje.',
+        'Salvar com faltas', () => { confirmouVazia.current = true; salvar(); });
       return;
     }
     if (jaRegistrada && !forcar.current) {
       folha.confirmar('Salvar de novo?',
-        'Esta turma já teve chamada salva hoje. Salvar de novo cria um segundo registro e conta em dobro nos relatórios.',
-        'Salvar assim mesmo', () => { forcar.current = true; salvar(); });
+        'Esta turma já tem chamada hoje. Só salve de novo se for outra aula: senão ela conta duas vezes nos relatórios.',
+        'Salvar de novo', () => { forcar.current = true; salvar(); });
       return;
     }
     enviar();
@@ -199,7 +201,12 @@ function ChamadaAberta({ turma, base, viaQr, capa }: {
       const msg = textoErro(e);
       /* Recusou por duplicidade: oferecer "tentar de novo" seria empurrar
          a professora para o erro que acabamos de evitar. */
-      if (msg.startsWith('DUPLICADA')) { setJaRegistrada(true); toast('Esta turma já tem chamada salva hoje.', 'erro'); return; }
+      if (msg.startsWith('DUPLICADA')) {
+        setJaRegistrada(true);
+        toast('Outra pessoa já salvou a chamada desta turma hoje. Confira o aviso no topo.', 'erro');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
       toast(msg, 'erro');
     } finally {
       emMaos.delete(item.token);
@@ -211,7 +218,7 @@ function ChamadaAberta({ turma, base, viaQr, capa }: {
     return (
       <Tela titulo={turma} capa={capa('0', 'sem alunos', sub)} voltar={viaQr ? false : '/chamada'}>
         <Estado icone={Users} titulo="Turma sem alunos"
-          texto={'Ninguém ativo em ' + turma + '. Na tela inicial, entre em Gestão para cadastrar.'} />
+          texto={'Ainda não tem ninguém na lista de ' + turma + '. Peça para a gestão cadastrar os alunos em Gestão → Turmas.'} />
       </Tela>
     );
   }
@@ -223,37 +230,33 @@ function ChamadaAberta({ turma, base, viaQr, capa }: {
       placar={<span aria-label={presentes + ' de ' + total + ' presentes'}>{presentes}/{total}</span>}
       voltar={viaQr ? false : '/chamada'}
       barra={
-        <button type="button" onClick={salvar} disabled={salvando}
-          className="flex min-h-13 baixo:min-h-11 baixo:py-2.5 w-full items-center justify-center gap-2 rounded-m bg-roxo p-4 text-[17px] font-bold tracking-tight text-white transition-colors duration-150 active:bg-roxo-fundo disabled:bg-roxo-apagado">
+        <BotaoCheio onClick={salvar} carregando={salvando}
+          className="text-[17px] tracking-tight baixo:min-h-11 baixo:py-2.5">
           {salvando ? 'Salvando…' : 'Salvar chamada'}
-        </button>
+        </BotaoCheio>
       }
     >
       {base.copia && <FaixaSemInternet desde={base.em} />}
 
       {deHoje && d.aniversarios?.length > 0 && (
-        <div className="mb-5 flex items-start gap-3 rounded-m border border-justif-borda bg-justif-fraco p-4 text-justif-tinta">
-          <Cake size={22} className="shrink-0" />
-          <div>
-            <b className="mb-1 block text-[15px] font-bold">Aniversário hoje</b>
-            {d.aniversarios.map((x) => (
-              <span key={x.aluno} className="block text-sm leading-normal">{x.aluno} está fazendo {x.faz} anos</span>
-            ))}
-          </div>
-        </div>
+        <Banner tom="sucesso" icone={Cake} titulo={d.aniversarios.length === 1 ? 'Aniversário hoje' : d.aniversarios.length + ' aniversários hoje'}>
+          {d.aniversarios.map((x) => (
+            <span key={x.aluno} className="block">{x.aluno} está fazendo {x.faz} anos</span>
+          ))}
+        </Banner>
       )}
 
       {jaRegistrada && (
-        <Aviso icone={CircleAlert}>
+        <Banner tom="atencao" titulo="Esta turma já tem chamada hoje">
           {naFilaHoje && !jaRegistradaServidor
-            ? 'Esta turma já tem chamada de hoje guardada no celular. Se salvar de novo, vai contar duas vezes.'
-            : 'Esta turma já teve chamada salva hoje. Se salvar de novo, vai contar duas vezes.'}
-        </Aviso>
+            ? 'Ela está guardada neste celular, esperando internet. Se salvar de novo, a aula conta duas vezes.'
+            : 'Se salvar de novo, a aula conta duas vezes nos relatórios. Só salve se for outra aula.'}
+        </Banner>
       )}
 
       <button type="button" onClick={escolherProf}
         className={clsx(CARTAO, 'mb-5 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-150 active:bg-fundo')}>
-        <User size={22} className="shrink-0" />
+        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-roxo-fraco text-roxo"><User size={20} /></span>
         <span className="min-w-0 flex-1">
           <small className="block text-[13px] leading-tight text-apagado">Quem está dando a aula</small>
           <b className={clsx('block truncate text-base', professor ? 'font-semibold' : 'font-normal text-apagado')}>

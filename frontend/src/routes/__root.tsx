@@ -3,6 +3,8 @@ import { MapPinOff } from 'lucide-react';
 import { Toaster } from '../ui/toast';
 import { Folha } from '../ui/folha';
 import { AvisoAtualizacao } from '../ui/AvisoAtualizacao';
+import { ConviteInstalar } from '../ui/ConviteInstalar';
+import { Arrastar } from '../ui/Arrastar';
 import { Estado } from '../ui/kit';
 import { Tela } from '../ui/Tela';
 
@@ -13,6 +15,8 @@ export const Route = createRootRoute({
       <Toaster />
       <Folha />
       <AvisoAtualizacao />
+      <ConviteInstalar />
+      <Arrastar />
     </>
   ),
   notFoundComponent: NaoAchou,

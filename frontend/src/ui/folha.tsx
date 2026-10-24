@@ -10,8 +10,8 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Check, type LucideIcon } from 'lucide-react';
 import { clsx } from 'clsx';
-import { toast } from './toast';
-import { Avatar, CLASSE_INPUT } from './kit';
+import { vibrar } from '../util';
+import { Avatar, Campo } from './kit';
 
 type Corpo = ReactNode | ((fechar: () => void) => ReactNode);
 type Estado = { aberta: boolean; titulo: string; corpo: Corpo; aoFechar?: () => void; id: number };
@@ -99,14 +99,14 @@ export const folha = {
   },
 };
 
-export function Acoes({ rotulo, onCancelar, onConfirmar, perigo = true, desligado }: {
-  rotulo: string; onCancelar: () => void; onConfirmar: () => void; perigo?: boolean; desligado?: boolean;
+export function Acoes({ rotulo, onCancelar, onConfirmar, perigo = true, desligado, rotuloCancelar = 'Cancelar' }: {
+  rotulo: string; onCancelar: () => void; onConfirmar: () => void; perigo?: boolean; desligado?: boolean; rotuloCancelar?: string;
 }) {
   return (
     <div className="flex shrink-0 gap-2 px-2 pt-3">
       <button type="button" onClick={onCancelar}
         className="min-h-13 flex-1 rounded-m bg-fundo text-base font-bold text-tinta active:bg-borda">
-        Cancelar
+        {rotuloCancelar}
       </button>
       <button type="button" onClick={onConfirmar} disabled={desligado}
         className={clsx('min-h-13 flex-1 rounded-m text-base font-bold text-white disabled:bg-roxo-apagado',
@@ -122,38 +122,43 @@ function Ficha({ campos, rotuloBotao, onCancelar, onEnviar }: {
 }) {
   const [v, setV] = useState<Record<string, string>>(() =>
     Object.fromEntries(campos.map((c) => [c.id, c.valor || ''])));
+  /* Erro embaixo do campo que faltou, não num toast atrás da folha. */
+  const [erros, setErros] = useState<Record<string, string>>({});
   const primeiro = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const t = setTimeout(() => { primeiro.current?.focus(); primeiro.current?.select(); }, 320);
     return () => clearTimeout(t);
   }, []);
   function enviar() {
-    const r: Record<string, string> = {};
+    const r: Record<string, string> = {}, e: Record<string, string> = {};
     for (const c of campos) {
       const x = (v[c.id] || '').trim();
-      if (c.obrigatorio && x.length < 2) { toast('Preencha ' + c.rotulo.toLowerCase() + '.', 'erro'); return; }
+      if (c.obrigatorio && x.length < 2) e[c.id] = x ? 'Escreva pelo menos 2 letras.' : 'Preencha ' + c.rotulo.toLowerCase() + '.';
       r[c.id] = x;
     }
+    setErros(e);
+    const falta = campos.find((c) => e[c.id]);
+    if (falta) { document.getElementById('f_' + falta.id)?.focus(); vibrar(); return; }
     onEnviar(r);
   }
   return (
-    <form onSubmit={(e) => { e.preventDefault(); enviar(); }}>
+    <form onSubmit={(ev) => { ev.preventDefault(); enviar(); }} noValidate>
       <div className="px-2">
         {campos.map((c, i) => (
-          <div key={c.id} className="mb-4">
-            <label htmlFor={'f_' + c.id} className="mb-2 block text-[13px] font-semibold text-apagado">{c.rotulo}</label>
-            <input
-              id={'f_' + c.id}
-              ref={i === 0 ? primeiro : undefined}
-              type={c.tipo || 'text'}
-              autoComplete="off"
-              autoCapitalize={!c.tipo || c.tipo === 'text' ? 'words' : 'none'}
-              placeholder={c.dica}
-              value={v[c.id]}
-              onChange={(e) => setV({ ...v, [c.id]: e.target.value })}
-              className={CLASSE_INPUT}
-            />
-          </div>
+          <Campo
+            key={c.id}
+            id={'f_' + c.id}
+            rotulo={c.rotulo}
+            ref={i === 0 ? primeiro : undefined}
+            type={c.tipo || 'text'}
+            autoComplete="off"
+            autoCapitalize={!c.tipo || c.tipo === 'text' ? 'words' : 'none'}
+            enterKeyHint={i === campos.length - 1 ? 'done' : 'next'}
+            placeholder={c.dica}
+            value={v[c.id]}
+            erro={erros[c.id]}
+            onChange={(ev) => { setV({ ...v, [c.id]: ev.target.value }); if (erros[c.id]) setErros({ ...erros, [c.id]: '' }); }}
+          />
         ))}
       </div>
       <Acoes rotulo={rotuloBotao} perigo={false} onCancelar={onCancelar} onConfirmar={enviar} />

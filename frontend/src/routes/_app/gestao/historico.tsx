@@ -40,7 +40,7 @@ function Historico() {
   else if (!meses.data) corpo = <Esqueleto n={4} />;
   else if (!lista.length) {
     corpo = <Estado icone={Calendar} titulo="Nenhuma chamada ainda"
-      texto="Assim que a primeira turma for salva, o histórico aparece aqui." />;
+      texto="Assim que a primeira chamada for salva, o histórico de cada mês aparece aqui." />;
   } else {
     corpo = (
       <>

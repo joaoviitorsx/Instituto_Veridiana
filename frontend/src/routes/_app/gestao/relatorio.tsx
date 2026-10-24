@@ -4,10 +4,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { CircleAlert, Copy, FileText } from 'lucide-react';
+import { CalendarX, Copy, FileText } from 'lucide-react';
 import { leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { Aviso, BotaoCheio, BotaoContorno, Campo, Esqueleto, Linha, Lista, Numeros, Secao } from '../../../ui/kit';
+import { Banner, BotaoCheio, BotaoContorno, Campo, Esqueleto, Linha, Lista, Numeros, Secao } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { toast } from '../../../ui/toast';
 import { copiarTexto, dataCurta, hojeISO, plural, vibrar } from '../../../util';
@@ -31,9 +31,14 @@ function RelatorioEdital() {
   const [pedido, setPedido] = useState({ de, ate });
   const q = useQuery({ ...leitura<Relatorio>('relatorioPeriodo', pedido.de, pedido.ate), enabled: !!pedido.de && !!pedido.ate });
 
+  /* Erro embaixo da data, não num toast. */
+  const [erro, setErro] = useState<{ campo: 'de' | 'ate'; msg: string } | null>(null);
+
   function gerar() {
-    if (!de || !ate) { toast('Escolha as duas datas.', 'erro'); return; }
-    if (de > ate) { toast('A data inicial é depois da final.', 'erro'); return; }
+    if (!de) { setErro({ campo: 'de', msg: 'Escolha o primeiro dia.' }); document.getElementById('dtIni')?.focus(); return; }
+    if (!ate) { setErro({ campo: 'ate', msg: 'Escolha o último dia.' }); document.getElementById('dtFim')?.focus(); return; }
+    if (de > ate) { setErro({ campo: 'ate', msg: 'O último dia vem antes do primeiro. Troque as datas.' }); document.getElementById('dtFim')?.focus(); return; }
+    setErro(null);
     setPedido({ de, ate });
     if (de === pedido.de && ate === pedido.ate) q.refetch();
   }
@@ -44,12 +49,14 @@ function RelatorioEdital() {
       {/* De/Até lado a lado enquanto couber; um embaixo do outro em tela estreita. */}
       <div className="mb-3 flex flex-wrap gap-x-3 gap-y-2">
         <Campo id="dtIni" rotulo="De" type="date" value={de} max={ate || undefined}
-          onChange={(e) => setDe(e.target.value)} className="mb-0 min-w-0 flex-[1_1_140px]" />
+          erro={erro?.campo === 'de' ? erro.msg : undefined}
+          onChange={(e) => { setDe(e.target.value); setErro(null); }} className="mb-0 min-w-0 flex-[1_1_140px]" />
         <Campo id="dtFim" rotulo="Até" type="date" value={ate} min={de || undefined}
-          onChange={(e) => setAte(e.target.value)} className="mb-0 min-w-0 flex-[1_1_140px]" />
+          erro={erro?.campo === 'ate' ? erro.msg : undefined}
+          onChange={(e) => { setAte(e.target.value); setErro(null); }} className="mb-0 min-w-0 flex-[1_1_140px]" />
       </div>
-      <BotaoCheio icone={FileText} onClick={gerar} disabled={q.isFetching}>
-        {q.isFetching ? 'Gerando…' : 'Gerar relatório'}
+      <BotaoCheio icone={FileText} onClick={gerar} carregando={q.isFetching}>
+        {q.isFetching ? 'Contando as chamadas…' : 'Gerar relatório'}
       </BotaoCheio>
 
       <div className="mt-5">
@@ -82,15 +89,23 @@ function Saida({ r }: { r: Relatorio }) {
     else toast('Não deu para copiar sozinho. Tente de novo.', 'erro');
   }
 
+  /* Período sem aula: zeros não dizem nada, e colar zeros num edital é pior. */
+  if (r.aulas === 0) {
+    return (
+      <Banner tom="info" icone={CalendarX} titulo="Nenhuma chamada nesse período">
+        Confira as datas De e Até. O relatório conta só as chamadas salvas no app.
+      </Banner>
+    );
+  }
+
   return (
     <>
       {/* Leitura truncada = números por baixo. Dizer isso é o ponto:
           relatório errado em silêncio é pior que erro na cara. */}
       {r.completo === false && (
-        <Aviso icone={CircleAlert}>
-          O histórico é grande demais e a leitura parou antes do fim. Estes números estão <b>por baixo</b>.
-          Gere por períodos menores, um semestre de cada vez.
-        </Aviso>
+        <Banner tom="atencao" titulo="Estes números estão a menos">
+          O período é longo e a conta parou antes do fim. Gere por partes, um semestre de cada vez, e some.
+        </Banner>
       )}
       <Secao className="mt-0">Resumo</Secao>
       <Numeros itens={[

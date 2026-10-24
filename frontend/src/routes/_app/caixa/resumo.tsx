@@ -3,10 +3,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { CircleAlert, Copy, FileText } from 'lucide-react';
+import { Copy, FileText, ReceiptText } from 'lucide-react';
 import { leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { Aviso, BotaoCheio, Campo, Esqueleto, Lista, Secao } from '../../../ui/kit';
+import { Banner, BotaoCheio, Campo, Esqueleto, Lista, Secao } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { toast } from '../../../ui/toast';
 import { copiarTexto, dataCurta, hojeISO, plural, reais, vibrar } from '../../../util';
@@ -21,18 +21,32 @@ function Resumo() {
   /* O período só vale quando a pessoa toca em Gerar: mexer na data não
      dispara uma busca a cada dígito. Abre já gerado, como no app HTML. */
   const [periodo, setPeriodo] = useState({ ini, fim });
+  const [erro, setErro] = useState<{ campo: 'ini' | 'fim'; msg: string } | null>(null);
   const q = useQuery(leitura<ResumoCaixa>('resumoCaixa', periodo.ini, periodo.fim));
+
+  function gerar() {
+    if (!ini) { setErro({ campo: 'ini', msg: 'Escolha o primeiro dia.' }); document.getElementById('cxIni')?.focus(); return; }
+    if (!fim) { setErro({ campo: 'fim', msg: 'Escolha o último dia.' }); document.getElementById('cxFim')?.focus(); return; }
+    if (ini > fim) { setErro({ campo: 'fim', msg: 'O último dia vem antes do primeiro. Troque as datas.' }); document.getElementById('cxFim')?.focus(); return; }
+    setErro(null);
+    setPeriodo({ ini, fim });
+    if (ini === periodo.ini && fim === periodo.fim) q.refetch();
+  }
 
   return (
     <Tela titulo="Resumo do caixa" voltar="/caixa">
       <p className="mx-1 mb-4 text-sm text-apagado">Totais por categoria e por fonte, para colar na prestação de contas.</p>
       {/* Lado a lado enquanto couber, um embaixo do outro em tela estreita. */}
       <div className="mb-3 flex flex-wrap gap-x-3 gap-y-2">
-        <Campo id="cxIni" rotulo="De" type="date" value={ini} onChange={(e) => setIni(e.target.value)} className="!mb-0 min-w-0 flex-[1_1_140px]" />
-        <Campo id="cxFim" rotulo="Até" type="date" value={fim} onChange={(e) => setFim(e.target.value)} className="!mb-0 min-w-0 flex-[1_1_140px]" />
+        <Campo id="cxIni" rotulo="De" type="date" value={ini} className="!mb-0 min-w-0 flex-[1_1_140px]"
+          erro={erro?.campo === 'ini' ? erro.msg : undefined}
+          onChange={(e) => { setIni(e.target.value); setErro(null); }} />
+        <Campo id="cxFim" rotulo="Até" type="date" value={fim} className="!mb-0 min-w-0 flex-[1_1_140px]"
+          erro={erro?.campo === 'fim' ? erro.msg : undefined}
+          onChange={(e) => { setFim(e.target.value); setErro(null); }} />
       </div>
-      <BotaoCheio icone={FileText} onClick={() => { setPeriodo({ ini, fim }); if (ini === periodo.ini && fim === periodo.fim) q.refetch(); }}>
-        Gerar resumo
+      <BotaoCheio icone={FileText} onClick={gerar} carregando={q.isFetching}>
+        {q.isFetching ? 'Somando…' : 'Gerar resumo'}
       </BotaoCheio>
 
       <div className="mt-1">
@@ -61,6 +75,15 @@ function Resultado({ r }: { r: ResumoCaixa }) {
     else toast('Não deu para copiar sozinho. Segure o dedo no texto.', 'erro');
   }
 
+  /* Período vazio: três "0,00" não dizem nada. Só o aviso. */
+  if (r.lancamentos === 0) {
+    return (
+      <Banner tom="info" titulo="Nada lançado nesse período" className="mt-5">
+        Confira as datas De e Até. Se o dinheiro entrou ou saiu e não aparece aqui, lance pela tela do Caixa.
+      </Banner>
+    );
+  }
+
   return (
     <>
       <Secao>Resumo</Secao>
@@ -78,10 +101,6 @@ function Resultado({ r }: { r: ResumoCaixa }) {
         ))}
       </div>
 
-      {r.lancamentos === 0 && (
-        <p className="mx-1 mt-4 text-sm text-apagado">Nenhum lançamento neste período. Confira as datas.</p>
-      )}
-
       <Bloco titulo="Entradas por categoria" itens={r.entradas} />
       <Bloco titulo="Saídas por categoria" itens={r.saidas} />
 
@@ -97,9 +116,10 @@ function Resultado({ r }: { r: ResumoCaixa }) {
       )}
 
       {r.semComprovante > 0 && (
-        <Aviso icone={CircleAlert} className="mt-4">
-          {plural(r.semComprovante, 'saída está', 'saídas estão')} sem comprovante. Prestação de contas costuma recusar despesa sem nota.
-        </Aviso>
+        <Banner tom="atencao" icone={ReceiptText} className="mt-4"
+          titulo={plural(r.semComprovante, 'saída sem nota', 'saídas sem nota')}>
+          A prestação de contas costuma recusar despesa sem comprovante. Junte as notas antes de enviar.
+        </Banner>
       )}
       <BotaoCheio icone={Copy} onClick={copiar} className="mt-5">Copiar para colar no relatório</BotaoCheio>
     </>

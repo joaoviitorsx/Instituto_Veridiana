@@ -2,10 +2,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { CircleAlert, Copy, ExternalLink, Share2, Sheet, WandSparkles } from 'lucide-react';
+import { Copy, ExternalLink, Lock, Share2, Sheet, WandSparkles } from 'lucide-react';
 import { leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { Aviso, BotaoCheio, BotaoContorno, CARTAO, Esqueleto, Secao } from '../../../ui/kit';
+import { Banner, BotaoCheio, BotaoContorno, CARTAO, Esqueleto, Secao } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { toast } from '../../../ui/toast';
 import { copiarTexto, vibrar } from '../../../util';
@@ -47,17 +47,16 @@ function Planilha() {
                 onClick={() => partilhar({ title: d.nome, url: d.url }, copiar)}>Compartilhar</BotaoContorno>
             )}
           </div>
-          <Aviso icone={CircleAlert} className="mt-5">
-            O link sozinho não libera nada. Quem abrir precisa já ter permissão. Para dar acesso a alguém, use o botão
-            Compartilhar dentro da própria planilha.
-          </Aviso>
+          <Banner tom="info" icone={Lock} titulo="O link não dá acesso sozinho" className="mt-5">
+            Só abre para quem já tem permissão. Para incluir alguém, use o botão Compartilhar dentro da própria planilha.
+          </Banner>
 
           <Secao>Padronizar</Secao>
           <div className={CARTAO + ' mb-3 p-5 text-sm leading-normal text-apagado'}>
             Deixa cabeçalho, larguras, cores, listas de SIM/NAO e o Painel no padrão. Pode rodar quantas vezes quiser,
             não duplica nada.
           </div>
-          <BotaoCheio icone={WandSparkles} onClick={arrumar} disabled={arrumando}>
+          <BotaoCheio icone={WandSparkles} onClick={arrumar} carregando={arrumando}>
             {arrumando ? 'Arrumando…' : 'Arrumar planilha'}
           </BotaoCheio>
         </>

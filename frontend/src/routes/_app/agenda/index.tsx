@@ -3,11 +3,11 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { Calendar, Check, FileText, MapPin, Pencil, Plus, Printer, Table, Trash2, Users } from 'lucide-react';
+import { Calendar, CalendarClock, Check, FileText, MapPin, Pencil, Plus, Printer, Table, Trash2, Users } from 'lucide-react';
 import { clsx } from 'clsx';
 import { escrever, leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { BotaoCheio, CARTAO, Esqueleto, Estado } from '../../../ui/kit';
+import { CARTAO, Esqueleto, Estado } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { folha } from '../../../ui/folha';
 import { toast } from '../../../ui/toast';
@@ -48,12 +48,13 @@ function Agenda() {
 
   return (
     <Tela titulo="Agenda"
-      barra={<BotaoCheio icone={Plus} onClick={novo} className="text-[17px]">Novo evento</BotaoCheio>}>
+      fab={{ icone: Plus, texto: 'Novo evento', onClick: novo }}>
       <Passo rotulo={mesExtenso(mes)} onAnterior={() => irMes(-1)} onProximo={() => irMes(1)}
         nomeAnterior="Mês anterior" nomeProximo="Próximo mês" />
       <div className="mb-4 flex gap-2">
         <Atalho icone={Table} onClick={() => navigate({ to: '/agenda/ano', search: { ano: +mes.slice(0, 4) } })}>Ver o ano</Atalho>
         <Atalho icone={Printer} onClick={() => navigate({ to: '/agenda/imprimir', search: { ano: +mes.slice(0, 4) } })}>Imprimir</Atalho>
+        <Atalho icone={CalendarClock} onClick={() => navigate({ to: '/grade' })}>Aulas</Atalho>
       </div>
 
       {r ? (
@@ -63,7 +64,8 @@ function Agenda() {
           </ul>
         ) : (
           <Estado icone={Calendar} titulo={'Nada marcado em ' + MESES[+mes.slice(5, 7) - 1]}
-            texto='Toque em "Novo evento" aqui embaixo para colocar a primeira data do mês.' />
+            texto="Coloque aqui ensaios, apresentações, reuniões e datas do instituto."
+            botao={{ txt: 'Marcar o primeiro evento', fn: novo }} />
         )
       ) : q.isError ? (
         <ErroTela erro={q.error} tentar={() => q.refetch()} />
@@ -98,8 +100,9 @@ function CartaoEvento({ ev, mes, r }: { ev: Evento; mes: string; r: AgendaMes })
   return (
     <li className="mb-3">
       <button type="button" onClick={() => verEvento(ev, r, editar)}
+        aria-label={ev.titulo + (passou ? ', já passou' : '') + (cancelado ? ', cancelado' : '')}
         className={clsx(CARTAO, 'flex w-full items-stretch overflow-hidden text-left transition-colors duration-150 active:bg-fundo',
-          passou && 'opacity-55')}>
+          passou && 'bg-fundo/60 shadow-none')}>
         <span className={clsx('flex w-16 shrink-0 flex-col items-center justify-center px-1 py-3',
           passou ? 'bg-fundo text-apagado' : 'bg-roxo-fraco text-roxo')}>
           <b className="text-[26px] leading-none font-bold tracking-tighter tabular-nums">{comecaAntes ? '…' : +ev.data.slice(8)}</b>
@@ -108,7 +111,7 @@ function CartaoEvento({ ev, mes, r }: { ev: Evento; mes: string; r: AgendaMes })
         <span className="min-w-0 flex-1 px-4 py-3">
           <Tag tipo={ev.tipo} cor={corTipo(r.cores, ev.tipo)} />
           <b className={clsx('mt-1.5 block text-base leading-snug font-bold [overflow-wrap:anywhere]',
-            cancelado && 'text-apagado line-through')}>{ev.titulo}</b>
+            (cancelado || passou) && 'text-apagado', cancelado && 'line-through')}>{ev.titulo}</b>
           <small className="mt-0.5 block text-[13px] leading-snug text-apagado">{linha.join(' · ')}</small>
         </span>
       </button>

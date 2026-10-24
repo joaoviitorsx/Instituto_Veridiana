@@ -41,7 +41,8 @@ function Resumo() {
   if (!itens.length) {
     return (
       <Tela titulo="Resumo dos materiais" voltar="/materiais">
-        <Estado icone={Package} titulo="Nenhum item ainda" texto="Cadastre os materiais pela lista." />
+        <Estado icone={Package} titulo="Nenhum item ainda" texto="O resumo aparece quando houver materiais cadastrados."
+          botao={{ txt: 'Cadastrar o primeiro item', fn: () => navigate({ to: '/materiais/novo' }) }} />
       </Tela>
     );
   }

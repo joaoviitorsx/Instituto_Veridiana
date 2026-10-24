@@ -3,14 +3,14 @@
    pública. O dado já existia; faltava alguém ler. */
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Check, MessageCircle, User } from 'lucide-react';
+import { Check, MessageCircle, UserPlus } from 'lucide-react';
 import { clsx } from 'clsx';
 import { leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
 import { Avatar, CARTAO, Esqueleto, Estado } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { dataCurta, linkZap, plural } from '../../../util';
-import { editarContato, Intro, Pct } from './-relatorios';
+import { editarContato, Intro } from './-relatorios';
 
 type Risco = {
   minimo: number;
@@ -38,13 +38,14 @@ function Atencao() {
   if (q.isError && !r) corpo = <ErroTela erro={q.error} tentar={() => q.refetch()} />;
   else if (!r) corpo = <Esqueleto n={3} />;
   else if (!r.alunos.length) {
-    corpo = <Estado icone={Check} titulo="Ninguém sumido"
-      texto="Nenhum aluno faltou 3 aulas seguidas. Continue olhando aqui de vez em quando." />;
+    corpo = <Estado icone={Check} titulo="Ninguém faltando seguido"
+      texto="Nenhum aluno faltou 3 aulas seguidas. Vale olhar aqui uma vez por semana." />;
   } else {
     corpo = (
       <>
         <Intro>
-          {plural(r.alunos.length, 'aluno faltou', 'alunos faltaram')} 3 aulas ou mais seguidas. Uma ligação agora costuma trazer de volta.
+          {plural(r.alunos.length, 'aluno faltou', 'alunos faltaram')} 3 aulas ou mais seguidas. Uma mensagem agora,
+          antes de virar hábito, costuma trazer de volta.
         </Intro>
         <ul>
           {r.alunos.map((a) => {
@@ -61,7 +62,10 @@ function Atencao() {
                       {a.turma}{a.idade != null ? ' · ' + a.idade + ' anos' : ''}
                     </small>
                   </span>
-                  <Pct perigo>{a.faltas}</Pct>
+                  {/* Número com palavra, não só um "4" vermelho solto. */}
+                  <span className="shrink-0 rounded-full bg-falta-fraco px-2.5 py-1 text-[13px] font-bold whitespace-nowrap text-falta">
+                    {plural(a.faltas, 'falta', 'faltas')}
+                  </span>
                 </div>
                 <p className="mt-3 text-sm leading-normal text-apagado">
                   {plural(a.faltas, 'falta seguida', 'faltas seguidas')}
@@ -75,8 +79,8 @@ function Atencao() {
                   </a>
                 ) : (
                   <button type="button" onClick={() => editarContato(a.aluno, a.turma)}
-                    className={clsx(BOTAO, 'border border-dashed border-borda bg-fundo text-apagado active:bg-borda')}>
-                    <User size={18} /> Sem telefone — cadastrar agora
+                    className={clsx(BOTAO, 'border border-dashed border-roxo/30 bg-roxo-fraco/50 text-roxo active:bg-roxo-fraco')}>
+                    <UserPlus size={18} /> Sem telefone — cadastrar agora
                   </button>
                 )}
               </li>

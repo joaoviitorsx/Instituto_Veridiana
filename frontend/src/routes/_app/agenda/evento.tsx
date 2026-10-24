@@ -2,7 +2,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { CircleAlert } from 'lucide-react';
+import { CalendarDays, CircleAlert, MapPin, StickyNote } from 'lucide-react';
 import { clsx } from 'clsx';
 import { leitura, useEscrita } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
@@ -10,7 +10,7 @@ import { BotaoCheio, Campo, Chip, Esqueleto, Estado } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { toast } from '../../../ui/toast';
 import { hojeISO, textoErro, vibrar } from '../../../util';
-import { comCor, corTipo, mesDeHoje, mesValido, type AgendaMes, type Evento } from './-comum';
+import { comCor, corTipo, ErroGrupo, mesDeHoje, mesValido, type AgendaMes, type Evento } from './-comum';
 
 type Busca = { id?: string; mes?: string; data?: string };
 
@@ -65,8 +65,14 @@ function Formulario({ id, ev, data, listas, titulo }: {
     ? { ...ev, turmas: [...ev.turmas] }
     : { titulo: '', data: data || hojeISO(), dataFim: '', tipo: '', turmas: [], local: '', status: 'Planejado', obs: '' });
   const [varios, setVarios] = useState(!!f.dataFim);
+  /* Erro embaixo do campo que precisa de ajuste, não num toast que some. */
+  const [erros, setErros] = useState<Partial<Record<'titulo' | 'data' | 'fim' | 'tipo', string>>>({});
   const nome = useRef<HTMLInputElement>(null);
-  const muda = (p: Partial<Ficha>) => setF((x) => ({ ...x, ...p }));
+  const muda = (p: Partial<Ficha>) => {
+    setF((x) => ({ ...x, ...p }));
+    const limpar = Object.keys(p).map((k) => (k === 'dataFim' ? 'fim' : k));
+    setErros((e) => Object.fromEntries(Object.entries(e).filter(([k]) => !limpar.includes(k))));
+  };
 
   useEffect(() => {
     if (id) return;
@@ -85,10 +91,18 @@ function Formulario({ id, ev, data, listas, titulo }: {
       ...f, titulo: f.titulo.trim(), local: f.local.trim(), obs: f.obs.trim(),
       dataFim: varios ? f.dataFim : '',
     };
-    if (dados.titulo.length < 2) { toast('Escreva o nome do evento.', 'erro'); nome.current?.focus(); return; }
-    if (!dados.data) { toast('Escolha a data.', 'erro'); return; }
-    if (!dados.tipo) { toast('Escolha o tipo do evento.', 'erro'); return; }
-    if (dados.dataFim && dados.dataFim < dados.data) { toast('A data do fim vem antes do começo.', 'erro'); return; }
+    const e: typeof erros = {};
+    if (dados.titulo.length < 2) e.titulo = 'Escreva o nome do evento (pelo menos 2 letras).';
+    if (!dados.data) e.data = 'Escolha o dia do evento.';
+    if (dados.dataFim && dados.data && dados.dataFim < dados.data) e.fim = 'O fim vem antes do começo. Escolha um dia igual ou depois.';
+    if (!dados.tipo) e.tipo = 'Escolha um tipo. Ele dá a cor do evento no calendário.';
+    setErros(e);
+    const primeiro = (['titulo', 'data', 'fim', 'tipo'] as const).find((k) => e[k]);
+    if (primeiro) {
+      vibrar();
+      document.getElementById({ titulo: 'agTitulo', data: 'agData', fim: 'agFim', tipo: 'agTipo' }[primeiro])?.focus();
+      return;
+    }
     salvar.mutate(id ? [id, dados] : [dados], {
       onSuccess: (r) => {
         vibrar();
@@ -102,13 +116,15 @@ function Formulario({ id, ev, data, listas, titulo }: {
 
   return (
     <Tela titulo={titulo} voltar="/agenda"
-      barra={<BotaoCheio onClick={enviar} disabled={salvar.isPending} className="text-[17px]">
+      barra={<BotaoCheio onClick={enviar} carregando={salvar.isPending} className="text-[17px]">
         {salvar.isPending ? 'Salvando…' : 'Salvar evento'}
       </BotaoCheio>}>
       <form onSubmit={(e) => { e.preventDefault(); enviar(); }} noValidate>
         <Campo id="agTitulo" rotulo="Nome do evento" ref={nome} autoComplete="off" autoCapitalize="sentences"
-          maxLength={120} placeholder="Dia da Dança" value={f.titulo} onChange={(e) => muda({ titulo: e.target.value })} />
-        <Campo id="agData" rotulo="Data" type="date" value={f.data} onChange={(e) => muda({ data: e.target.value })} />
+          enterKeyHint="next" maxLength={120} placeholder="Ex.: Dia da Dança" erro={erros.titulo}
+          value={f.titulo} onChange={(e) => muda({ titulo: e.target.value })} />
+        <Campo id="agData" rotulo="Data" type="date" icone={CalendarDays} erro={erros.data}
+          value={f.data} onChange={(e) => muda({ data: e.target.value })} />
         <label className="-mt-1 mb-4 flex min-h-11 cursor-pointer items-center gap-3 text-[15px] font-semibold">
           <input type="checkbox" className="size-[22px] accent-roxo" checked={varios}
             onChange={(e) => {
@@ -117,15 +133,16 @@ function Formulario({ id, ev, data, listas, titulo }: {
             }} />
           Dura mais de um dia
         </label>
-        {varios && <Campo id="agFim" rotulo="Termina em" type="date" min={f.data} value={f.dataFim}
-          onChange={(e) => muda({ dataFim: e.target.value })} />}
+        {varios && <Campo id="agFim" rotulo="Termina em" type="date" icone={CalendarDays} min={f.data} value={f.dataFim}
+          erro={erros.fim} onChange={(e) => muda({ dataFim: e.target.value })} />}
 
-        <Grupo rotulo="Tipo">
+        <Grupo rotulo="Tipo" id="agTipo" erro={erros.tipo}>
           <div className="grid grid-cols-2 gap-2">
             {listas.tipos.map((t) => {
               const on = f.tipo === t;
               return (
                 <button key={t} type="button" aria-pressed={on} style={comCor(corTipo(listas.cores, t))}
+                  id={t === listas.tipos[0] ? 'agTipo' : undefined}
                   onClick={() => { vibrar(); muda({ tipo: t }); }}
                   className={clsx('flex min-h-13 items-center gap-2 rounded-m bg-papel text-left text-[15px] leading-tight font-semibold',
                     'transition-colors duration-150',
@@ -146,9 +163,11 @@ function Formulario({ id, ev, data, listas, titulo }: {
         </Grupo>
 
         <Campo id="agLocal" rotulo={<>Local <i className="font-normal not-italic">(opcional)</i></>} autoComplete="off"
-          maxLength={120} placeholder="Teatro do bairro" value={f.local} onChange={(e) => muda({ local: e.target.value })} />
+          icone={MapPin} enterKeyHint="next" maxLength={120} placeholder="Ex.: Teatro do bairro"
+          value={f.local} onChange={(e) => muda({ local: e.target.value })} />
         <Campo id="agObs" rotulo={<>Observação <i className="font-normal not-italic">(opcional)</i></>} autoComplete="off"
-          maxLength={500} value={f.obs} onChange={(e) => muda({ obs: e.target.value })} />
+          icone={StickyNote} enterKeyHint="done" maxLength={500} placeholder="Ex.: levar figurino"
+          value={f.obs} onChange={(e) => muda({ obs: e.target.value })} />
 
         <Grupo rotulo="Situação">
           <div className="flex flex-wrap gap-2">
@@ -163,11 +182,12 @@ function Formulario({ id, ev, data, listas, titulo }: {
   );
 }
 
-function Grupo({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+function Grupo({ rotulo, children, id, erro }: { rotulo: string; children: React.ReactNode; id?: string; erro?: string }) {
   return (
-    <fieldset className="mb-4">
+    <fieldset className="mb-4" aria-describedby={erro && id ? id + '-erro' : undefined}>
       <legend className="mb-2 block text-[13px] font-semibold text-apagado">{rotulo}</legend>
       {children}
+      <ErroGrupo id={id} erro={erro} />
     </fieldset>
   );
 }

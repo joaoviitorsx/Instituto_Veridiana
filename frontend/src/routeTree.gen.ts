@@ -34,6 +34,8 @@ import { Route as AppGestaoHistoricoRouteImport } from './routes/_app/gestao/his
 import { Route as AppGestaoPlanilhaRouteImport } from './routes/_app/gestao/planilha'
 import { Route as AppGestaoRelatorioRouteImport } from './routes/_app/gestao/relatorio'
 import { Route as AppGestaoRiscoRouteImport } from './routes/_app/gestao/risco'
+import { Route as AppGradeIndexRouteImport } from './routes/_app/grade/index'
+import { Route as AppGradeHorarioRouteImport } from './routes/_app/grade/horario'
 import { Route as AppMateriaisIndexRouteImport } from './routes/_app/materiais/index'
 import { Route as AppMateriaisNovoRouteImport } from './routes/_app/materiais/novo'
 import { Route as AppMateriaisResumoRouteImport } from './routes/_app/materiais/resumo'
@@ -168,6 +170,16 @@ const AppGestaoRiscoRoute = AppGestaoRiscoRouteImport.update({
   path: '/gestao/risco',
   getParentRoute: () => AppRoute,
 } as any)
+const AppGradeIndexRoute = AppGradeIndexRouteImport.update({
+  id: '/grade/',
+  path: '/grade/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppGradeHorarioRoute = AppGradeHorarioRouteImport.update({
+  id: '/grade/horario',
+  path: '/grade/horario',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppMateriaisIndexRoute = AppMateriaisIndexRouteImport.update({
   id: '/materiais/',
   path: '/materiais/',
@@ -234,6 +246,7 @@ export interface FileRoutesByFullPath {
   '/gestao/planilha': typeof AppGestaoPlanilhaRoute
   '/gestao/relatorio': typeof AppGestaoRelatorioRoute
   '/gestao/risco': typeof AppGestaoRiscoRoute
+  '/grade/horario': typeof AppGradeHorarioRoute
   '/materiais/novo': typeof AppMateriaisNovoRoute
   '/materiais/resumo': typeof AppMateriaisResumoRoute
   '/agenda/': typeof AppAgendaIndexRoute
@@ -241,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/certificados/': typeof AppCertificadosIndexRoute
   '/chamada/': typeof AppChamadaIndexRoute
   '/gestao/': typeof AppGestaoIndexRoute
+  '/grade/': typeof AppGradeIndexRoute
   '/materiais/': typeof AppMateriaisIndexRoute
   '/gestao/qr/ver': typeof AppGestaoQrVerRoute
   '/gestao/turmas/$turma': typeof AppGestaoTurmasTurmaRoute
@@ -269,6 +283,7 @@ export interface FileRoutesByTo {
   '/gestao/planilha': typeof AppGestaoPlanilhaRoute
   '/gestao/relatorio': typeof AppGestaoRelatorioRoute
   '/gestao/risco': typeof AppGestaoRiscoRoute
+  '/grade/horario': typeof AppGradeHorarioRoute
   '/materiais/novo': typeof AppMateriaisNovoRoute
   '/materiais/resumo': typeof AppMateriaisResumoRoute
   '/agenda': typeof AppAgendaIndexRoute
@@ -276,6 +291,7 @@ export interface FileRoutesByTo {
   '/certificados': typeof AppCertificadosIndexRoute
   '/chamada': typeof AppChamadaIndexRoute
   '/gestao': typeof AppGestaoIndexRoute
+  '/grade': typeof AppGradeIndexRoute
   '/materiais': typeof AppMateriaisIndexRoute
   '/gestao/qr/ver': typeof AppGestaoQrVerRoute
   '/gestao/turmas/$turma': typeof AppGestaoTurmasTurmaRoute
@@ -306,6 +322,7 @@ export interface FileRoutesById {
   '/_app/gestao/planilha': typeof AppGestaoPlanilhaRoute
   '/_app/gestao/relatorio': typeof AppGestaoRelatorioRoute
   '/_app/gestao/risco': typeof AppGestaoRiscoRoute
+  '/_app/grade/horario': typeof AppGradeHorarioRoute
   '/_app/materiais/novo': typeof AppMateriaisNovoRoute
   '/_app/materiais/resumo': typeof AppMateriaisResumoRoute
   '/_app/agenda/': typeof AppAgendaIndexRoute
@@ -313,6 +330,7 @@ export interface FileRoutesById {
   '/_app/certificados/': typeof AppCertificadosIndexRoute
   '/_app/chamada/': typeof AppChamadaIndexRoute
   '/_app/gestao/': typeof AppGestaoIndexRoute
+  '/_app/grade/': typeof AppGradeIndexRoute
   '/_app/materiais/': typeof AppMateriaisIndexRoute
   '/_app/gestao/qr/ver': typeof AppGestaoQrVerRoute
   '/_app/gestao/turmas/$turma': typeof AppGestaoTurmasTurmaRoute
@@ -343,6 +361,7 @@ export interface FileRouteTypes {
     | '/gestao/planilha'
     | '/gestao/relatorio'
     | '/gestao/risco'
+    | '/grade/horario'
     | '/materiais/novo'
     | '/materiais/resumo'
     | '/agenda/'
@@ -350,6 +369,7 @@ export interface FileRouteTypes {
     | '/certificados/'
     | '/chamada/'
     | '/gestao/'
+    | '/grade/'
     | '/materiais/'
     | '/gestao/qr/ver'
     | '/gestao/turmas/$turma'
@@ -378,6 +398,7 @@ export interface FileRouteTypes {
     | '/gestao/planilha'
     | '/gestao/relatorio'
     | '/gestao/risco'
+    | '/grade/horario'
     | '/materiais/novo'
     | '/materiais/resumo'
     | '/agenda'
@@ -385,6 +406,7 @@ export interface FileRouteTypes {
     | '/certificados'
     | '/chamada'
     | '/gestao'
+    | '/grade'
     | '/materiais'
     | '/gestao/qr/ver'
     | '/gestao/turmas/$turma'
@@ -414,6 +436,7 @@ export interface FileRouteTypes {
     | '/_app/gestao/planilha'
     | '/_app/gestao/relatorio'
     | '/_app/gestao/risco'
+    | '/_app/grade/horario'
     | '/_app/materiais/novo'
     | '/_app/materiais/resumo'
     | '/_app/agenda/'
@@ -421,6 +444,7 @@ export interface FileRouteTypes {
     | '/_app/certificados/'
     | '/_app/chamada/'
     | '/_app/gestao/'
+    | '/_app/grade/'
     | '/_app/materiais/'
     | '/_app/gestao/qr/ver'
     | '/_app/gestao/turmas/$turma'
@@ -613,6 +637,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppGestaoRiscoRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/grade/': {
+      id: '/_app/grade/'
+      path: '/grade'
+      fullPath: '/grade/'
+      preLoaderRoute: typeof AppGradeIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/grade/horario': {
+      id: '/_app/grade/horario'
+      path: '/grade/horario'
+      fullPath: '/grade/horario'
+      preLoaderRoute: typeof AppGradeHorarioRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/materiais/': {
       id: '/_app/materiais/'
       path: '/materiais'
@@ -697,6 +735,7 @@ interface AppRouteChildren {
   AppGestaoPlanilhaRoute: typeof AppGestaoPlanilhaRoute
   AppGestaoRelatorioRoute: typeof AppGestaoRelatorioRoute
   AppGestaoRiscoRoute: typeof AppGestaoRiscoRoute
+  AppGradeHorarioRoute: typeof AppGradeHorarioRoute
   AppMateriaisNovoRoute: typeof AppMateriaisNovoRoute
   AppMateriaisResumoRoute: typeof AppMateriaisResumoRoute
   AppAgendaIndexRoute: typeof AppAgendaIndexRoute
@@ -704,6 +743,7 @@ interface AppRouteChildren {
   AppCertificadosIndexRoute: typeof AppCertificadosIndexRoute
   AppChamadaIndexRoute: typeof AppChamadaIndexRoute
   AppGestaoIndexRoute: typeof AppGestaoIndexRoute
+  AppGradeIndexRoute: typeof AppGradeIndexRoute
   AppMateriaisIndexRoute: typeof AppMateriaisIndexRoute
   AppGestaoQrVerRoute: typeof AppGestaoQrVerRoute
   AppGestaoTurmasTurmaRoute: typeof AppGestaoTurmasTurmaRoute
@@ -731,6 +771,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppGestaoPlanilhaRoute: AppGestaoPlanilhaRoute,
   AppGestaoRelatorioRoute: AppGestaoRelatorioRoute,
   AppGestaoRiscoRoute: AppGestaoRiscoRoute,
+  AppGradeHorarioRoute: AppGradeHorarioRoute,
   AppMateriaisNovoRoute: AppMateriaisNovoRoute,
   AppMateriaisResumoRoute: AppMateriaisResumoRoute,
   AppAgendaIndexRoute: AppAgendaIndexRoute,
@@ -738,6 +779,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCertificadosIndexRoute: AppCertificadosIndexRoute,
   AppChamadaIndexRoute: AppChamadaIndexRoute,
   AppGestaoIndexRoute: AppGestaoIndexRoute,
+  AppGradeIndexRoute: AppGradeIndexRoute,
   AppMateriaisIndexRoute: AppMateriaisIndexRoute,
   AppGestaoQrVerRoute: AppGestaoQrVerRoute,
   AppGestaoTurmasTurmaRoute: AppGestaoTurmasTurmaRoute,

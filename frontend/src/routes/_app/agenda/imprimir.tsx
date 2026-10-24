@@ -7,7 +7,7 @@ import { Copy, ExternalLink, FileText, MessageCircle, Printer } from 'lucide-rea
 import { clsx } from 'clsx';
 import { leitura, useEscrita } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { BotaoCheio, CARTAO } from '../../../ui/kit';
+import { Banner, BotaoCheio, CARTAO } from '../../../ui/kit';
 import { folha } from '../../../ui/folha';
 import { toast } from '../../../ui/toast';
 import { copiarTexto, plural, textoErro, urlSegura, vibrar } from '../../../util';
@@ -78,7 +78,7 @@ function Imprimir() {
           </span>
         )}
       </div>
-      <BotaoCheio icone={FileText} onClick={pedir} disabled={gerar.isPending}>
+      <BotaoCheio icone={FileText} onClick={pedir} carregando={gerar.isPending}>
         {gerar.isPending ? 'Gerando o calendário…' : gerar.isSuccess ? 'Gerar de novo' : 'Gerar o PDF'}
       </BotaoCheio>
       <p role="status" aria-live="polite" className="mt-2 min-h-[3em] text-center text-[13px] leading-normal text-apagado">
@@ -115,14 +115,14 @@ function mostrarPronto(ano: number, r: Pdf, medido: number) {
           </a>
         )}
         <button type="button" className={clsx(link, 'bg-fundo text-roxo active:bg-borda')}
-          onClick={async () => { if (await copiarTexto(url)) { vibrar(); toast('Link copiado'); } else toast('Não deu para copiar sozinho. Segure o dedo no link.', 'erro'); }}>
+          onClick={async () => { if (await copiarTexto(url)) { vibrar(); toast('Link copiado'); } else toast('Não deu para copiar sozinho. Segure o dedo no link para copiar.', 'info'); }}>
           <Copy size={18} /> Copiar link
         </button>
         {!r.publico && (
-          <p className="mx-1 mt-2 text-[13px] leading-normal text-apagado">
+          <Banner tom="atencao" titulo="Link só para quem tem acesso" className="mt-2 mb-0">
             O Drive do instituto não deixou abrir o link para qualquer pessoa. Quem receber precisa ter acesso à
             pasta "Agenda — Instituto Veridiana".
-          </p>
+          </Banner>
         )}
       </div>
     </>

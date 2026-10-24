@@ -130,5 +130,84 @@ caso('certificado conta a chamada atrasada', () => {
   assert.strictEqual(h['Ballet|Ana'].aulas, 2);
   assert.strictEqual(h['Ballet|Ana'].primeira, dia(Date.now() - 3 * D));
 });
+
+/* ─── grade semanal ─── */
+function montarGrade() {
+  const m = montar();
+  const tu = m.g.ss.insertSheet('Turmas'); tu.appendRow(['Turma', 'Ativa']);
+  tu.appendRow(['Ballet', 'SIM']); tu.appendRow(['Jazz', 'SIM']); tu.appendRow(['Velha', 'NAO']);
+  return m;
+}
+caso('grade: cria aula em dois dias de uma vez', () => {
+  const { post, tok, g } = montarGrade();
+  const r = post('criarHorario', [tok, { turma: 'Ballet', dias: [1, 3], inicio: '14:00', fim: '15:00', sala: 'Sala 1', professor: 'Vera' }]);
+  assert.strictEqual(r.ok, true, r.erro); assert.strictEqual(r.dados.criados, 2);
+  const l = post('listarGrade', [tok]).dados;
+  assert.deepStrictEqual(l.horarios.map(h => [h.dia, h.inicio, h.fim, h.turma]), [[1, '14:00', '15:00', 'Ballet'], [3, '14:00', '15:00', 'Ballet']]);
+  assert.deepStrictEqual(l.salas, ['Sala 1']); assert.deepStrictEqual(l.turmas, ['Ballet', 'Jazz']);
+  assert.strictEqual(g.sheets.Grade.getRange(2, 3).getValue(), 'Segunda');
+});
+caso('grade: conflito de sala volta CONFLITO, forcar grava', () => {
+  const { post, tok } = montarGrade();
+  post('criarHorario', [tok, { turma: 'Ballet', dias: [1], inicio: '14:00', fim: '15:00', sala: 'Sala 1' }]);
+  const r = post('criarHorario', [tok, { turma: 'Jazz', dias: [1], inicio: '14:30', fim: '15:30', sala: 'sala 1' }]);
+  assert.strictEqual(r.ok, false); assert.match(r.erro, /^CONFLITO: A sala Sala 1 já tem Ballet na segunda, das 14h às 15h\./);
+  const r2 = post('criarHorario', [tok, { turma: 'Jazz', dias: [1], inicio: '14:30', fim: '15:30', sala: 'Sala 1', forcar: true }]);
+  assert.strictEqual(r2.ok, true);
+  // encostado (15h às 16h) não é conflito
+  const r3 = post('criarHorario', [tok, { turma: 'Jazz', dias: [1], inicio: '15:30', fim: '16:00', sala: 'Sala 1' }]);
+  assert.strictEqual(r3.ok, true, r3.erro);
+});
+caso('grade: valida turma inativa, horário invertido, professora fora da equipe', () => {
+  const { post, tok } = montarGrade();
+  assert.match(post('criarHorario', [tok, { turma: 'Velha', dias: [1], inicio: '14:00', fim: '15:00' }]).erro, /não está ativa/);
+  assert.match(post('criarHorario', [tok, { turma: 'Ballet', dias: [1], inicio: '15:00', fim: '14:00' }]).erro, /termina antes de começar/);
+  assert.match(post('criarHorario', [tok, { turma: 'Ballet', dias: [], inicio: '14:00', fim: '15:00' }]).erro, /pelo menos um dia/);
+  assert.match(post('criarHorario', [tok, { turma: 'Ballet', dias: [2], inicio: '14:00', fim: '15:00', professor: 'Fulana' }]).erro, /não está na equipe/);
+});
+caso('grade: editar e tirar da grade', () => {
+  const { post, tok } = montarGrade();
+  const id = post('criarHorario', [tok, { turma: 'Ballet', dias: [2], inicio: '9h', fim: '10h30' }]).dados.ids[0];
+  assert.strictEqual(post('listarGrade', [tok]).dados.horarios[0].fim, '10:30');
+  assert.strictEqual(post('editarHorario', [tok, id, { dia: 4, sala: 'Palco' }]).ok, true);
+  const h = post('listarGrade', [tok]).dados.horarios[0];
+  assert.deepStrictEqual([h.dia, h.inicio, h.sala], [4, '09:00', 'Palco']);
+  assert.strictEqual(post('excluirHorario', [tok, id]).ok, true);
+  assert.strictEqual(post('listarGrade', [tok]).dados.horarios.length, 0);
+});
+caso('grade: linha digitada à mão na planilha é lida e ganha ID', () => {
+  const { c, post, tok } = montarGrade();
+  const aba = c.abaGrade(); aba.appendRow(['', 'Jazz', 'quarta-feira', '19h', '20:00', 'Sala 2', 'Vera', '']);
+  const h = post('listarGrade', [tok]).dados.horarios;
+  assert.strictEqual(h.length, 1); assert.deepStrictEqual([h[0].dia, h[0].inicio, h[0].fim], [3, '19:00', '20:00']);
+  assert.ok(String(aba.getRange(2, 1).getValue()).startsWith('G'));
+});
+caso('grade: "Aula agora" usa a grade e pula turma que já teve chamada', () => {
+  const vm = require('vm');
+  const { c, post, tok } = montarGrade();
+  const hj = c.hoje(), dia = c.diaDaSemana_(hj);
+  const agora = new Date(); const min = Number(fmt(agora, 'America/Fortaleza', 'HH')) * 60 + Number(fmt(agora, 'America/Fortaleza', 'mm'));
+  const hh = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+  if (min < 60 || min > 22 * 60) { console.log('     (pulado: fora do horário de teste)'); return; }
+  post('criarHorario', [tok, { turma: 'Ballet', dias: [dia], inicio: hh(min - 10), fim: hh(min + 50), sala: 'Sala 1', professor: 'Vera' }]);
+  post('criarHorario', [tok, { turma: 'Jazz', dias: [dia], inicio: hh(Math.min(min + 60, 23 * 60)), fim: hh(Math.min(min + 120, 23 * 60 + 59)) }]);
+  let d = c.resumoInicial(tok).destaque;
+  assert.deepStrictEqual([d.origem, d.turma, d.agora, d.sala], ['grade', 'Ballet', true, 'Sala 1']);
+  c.salvarChamada(tok, { turma: 'Ballet', professor: 'Vera', token: 'gr', presencas: pres });
+  vm.runInContext('CacheService.getScriptCache().remove("x")', c);
+  d = c.resumoInicial(tok).destaque;
+  assert.strictEqual(d && d.turma, 'Jazz', JSON.stringify(d));
+  assert.strictEqual(d.agora, false);
+});
+caso('grade: sem grade nenhuma, o palpite antigo continua', () => {
+  const { c, tok } = montarGrade();
+  const vm = require('vm');
+  assert.strictEqual(vm.runInContext('aulaDaGrade_', c)('Vera', c.hoje()), undefined);
+  c.resumoInicial(tok);   // não quebra
+});
+caso('API: funções da grade estão na lista', () => {
+  const { c } = montar();
+  ['listarGrade', 'criarHorario', 'editarHorario', 'excluirHorario'].forEach(f => assert.strictEqual(typeof c.funcoesDaApi_()[f], 'function', f));
+});
 console.log(`\n${n - falhas}/${n} casos`);
 process.exit(falhas ? 1 : 0);

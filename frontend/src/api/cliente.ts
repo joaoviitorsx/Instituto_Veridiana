@@ -76,7 +76,7 @@ export const queryClient = new QueryClient({
    que a chamada precisa para funcionar sem internet: a lista de turmas
    e o elenco de cada uma, com a data em que vieram (dataUpdatedAt). O
    resto pede conexão. */
-export const PERSISTIDAS = new Set(['listarTurmas', 'carregarTurma', 'resumoInicial']);
+export const PERSISTIDAS = new Set(['listarTurmas', 'carregarTurma', 'resumoInicial', 'listarGrade']);
 export const persister = createAsyncStoragePersister({
   storage: { getItem: (k) => get(k), setItem: (k, v) => set(k, v), removeItem: (k) => del(k) },
   key: 'veridiana.cache',
@@ -85,7 +85,8 @@ export const persister = createAsyncStoragePersister({
 
 /* ─── escrita ─── */
 const CHAMADAS_L = ['carregarTurma', 'resumoInicial', 'contarRisco', 'alunosEmRisco', 'mesesComChamada',
-  'resumoHistorico', 'alunosParaCertificado', 'relatorioPeriodo'];
+  'resumoHistorico', 'alunosParaCertificado', 'relatorioPeriodo', 'listarGrade'];
+const GRADE_L = ['listarGrade', 'resumoInicial'];
 const CAIXA_L = ['mesesCaixa', 'listarCaixa', 'resumoCaixa', 'resumoInicial'];
 const MATERIAIS_L = ['listarMateriais', 'listarCategorias', 'listarLocais', 'resumoInicial'];
 const AGENDA_L = ['listarAgenda', 'listarAgendaAno', 'datasFixas', 'resumoInicial'];
@@ -98,6 +99,7 @@ const INVALIDA: Record<string, string[]> = {
   criarMaterial: MATERIAIS_L, editarMaterial: MATERIAIS_L, ajustarQuantidade: MATERIAIS_L,
   inativarMaterial: MATERIAIS_L, renomearNaLista: MATERIAIS_L,
   criarEvento: AGENDA_L, editarEvento: AGENDA_L, excluirEvento: AGENDA_L, precarregarDatas: AGENDA_L,
+  criarHorario: GRADE_L, editarHorario: GRADE_L, excluirHorario: GRADE_L,
   gerarCertificado: [], gerarCalendarioPdf: [], sair: [], trocarSenha: [], entrar: [],
 };
 

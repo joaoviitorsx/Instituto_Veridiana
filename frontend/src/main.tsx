@@ -9,6 +9,7 @@ import { ligarEnvioAutomatico } from './offline/envio';
 import { ouvirInstalacao } from './offline/instalar';
 import { fecharToast } from './ui/toast';
 import { folha } from './ui/folha';
+import { ehRaiz } from './ui/Abas';
 import type { Resposta } from './offline/fila';
 import './estilo/index.css';
 
@@ -20,6 +21,17 @@ const router = createRouter({
   /* Encostou o dedo num link, o código da tela já começa a vir. */
   defaultPreload: 'intent',
   defaultPreloadStaleTime: 0,
+  /* Transição com sentido (DESIGN.md §6): entrar numa tela desliza da
+     direita, voltar faz o inverso, trocar de aba só esmaece. Navegador
+     sem View Transitions troca na hora. */
+  defaultViewTransition: {
+    types: ({ fromLocation, toLocation, pathChanged }) => {
+      if (!pathChanged || !fromLocation) return false;
+      if (ehRaiz(fromLocation.pathname) && ehRaiz(toLocation.pathname)) return ['aba'];
+      const de = fromLocation.state.__TSR_index ?? 0, para = toLocation.state.__TSR_index ?? 0;
+      return [para < de ? 'voltar' : para > de ? 'ir' : 'aba'];
+    },
+  },
 });
 
 declare module '@tanstack/react-router' {
@@ -46,6 +58,14 @@ router.subscribe('onResolved', (e) => {
 });
 
 ligarEnvioAutomatico();
+
+/* Transição interrompida porque a tela mudou de tamanho no meio (teclado
+   abrindo, barra do navegador recolhendo) não é erro: a tela nova já está
+   lá, só não animou. */
+window.addEventListener('unhandledrejection', (e) => {
+  const r = e.reason as { name?: string; message?: string } | undefined;
+  if (r?.name === 'InvalidStateError' && /transition/i.test(r.message || '')) e.preventDefault();
+});
 
 /* Só no mock: o cache à mão no console, para depurar. */
 if (import.meta.env.VITE_MOCK === '1') (window as unknown as { __qc: typeof queryClient }).__qc = queryClient;

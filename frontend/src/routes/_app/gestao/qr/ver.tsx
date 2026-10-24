@@ -3,10 +3,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { CircleAlert, Copy, Printer, Share2 } from 'lucide-react';
+import { Copy, Printer, Share2 } from 'lucide-react';
 import { leitura } from '../../../../api/cliente';
 import { Tela } from '../../../../ui/Tela';
-import { Aviso, BotaoCheio, BotaoContorno, CARTAO, Esqueleto, Filtro } from '../../../../ui/kit';
+import { Banner, BotaoCheio, BotaoContorno, CARTAO, Esqueleto, Filtro } from '../../../../ui/kit';
 import { toast } from '../../../../ui/toast';
 import { copiarTexto, vibrar } from '../../../../util';
 import { partilhar } from '../-comum';
@@ -58,9 +58,9 @@ function Cartaz() {
       </div>
 
       {antigo && exec.isPending ? <Esqueleto n={2} /> : antigo && !url ? (
-        <Aviso icone={CircleAlert}>
-          Falta o endereço do app antigo. Use "Configurar endereço do app" no menu Veridiana da planilha, uma vez só.
-        </Aviso>
+        <Banner tom="atencao" titulo="Falta o endereço do app antigo">
+          Na planilha, abra o menu Veridiana → "Configurar endereço do app". É uma vez só.
+        </Banner>
       ) : qr && (
         <>
           <div className={CARTAO + ' mb-4 p-6 text-center print:border-0 print:shadow-none'}>

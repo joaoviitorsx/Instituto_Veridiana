@@ -63,7 +63,7 @@ export async function editarContato(nome: string, turma: string) {
     const lista = await queryClient.fetchQuery(leitura<Aluno[]>('listarAlunos', turma, true));
     atual = lista.find((a) => a.nome === nome && a.turma === turma);
   } catch (e) {
-    toast(textoErro(e), 'erro');
+    toast('Não deu para abrir os dados de ' + nome + '. ' + textoErro(e), 'erro');
     return;
   }
   folha.pedirFicha('Dados de ' + nome, [
@@ -76,7 +76,7 @@ export async function editarContato(nome: string, turma: string) {
       vibrar();
       toast('Dados de ' + nome + ' salvos');
     } catch (e) {
-      toast(textoErro(e), 'erro');
+      toast('Não salvou. ' + textoErro(e), 'erro');
     }
   });
 }

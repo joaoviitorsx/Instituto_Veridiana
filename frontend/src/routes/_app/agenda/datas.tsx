@@ -3,11 +3,11 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Check } from 'lucide-react';
+import { CalendarPlus, Check } from 'lucide-react';
 import { clsx } from 'clsx';
 import { leitura, useEscrita } from '../../../api/cliente';
 import { Tela, useVoltar } from '../../../ui/Tela';
-import { BotaoCheio, Esqueleto, Lista } from '../../../ui/kit';
+import { Banner, BotaoCheio, Esqueleto, GrupoNav, Lista } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { toast } from '../../../ui/toast';
 import { dataExtenso, plural, textoErro, vibrar } from '../../../util';
@@ -43,14 +43,18 @@ function Escolha({ ano, r }: { ano: number; r: Datas }) {
   /* Começa com tudo o que ainda não está na agenda marcado. */
   const [marcadas, setMarcadas] = useState(() => new Set(r.datas.filter((d) => !d.jaTem).map((d) => d.dia)));
   const livres = r.datas.some((d) => !d.jaTem);
+  /* Tocou em "Colocar" sem nada marcado: o aviso aparece em cima da
+     lista, onde está o que falta fazer, e não num toast que some. */
+  const [semMarca, setSemMarca] = useState(false);
 
   function alternar(dia: string) {
     vibrar();
+    setSemMarca(false);
     setMarcadas((m) => { const n = new Set(m); if (n.has(dia)) n.delete(dia); else n.add(dia); return n; });
   }
   function enviar() {
     const dias = [...marcadas];
-    if (!dias.length) { toast('Marque pelo menos uma data.', 'erro'); return; }
+    if (!dias.length) { setSemMarca(true); vibrar(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
     colocar.mutate([ano, dias], {
       onSuccess: (x) => {
         vibrar();
@@ -64,12 +68,21 @@ function Escolha({ ano, r }: { ano: number; r: Datas }) {
 
   return (
     <Tela titulo={'Datas de ' + ano} voltar="/agenda/ano"
-      barra={<BotaoCheio onClick={enviar} disabled={!livres || colocar.isPending} className="text-[17px]">
-        {colocar.isPending ? 'Colocando…' : 'Colocar na agenda'}
-      </BotaoCheio>}>
-      <p className="mb-4 ml-1 text-sm text-apagado">
-        Datas que se repetem todo ano. Desmarque o que não quiser e toque em "Colocar na agenda".
-      </p>
+      barra={livres
+        ? <BotaoCheio onClick={enviar} carregando={colocar.isPending} className="text-[17px]">
+            {colocar.isPending ? 'Colocando…' : marcadas.size ? 'Colocar ' + plural(marcadas.size, 'data', 'datas') + ' na agenda' : 'Colocar na agenda'}
+          </BotaoCheio>
+        : <BotaoCheio onClick={voltar} className="text-[17px]">Voltar para a agenda</BotaoCheio>}>
+      {livres ? (
+        <p className="mb-4 ml-1 text-sm text-apagado">
+          Datas que se repetem todo ano. Desmarque o que não quiser e toque no botão aqui embaixo.
+        </p>
+      ) : (
+        <Banner tom="sucesso" titulo="Tudo certo por aqui">Todas estas datas já estão na agenda de {ano}.</Banner>
+      )}
+      {semMarca && (
+        <Banner tom="atencao" titulo="Nenhuma data marcada">Toque nas datas que você quer colocar na agenda.</Banner>
+      )}
       <Lista>
         {r.datas.map((d) => {
           const on = !d.jaTem && marcadas.has(d.dia);
@@ -96,12 +109,10 @@ function Escolha({ ano, r }: { ano: number; r: Datas }) {
           );
         })}
       </Lista>
-      <p className="mx-1 mt-1 text-[13px] leading-normal text-apagado">
-        Faltou alguma?{' '}
-        <button type="button" className="-my-3 inline-block py-3 font-semibold text-roxo underline" onClick={() => navigate({ to: '/agenda' })}>
-          Cadastre pelo "Novo evento"
-        </button>{' '}na agenda do mês.
-      </p>
+      <GrupoNav titulo="Faltou alguma?" itens={[{
+        icone: CalendarPlus, titulo: 'Cadastrar outra data', sub: 'abre o formulário de evento novo',
+        onClick: () => navigate({ to: '/agenda/evento' }),
+      }]} />
     </Tela>
   );
 }

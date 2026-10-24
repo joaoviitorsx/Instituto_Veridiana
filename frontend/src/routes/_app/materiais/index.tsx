@@ -77,7 +77,7 @@ function ListaMateriais() {
 
   return (
     <Tela titulo="Materiais" voltar="/"
-      barra={<BotaoCheio icone={Plus} onClick={() => navigate({ to: '/materiais/novo' })}>Novo item</BotaoCheio>}>
+      barra={<BotaoCheio icone={Plus} className="text-[17px]" onClick={() => navigate({ to: '/materiais/novo' })}>Novo item</BotaoCheio>}>
       {/* Os dois atalhos com valor operacional: o que vai para o bazar e
           o que precisa de conserto. Com número, sem abrir filtro. */}
       <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -105,7 +105,8 @@ function ListaMateriais() {
         q.isError ? <ErroTela erro={q.error} tentar={() => q.refetch()} /> : <Esqueleto n={5} />
       ) : !todos.length ? (
         <Estado icone={Package} titulo="Nenhum item ainda"
-          texto='Toque em "Novo item" aqui embaixo. Nome, quantidade e onde fica já bastam.' />
+          texto="Comece pelo que mais se procura: figurinos, som, cenário. Nome, quantidade e onde fica já bastam."
+          botao={{ txt: 'Cadastrar o primeiro item', fn: () => navigate({ to: '/materiais/novo' }) }} />
       ) : (
         <>
           {algumFiltro && (
@@ -115,7 +116,8 @@ function ListaMateriais() {
             </button>
           )}
           {!lista.length ? (
-            <Estado icone={Search} titulo="Nada com esse filtro" texto="Troque o filtro ou limpe a busca." />
+            <Estado icone={Search} titulo="Nada com esse filtro" texto="Nenhum item bate com a busca e os filtros escolhidos."
+              botao={{ txt: 'Limpar busca e filtros', fn: limpar }} />
           ) : grupos.map(([cat, itens]) => {
             const aberto = !fechados.has(cat);
             return (

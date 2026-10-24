@@ -25,8 +25,13 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'icones/icon-180.png'],
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,woff2,png,ico,svg}'],
+        /* As capturas do manifest só servem para o diálogo de instalação. */
+        globIgnores: ['capturas/**'],
       },
       manifest: {
+        /* id fixo: o navegador reconhece o mesmo app instalado mesmo se o
+           start_url mudar um dia. */
+        id: '/',
         name: 'Chamada — Instituto Veridiana',
         short_name: 'Veridiana',
         description: 'Registro de frequência e gestão do Instituto Veridiana.',
@@ -34,6 +39,9 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
+        display_override: ['standalone'],
+        categories: ['education', 'productivity'],
+        prefer_related_applications: false,
         orientation: 'portrait',
         background_color: '#4A1D6E',
         theme_color: '#4A1D6E',
@@ -41,6 +49,18 @@ export default defineConfig({
           { src: '/icones/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icones/icon-512.png', sizes: '512x512', type: 'image/png' },
           { src: '/icones/icon-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+        /* Segurar o dedo no ícone instalado mostra estes atalhos. */
+        shortcuts: [
+          { name: 'Fazer chamada', short_name: 'Chamada', url: '/chamada', icons: [{ src: '/icones/icon-192.png', sizes: '192x192' }] },
+          { name: 'Agenda', url: '/agenda', icons: [{ src: '/icones/icon-192.png', sizes: '192x192' }] },
+        ],
+        /* O Android mostra estas telas no diálogo de instalação ("instalação
+           rica"), em vez de só o nome e o ícone. Regerar quando a cara mudar. */
+        screenshots: [
+          { src: '/capturas/1-inicio.webp', sizes: '780x1688', type: 'image/webp', form_factor: 'narrow', label: 'Tela inicial com a próxima aula' },
+          { src: '/capturas/2-chamada.webp', sizes: '780x1688', type: 'image/webp', form_factor: 'narrow', label: 'Chamada: um toque em quem veio' },
+          { src: '/capturas/3-agenda.webp', sizes: '780x1688', type: 'image/webp', form_factor: 'narrow', label: 'Agenda do ano' },
         ],
       },
       devOptions: { enabled: false },

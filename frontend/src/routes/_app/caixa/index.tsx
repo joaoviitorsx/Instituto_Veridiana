@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, ExternalLink, FileText, Minus, Plus, Trash2,
 import { clsx } from 'clsx';
 import { escrever, leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { CARTAO, Esqueleto, Estado, Lista, Secao } from '../../../ui/kit';
+import { Banner, CARTAO, Esqueleto, Estado, GrupoNav, Lista, Secao } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { folha } from '../../../ui/folha';
 import { toast } from '../../../ui/toast';
@@ -119,9 +119,15 @@ function Mes({ r }: { r: MesCaixa }) {
         </div>
       </div>
 
+      {/* O resumo é por período, não pelo mês da tela: vale até em mês vazio. */}
+      <GrupoNav className="mt-4" itens={[{
+        icone: FileText, titulo: 'Resumo para prestação de contas', sub: 'totais por categoria e por fonte',
+        onClick: () => navigate({ to: '/caixa/resumo' }),
+      }]} />
+
       {!r.lancamentos.length ? (
         <Estado icone={Wallet} titulo="Nada lançado neste mês"
-          texto="Use os botões aqui embaixo assim que entrar ou sair dinheiro." />
+          texto="Assim que entrar ou sair dinheiro, toque em Entrou ou Saiu, aqui embaixo." />
       ) : (
         <>
           <Secao>{plural(r.lancamentos.length, 'lançamento', 'lançamentos')}</Secao>
@@ -133,10 +139,6 @@ function Mes({ r }: { r: MesCaixa }) {
               </Lista>
             </div>
           ))}
-          <button type="button" onClick={() => navigate({ to: '/caixa/resumo' })}
-            className="mt-5 flex min-h-13 w-full items-center justify-center gap-2 rounded-m bg-roxo-fraco p-4 text-base font-bold text-roxo transition-colors duration-150 active:bg-roxo-claro">
-            <FileText size={18} /> Resumo para prestação de contas
-          </button>
         </>
       )}
     </>
@@ -193,9 +195,9 @@ function verLanc(l: Lancamento) {
           <ExternalLink size={18} /> Ver o comprovante
         </a>
       ) : !entrada && (
-        <p className="mx-1 mt-4 text-[13px] leading-normal text-apagado">
-          Sem comprovante. Prestação de contas costuma recusar despesa sem nota.
-        </p>
+        <Banner tom="atencao" titulo="Saída sem nota" className="mt-4 mb-0">
+          A prestação de contas costuma recusar despesa sem comprovante. Se a nota aparecer, lance de novo com a foto.
+        </Banner>
       )}
       <button type="button" onClick={() => { fechar(); setTimeout(() => apagar(l), 80); }}
         className="mt-4 flex min-h-13 w-full items-center justify-center gap-2 rounded-m border border-dashed border-[#EDC6CE] bg-fundo p-3.5 text-base font-bold text-falta active:bg-borda">
@@ -206,14 +208,14 @@ function verLanc(l: Lancamento) {
 }
 
 function apagar(l: Lancamento) {
-  folha.confirmar('Apagar lançamento', 'Some da planilha e do saldo. Use só para corrigir digitação.', 'Apagar', async () => {
+  folha.confirmar('Apagar este lançamento?', reais(l.valor) + ' de ' + l.categoria + ' sai da planilha e do saldo. Use só para corrigir algo digitado errado.', 'Apagar', async () => {
     try {
       /* O valor vai junto: se alguém lançou nesse meio-tempo as linhas
          andaram, e o servidor recusa em vez de apagar a errada. */
       await escrever('apagarLancamento', [l.linha, l.valor]);
       vibrar(); toast('Lançamento apagado');
     } catch (e) {
-      toast(textoErro(e), 'erro');
+      toast('Não deu para apagar. ' + textoErro(e), 'erro');
     }
   });
 }

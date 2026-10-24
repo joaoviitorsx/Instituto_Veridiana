@@ -2,10 +2,10 @@
    aluna esteve presente. */
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, Users } from 'lucide-react';
 import { leitura } from '../../../api/cliente';
 import { Tela } from '../../../ui/Tela';
-import { CartaoNav, Esqueleto, Estado } from '../../../ui/kit';
+import { GrupoNav, Esqueleto, Estado } from '../../../ui/kit';
 import { ErroTela } from '../../../ui/ErroTela';
 import { plural } from '../../../util';
 import { Intro } from '../gestao/-relatorios';
@@ -22,17 +22,15 @@ function Certificados() {
   let corpo;
   if (q.isError && !ts) corpo = <ErroTela erro={q.error} tentar={() => q.refetch()} />;
   else if (!ts) corpo = <Esqueleto n={4} />;
-  else if (!ts.length) corpo = <Estado icone={ClipboardList} titulo="Nenhuma turma ainda" texto="Crie uma turma para emitir certificados." />;
+  else if (!ts.length) corpo = <Estado icone={ClipboardList} titulo="Nenhuma turma ainda" texto="Crie a primeira turma em Gestão → Turmas. Depois das primeiras chamadas, os certificados aparecem aqui." />;
   else {
     corpo = (
       <>
         <Intro>Escolha a turma. O certificado conta as aulas em que a aluna esteve presente.</Intro>
-        <ul>
-          {ts.map((t) => (
-            <CartaoNav key={t.nome} titulo={t.nome} sub={plural(t.ativos, 'aluno', 'alunos')}
-              onClick={() => navigate({ to: '/certificados/$turma', params: { turma: t.nome } })} />
-          ))}
-        </ul>
+        <GrupoNav itens={ts.map((t) => ({
+          icone: Users, titulo: t.nome, sub: plural(t.ativos, 'aluno', 'alunos'),
+          onClick: () => navigate({ to: '/certificados/$turma', params: { turma: t.nome } }),
+        }))} />
       </>
     );
   }

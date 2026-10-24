@@ -5,7 +5,7 @@
    prefixo '-' deixa este arquivo fora das rotas. */
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { Check, MapPin, Minus, Plus, Tag } from 'lucide-react';
+import { Check, CircleAlert, MapPin, Minus, Plus, Tag } from 'lucide-react';
 import { clsx } from 'clsx';
 import { api, invalidarDepoisDe, leitura } from '../../../api/cliente';
 import { folha } from '../../../ui/folha';
@@ -160,7 +160,7 @@ export function useAjuste(item: Material | undefined) {
       invalidarDepoisDe('ajustarQuantidade');
     }, (e) => {
       setDelta((x) => x - d);
-      toast('A quantidade não foi salva. ' + textoErro(e), 'erro');
+      toast('A quantidade não foi salva: ' + textoErro(e) + ' Toque de novo para tentar.', 'erro');
     });
   }
 
@@ -179,4 +179,15 @@ export function useAjuste(item: Material | undefined) {
   useEffect(() => () => enviar(), []);
 
   return { quantidade: item ? Math.max(0, item.quantidade + delta) : 0, somar, enviar };
+}
+
+/* Erro embaixo de um campo montado à mão (a quantidade, com mais/menos),
+   igual ao erro de campo do kit: ícone + texto, lido pelo leitor de tela. */
+export function ErroLinha({ id, erro }: { id: string; erro?: string }) {
+  if (!erro) return null;
+  return (
+    <span id={id + '-erro'} role="alert" className="mt-2 flex items-start gap-1.5 text-[13px] leading-snug font-medium text-falta">
+      <CircleAlert size={16} className="mt-px shrink-0" />{erro}
+    </span>
+  );
 }

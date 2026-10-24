@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { api } from '../api/cliente';
 import { usarSessao, useSessao, pegarSenhaTemp, guardarSenhaTemp, type Usuario } from '../sessao';
+import { KeyRound, LockKeyhole } from 'lucide-react';
 import { Tela, useVoltar } from '../ui/Tela';
 import { BotaoCheio, CampoSenha } from '../ui/kit';
 import { toast } from '../ui/toast';
@@ -29,6 +30,8 @@ function Senha() {
   const [nova, setNova] = useState('');
   const [conf, setConf] = useState('');
   const [indo, setIndo] = useState(false);
+  /* Erro embaixo do campo certo, não num toast. */
+  const [erro, setErro] = useState<{ campo: 'atual' | 'nova' | 'conf'; msg: string } | null>(null);
 
   if (!sessao || !usuario) {
     navigate({ to: '/entrar', replace: true });
@@ -37,8 +40,10 @@ function Senha() {
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
-    if (nova.length < 6) { toast('A senha nova precisa ter pelo menos 6 caracteres.', 'erro'); return; }
-    if (nova !== conf) { toast('As duas senhas novas não são iguais.', 'erro'); return; }
+    if (!primeira && !atual) { setErro({ campo: 'atual', msg: 'Escreva a senha que você usa hoje.' }); return; }
+    if (nova.length < 6) { setErro({ campo: 'nova', msg: 'Pelo menos 6 letras ou números.' }); return; }
+    if (nova !== conf) { setErro({ campo: 'conf', msg: 'Não ficou igual à senha nova. Digite de novo.' }); return; }
+    setErro(null);
     setIndo(true);
     try {
       const r = await api<{ token: string; usuario: Usuario }>('trocarSenha', [primeira ? pegarSenhaTemp() : atual, nova]);
@@ -48,7 +53,8 @@ function Senha() {
       if (primeira) seguir(volta); else sair();
     } catch (err) {
       setIndo(false);
-      toast(textoErro(err), 'erro');
+      const msg = textoErro(err);
+      setErro({ campo: /atual/i.test(msg) ? 'atual' : 'nova', msg });
     }
   }
 
@@ -64,13 +70,16 @@ function Senha() {
             : 'Pelo menos 6 caracteres. Os outros aparelhos onde você entrou vão pedir a senha nova.'}
         </p>
         <input type="email" autoComplete="username" hidden readOnly value={usuario.email} />
-        {!primeira && <CampoSenha id="tsAtual" rotulo="Senha atual" autoComplete="current-password" autoFocus
-          value={atual} onChange={(e) => setAtual(e.target.value)} />}
-        <CampoSenha id="tsNova" rotulo="Senha nova" autoComplete="new-password" autoFocus={!!primeira}
-          value={nova} onChange={(e) => setNova(e.target.value)} />
-        <CampoSenha id="tsConf" rotulo="Repita a senha nova" autoComplete="new-password"
-          value={conf} onChange={(e) => setConf(e.target.value)} />
-        <BotaoCheio type="submit" disabled={indo} className="mt-2">{indo ? 'Salvando…' : 'Salvar senha'}</BotaoCheio>
+        {!primeira && <CampoSenha id="tsAtual" rotulo="Senha atual" icone={LockKeyhole} autoComplete="current-password" autoFocus
+          erro={erro?.campo === 'atual' ? erro.msg : undefined}
+          value={atual} onChange={(e) => { setAtual(e.target.value); setErro(null); }} />}
+        <CampoSenha id="tsNova" rotulo="Senha nova" icone={KeyRound} autoComplete="new-password" autoFocus={!!primeira}
+          erro={erro?.campo === 'nova' ? erro.msg : undefined}
+          value={nova} onChange={(e) => { setNova(e.target.value); setErro(null); }} />
+        <CampoSenha id="tsConf" rotulo="Repita a senha nova" icone={KeyRound} autoComplete="new-password"
+          erro={erro?.campo === 'conf' ? erro.msg : undefined}
+          value={conf} onChange={(e) => { setConf(e.target.value); setErro(null); }} />
+        <BotaoCheio type="submit" carregando={indo} className="mt-2">{indo ? 'Salvando…' : 'Salvar senha'}</BotaoCheio>
       </form>
     </Tela>
   );

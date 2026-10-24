@@ -86,13 +86,13 @@ function preCarregar(d){
 }
 
 /* O código das seções não depende do resumo: sai logo depois da
-   primeira pintura, as três juntas. Em fila, a gestão (a maior, atrás
+   primeira pintura, todas juntas. Em fila, a gestão (a maior, atrás
    de metade dos blocos) só chegava depois de três idas ao servidor. */
 function preCarregarModulos(){
   if (S.modulosPedidos) return;
   S.modulosPedidos = true;
   setTimeout(function(){
-    carregarModulo('gestao'); carregarModulo('agenda'); carregarModulo('materiais');
+    carregarModulo('gestao'); carregarModulo('agenda'); carregarModulo('materiais'); carregarModulo('grade');
   }, 300);
 }
 
@@ -106,7 +106,11 @@ function pintarDestaque(d){
   if (d.tipo === 'aula'){
     rotulo = d.agora ? 'Aula agora' : 'Próxima aula';
     titulo = d.turma;
-    sub = (d.hora ? 'costuma começar às ' + d.hora : 'costuma ter aula hoje') + ' · abrir chamada';
+    var sala = d.sala ? ' · ' + d.sala : '';
+    /* Pela grade é hora marcada; pelo palpite, "costuma". */
+    sub = d.origem === 'grade'
+      ? (d.agora ? 'agora · até ' + d.fim + sala : 'começa às ' + d.hora + sala + ' · abrir chamada')
+      : (d.hora ? 'costuma começar às ' + d.hora : 'costuma ter aula hoje') + ' · abrir chamada';
     icone = 'relogio';
   } else {
     rotulo = d.hoje ? 'Hoje na agenda' : 'Próximo na agenda';

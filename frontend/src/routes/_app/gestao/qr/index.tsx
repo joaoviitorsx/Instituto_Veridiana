@@ -6,10 +6,10 @@
    antigo (/exec) continua disponível no cartaz, como plano B. */
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { ClipboardList, QrCode } from 'lucide-react';
+import { ClipboardList, QrCode, Users } from 'lucide-react';
 import { leitura } from '../../../../api/cliente';
 import { Tela } from '../../../../ui/Tela';
-import { CartaoNav, Esqueleto, Estado } from '../../../../ui/kit';
+import { GrupoNav, Esqueleto, Estado } from '../../../../ui/kit';
 import { ErroTela } from '../../../../ui/ErroTela';
 import type { TurmaGestao } from '../-comum';
 
@@ -20,22 +20,18 @@ function ListaQr() {
   const q = useQuery(leitura<TurmaGestao[]>('listarTurmasCompleto'));
   return (
     <Tela titulo="QR do app" voltar="/gestao">
-      <ul>
-        <CartaoNav icone={QrCode} titulo="Acessar o app" sub="um cartaz só, para todo mundo"
-          onClick={() => navigate({ to: '/gestao/qr/ver' })} />
-      </ul>
-      <p className="mx-1 mt-6 mb-3 text-sm text-apagado">Opcional: QR por turma, que já abre a chamada daquela sala.</p>
+      <GrupoNav itens={[{ icone: QrCode, titulo: 'Acessar o app', sub: 'um cartaz só, para todo mundo',
+        onClick: () => navigate({ to: '/gestao/qr/ver' }) }]} />
+      <p className="mx-4 mt-2 mb-1.5 text-[13px] font-semibold tracking-wide text-apagado uppercase">Por turma (opcional)</p>
+      <p className="mx-4 mb-2 text-sm text-apagado">Já abre direto a chamada daquela sala.</p>
       {q.data ? (
         q.data.length ? (
-          <ul>
-            {q.data.map((t) => (
-              <CartaoNav key={t.nome} titulo={t.nome}
-                direita={<QrCode size={20} className="shrink-0 text-apagado" />}
-                onClick={() => navigate({ to: '/gestao/qr/ver', search: { turma: t.nome } })} />
-            ))}
-          </ul>
+          <GrupoNav itens={q.data.map((t) => ({
+            icone: Users, titulo: t.nome,
+            onClick: () => navigate({ to: '/gestao/qr/ver', search: { turma: t.nome } }),
+          }))} />
         ) : (
-          <Estado icone={ClipboardList} titulo="Nenhuma turma ainda" texto="Crie uma turma para gerar o QR dela." />
+          <Estado icone={ClipboardList} titulo="Nenhuma turma ainda" texto="O QR por turma aparece aqui depois que a turma for criada em Gestão → Turmas." />
         )
       ) : q.isError ? <ErroTela erro={q.error} tentar={() => q.refetch()} /> : <Esqueleto n={4} />}
     </Tela>

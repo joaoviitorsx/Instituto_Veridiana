@@ -206,7 +206,8 @@ var LEITURAS = {
   entrarNaGestao:1, listarTurmasCompleto:1, listarAlunos:1, listarProfessores:1,
   mesesCaixa:1, listarCaixa:1, resumoCaixa:1, mesesComChamada:1, resumoHistorico:1,
   alunosParaCertificado:1, alunosEmRisco:1, contarRisco:1, aniversariantesSemana:1,
-  relatorioPeriodo:1, obterUrlApp:1, obterLinkPlanilha:1, listarEquipe:1, quemSou:1
+  relatorioPeriodo:1, obterUrlApp:1, obterLinkPlanilha:1, listarEquipe:1, quemSou:1,
+  listarGrade:1
 };
 var MEM = {}, PEND = {}, MEM_GEN = 0;
 
@@ -220,12 +221,16 @@ var CHAMADAS_L = ['carregarTurma','resumoInicial','contarRisco','alunosEmRisco',
 var CAIXA_L = ['mesesCaixa','listarCaixa','resumoCaixa','resumoInicial'];
 var MATERIAIS_L = ['listarMateriais','listarCategorias','listarLocais','resumoInicial'];
 var AGENDA_L = ['listarAgenda','listarAgendaAno','datasFixas','resumoInicial'];
+/* A grade muda o cartão "Aula agora" da tela inicial. */
+var GRADE_L = ['listarGrade','resumoInicial'];
 var INVALIDA = {
-  salvarChamada:CHAMADAS_L,
+  /* listarGrade traz quais turmas já tiveram chamada hoje. */
+  salvarChamada:CHAMADAS_L.concat(['listarGrade']),
   lancarCaixa:CAIXA_L, apagarLancamento:CAIXA_L,
   criarMaterial:MATERIAIS_L, editarMaterial:MATERIAIS_L, ajustarQuantidade:MATERIAIS_L,
   inativarMaterial:MATERIAIS_L, renomearNaLista:MATERIAIS_L,
   criarEvento:AGENDA_L, editarEvento:AGENDA_L, excluirEvento:AGENDA_L, precarregarDatas:AGENDA_L,
+  criarHorario:GRADE_L, editarHorario:GRADE_L, excluirHorario:GRADE_L,
   gerarCertificado:[], gerarCalendarioPdf:[], sair:[]
 };
 function esquecer(fn){
@@ -508,7 +513,7 @@ function modPronto(nome){
   if (fila && fila.forEach) fila.forEach(function(f){ f.ok(); });
 }
 function modDaTela(t){
-  return /^ag/.test(t) ? 'agenda' : /^mt/.test(t) ? 'materiais' : 'gestao';
+  return /^ag/.test(t) ? 'agenda' : /^mt/.test(t) ? 'materiais' : /^gr/.test(t) ? 'grade' : 'gestao';
 }
 /* O primeiro pedido de cada tela que mora num módulo sob demanda. */
 function primeiraLeitura(a){
@@ -522,6 +527,7 @@ function primeiraLeitura(a){
     case 'agenda':  var m = (a.p && a.p.mes) || h.slice(0, 7);
                     return ['listarAgenda', [+m.slice(0, 4), +m.slice(5, 7)]];
     case 'mtLista': return ['listarMateriais', [{}]];
+    case 'grDia': case 'grForm': return ['listarGrade', []];
   }
   return null;
 }
@@ -553,6 +559,9 @@ function carregarModulo(nome, ok, erro){
 }
 
 ACOES.copiarLink = function(b){ copiar(b.getAttribute('data-u')); };
+/* A grade é aberta de vários lugares (chamada, agenda, gestão, que moram
+   em módulos diferentes): a entrada fica aqui no núcleo. */
+ACOES.irGrade = function(){ ir('grDia', {}); };
 
 function desenhar(){
   var a = atual();

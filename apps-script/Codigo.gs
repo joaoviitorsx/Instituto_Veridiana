@@ -85,7 +85,8 @@ const PARTES = ['AppNucleo', 'AppEntrada', 'AppInicio', 'AppChamada', 'AppPartid
 const MODULOS = {
   gestao:    ['AppGestao', 'AppCaixa', 'AppQr'],
   agenda:    ['AppAgenda'],
-  materiais: ['AppMateriais']
+  materiais: ['AppMateriais'],
+  grade:     ['AppGrade']
 };
 
 /**

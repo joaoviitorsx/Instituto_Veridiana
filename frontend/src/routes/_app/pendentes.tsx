@@ -7,7 +7,7 @@ import { enviarAgora, useFila } from '../../offline/envio';
 import { forcarItem, reativarItem, tirarDaFila, type ItemFila } from '../../offline/fila';
 import { useOnline } from '../../offline/rede';
 import { Tela } from '../../ui/Tela';
-import { BotaoCheio, CARTAO, Estado } from '../../ui/kit';
+import { BotaoCheio, CARTAO, Estado, Banner } from '../../ui/kit';
 import { folha } from '../../ui/folha';
 import { toast } from '../../ui/toast';
 import { copiarTexto, dataExtenso, hojeISO, plural } from '../../util';
@@ -20,26 +20,27 @@ function Pendentes() {
   const [indo, setIndo] = useState(false);
 
   async function tentar() {
-    if (!online) { toast('Ainda sem internet. Vai enviar sozinha quando voltar.', 'erro'); return; }
+    if (!online) { toast('Ainda sem internet. Vai enviar sozinha quando voltar.', 'info'); return; }
     setIndo(true);
     const n = await enviarAgora().finally(() => setIndo(false));
-    if (!n) toast('Não foi agora. Continua guardada no celular.', 'erro');
+    if (!n) toast('Não foi agora. Continua guardada no celular.', 'info');
   }
 
   return (
     <Tela titulo="Esperando internet" voltar="/"
       barra={itens.some((i) => i.situacao === 'pendente') && (
-        <BotaoCheio icone={RefreshCw} onClick={tentar} disabled={indo}>{indo ? 'Enviando…' : 'Tentar enviar agora'}</BotaoCheio>
+        <BotaoCheio icone={RefreshCw} onClick={tentar} carregando={indo}>{indo ? 'Enviando…' : 'Tentar enviar agora'}</BotaoCheio>
       )}>
       {itens.length ? (
         <>
-          <p className="mx-1 mb-4 text-sm text-apagado">
-            {plural(itens.length, 'chamada guardada', 'chamadas guardadas')} neste celular. Não apague o app nem limpe os dados do navegador até elas chegarem.
-          </p>
+          <Banner tom="atencao" titulo={plural(itens.length, 'chamada guardada', 'chamadas guardadas') + ' neste celular'}>
+            Até chegarem na planilha, não desinstale o app nem limpe os dados do navegador: é aqui que elas estão.
+          </Banner>
           <ul>{itens.map((i) => <Item key={i.token} i={i} />)}</ul>
         </>
       ) : (
-        <Estado icone={CircleCheck} titulo="Tudo enviado" texto="Nenhuma chamada esperando internet neste celular." />
+        <Estado icone={CircleCheck} titulo="Tudo enviado"
+          texto="Todas as chamadas feitas neste celular já estão na planilha." />
       )}
     </Tela>
   );
@@ -66,7 +67,7 @@ function Item({ i }: { i: ItemFila }) {
     <li className={clsx(CARTAO, 'mb-3 p-4')}>
       <div className="flex items-start gap-3">
         <span className={clsx('mt-0.5 grid size-10 shrink-0 place-items-center rounded-full',
-          precisaDecidir ? 'bg-falta-fraco text-falta' : 'bg-roxo-fraco text-roxo')}>
+          precisaDecidir ? 'bg-falta-fraco text-falta' : 'bg-roxo-fraco text-roxo')} aria-hidden="true">
           <CloudUpload size={20} />
         </span>
         <div className="min-w-0 flex-1">
@@ -78,10 +79,19 @@ function Item({ i }: { i: ItemFila }) {
           </span>
         </div>
       </div>
-      {precisaDecidir && (
-        <p className="mt-3 rounded-p bg-falta-fraco px-3 py-2 text-sm text-falta">
-          {i.situacao === 'duplicada' ? 'A planilha já tem chamada desta turma neste dia. ' : ''}{i.erro}
-        </p>
+      {/* O que fazer, em palavras de quem está com o celular na mão. */}
+      {i.situacao === 'duplicada' && (
+        <Banner tom="atencao" className="mt-3 mb-0!" titulo="Já tem chamada desta turma neste dia">
+          Alguém salvou antes. Se esta é outra aula, toque em "Gravar mesmo assim". Se é a mesma, descarte.
+        </Banner>
+      )}
+      {i.situacao === 'antiga' && (
+        <Banner tom="erro" className="mt-3 mb-0!" titulo="Ficou antiga demais para enviar">
+          {i.erro} Copie a lista e mande para a coordenação.
+        </Banner>
+      )}
+      {i.situacao === 'recusada' && (
+        <Banner tom="erro" className="mt-3 mb-0!" titulo="A planilha não aceitou">{i.erro}</Banner>
       )}
       <div className="mt-3 flex flex-wrap gap-2">
         {i.situacao === 'duplicada' && (
